@@ -1,22 +1,162 @@
 [
-  {"id":"ts-null-guard-01","language":"typescript","repository":"typescript-service","title":"Profile endpoint throws reading active","severity":"high","expected":{"path":"src/handler.ts","terms":["null","guard","&&"]}},
-  {"id":"ts-null-guard-02","language":"typescript","repository":"typescript-service","title":"Anonymous user causes TypeError","severity":"high","expected":{"path":"src/handler.ts","terms":["user","null"]}},
-  {"id":"ts-zero-limit-03","language":"typescript","repository":"typescript-service","title":"Explicit zero limit becomes one hundred","severity":"medium","expected":{"path":"src/handler.ts","terms":["falsy","zero","default"]}},
-  {"id":"ts-zero-limit-04","language":"typescript","repository":"typescript-service","title":"Pagination limit ignores 0","severity":"low","expected":{"path":"src/handler.ts","terms":["Number","or"]}},
-  {"id":"ts-promise-json-05","language":"typescript","repository":"typescript-service","title":"Config parser receives Promise","severity":"high","expected":{"path":"src/handler.ts","terms":["await","Promise"]}},
-  {"id":"ts-promise-json-06","language":"typescript","repository":"typescript-service","title":"Unexpected token parsing remote config","severity":"high","expected":{"path":"src/handler.ts","terms":["fetchConfig","await"]}},
-  {"id":"ts-compile-null-07","language":"typescript","repository":"typescript-service","title":"Strict typecheck fails in profile helper","severity":"medium","expected":{"path":"src/handler.ts","terms":["possibly null","guard"]}},
-  {"id":"py-tags-leak-08","language":"python","repository":"python-service","title":"Tags from prior request appear again","severity":"medium","expected":{"path":"app.py","terms":["mutable default","tags"]}},
-  {"id":"py-tags-leak-09","language":"python","repository":"python-service","title":"append_tag accumulates between calls","severity":"medium","expected":{"path":"app.py","terms":["default argument","list"]}},
-  {"id":"py-price-none-10","language":"python","repository":"python-service","title":"Checkout crashes when price is absent","severity":"high","expected":{"path":"app.py","terms":["None","int","price"]}},
-  {"id":"py-price-decimal-11","language":"python","repository":"python-service","title":"Decimal price string raises ValueError","severity":"high","expected":{"path":"app.py","terms":["int","decimal"]}},
-  {"id":"py-user-none-12","language":"python","repository":"python-service","title":"Missing account triggers NoneType subscript","severity":"high","expected":{"path":"app.py","terms":["None","find_user"]}},
-  {"id":"py-user-none-13","language":"python","repository":"python-service","title":"Unknown user email lookup crashes","severity":"medium","expected":{"path":"app.py","terms":["guard","None"]}},
-  {"id":"py-cache-global-14","language":"python","repository":"python-service","title":"Test data remains in module cache","severity":"low","expected":{"path":"app.py","terms":["global","cache"]}},
-  {"id":"go-http-hang-15","language":"go","repository":"go-service","title":"Upstream HTTP call never times out","severity":"critical","expected":{"path":"handler.go","terms":["http.Client","Timeout"]}},
-  {"id":"go-http-hang-16","language":"go","repository":"go-service","title":"Worker goroutines stuck in HTTP client","severity":"critical","expected":{"path":"handler.go","terms":["timeout","Client"]}},
-  {"id":"go-context-17","language":"go","repository":"go-service","title":"Request cancellation does not stop work","severity":"high","expected":{"path":"handler.go","terms":["context.Background","parent"]}},
-  {"id":"go-context-18","language":"go","repository":"go-service","title":"Work ignores caller deadline","severity":"high","expected":{"path":"handler.go","terms":["ctx","shadow","Background"]}},
-  {"id":"go-shift-19","language":"go","repository":"go-service","title":"Retry delay grows beyond operational window","severity":"medium","expected":{"path":"handler.go","terms":["shift","cap","attempt"]}},
-  {"id":"go-shift-20","language":"go","repository":"go-service","title":"Large retry attempt overflows duration","severity":"high","expected":{"path":"handler.go","terms":["overflow","Duration"]}}
+	{
+		"id": "ts-null-guard-01",
+		"language": "typescript",
+		"repository": "typescript-service",
+		"title": "Profile endpoint throws reading active",
+		"severity": "high",
+		"expected": { "path": "src/handler.ts", "terms": ["null", "guard", "&&"] }
+	},
+	{
+		"id": "ts-null-guard-02",
+		"language": "typescript",
+		"repository": "typescript-service",
+		"title": "Anonymous user causes TypeError",
+		"severity": "high",
+		"expected": { "path": "src/handler.ts", "terms": ["user", "null"] }
+	},
+	{
+		"id": "ts-zero-limit-03",
+		"language": "typescript",
+		"repository": "typescript-service",
+		"title": "Explicit zero limit becomes one hundred",
+		"severity": "medium",
+		"expected": { "path": "src/handler.ts", "terms": ["falsy", "zero", "default"] }
+	},
+	{
+		"id": "ts-zero-limit-04",
+		"language": "typescript",
+		"repository": "typescript-service",
+		"title": "Pagination limit ignores 0",
+		"severity": "low",
+		"expected": { "path": "src/handler.ts", "terms": ["Number", "or"] }
+	},
+	{
+		"id": "ts-promise-json-05",
+		"language": "typescript",
+		"repository": "typescript-service",
+		"title": "Config parser receives Promise",
+		"severity": "high",
+		"expected": { "path": "src/handler.ts", "terms": ["await", "Promise"] }
+	},
+	{
+		"id": "ts-promise-json-06",
+		"language": "typescript",
+		"repository": "typescript-service",
+		"title": "Unexpected token parsing remote config",
+		"severity": "high",
+		"expected": { "path": "src/handler.ts", "terms": ["fetchConfig", "await"] }
+	},
+	{
+		"id": "ts-compile-null-07",
+		"language": "typescript",
+		"repository": "typescript-service",
+		"title": "Strict typecheck fails in profile helper",
+		"severity": "medium",
+		"expected": { "path": "src/handler.ts", "terms": ["possibly null", "guard"] }
+	},
+	{
+		"id": "py-tags-leak-08",
+		"language": "python",
+		"repository": "python-service",
+		"title": "Tags from prior request appear again",
+		"severity": "medium",
+		"expected": { "path": "app.py", "terms": ["mutable default", "tags"] }
+	},
+	{
+		"id": "py-tags-leak-09",
+		"language": "python",
+		"repository": "python-service",
+		"title": "append_tag accumulates between calls",
+		"severity": "medium",
+		"expected": { "path": "app.py", "terms": ["default argument", "list"] }
+	},
+	{
+		"id": "py-price-none-10",
+		"language": "python",
+		"repository": "python-service",
+		"title": "Checkout crashes when price is absent",
+		"severity": "high",
+		"expected": { "path": "app.py", "terms": ["None", "int", "price"] }
+	},
+	{
+		"id": "py-price-decimal-11",
+		"language": "python",
+		"repository": "python-service",
+		"title": "Decimal price string raises ValueError",
+		"severity": "high",
+		"expected": { "path": "app.py", "terms": ["int", "decimal"] }
+	},
+	{
+		"id": "py-user-none-12",
+		"language": "python",
+		"repository": "python-service",
+		"title": "Missing account triggers NoneType subscript",
+		"severity": "high",
+		"expected": { "path": "app.py", "terms": ["None", "find_user"] }
+	},
+	{
+		"id": "py-user-none-13",
+		"language": "python",
+		"repository": "python-service",
+		"title": "Unknown user email lookup crashes",
+		"severity": "medium",
+		"expected": { "path": "app.py", "terms": ["guard", "None"] }
+	},
+	{
+		"id": "py-cache-global-14",
+		"language": "python",
+		"repository": "python-service",
+		"title": "Test data remains in module cache",
+		"severity": "low",
+		"expected": { "path": "app.py", "terms": ["global", "cache"] }
+	},
+	{
+		"id": "go-http-hang-15",
+		"language": "go",
+		"repository": "go-service",
+		"title": "Upstream HTTP call never times out",
+		"severity": "critical",
+		"expected": { "path": "handler.go", "terms": ["http.Client", "Timeout"] }
+	},
+	{
+		"id": "go-http-hang-16",
+		"language": "go",
+		"repository": "go-service",
+		"title": "Worker goroutines stuck in HTTP client",
+		"severity": "critical",
+		"expected": { "path": "handler.go", "terms": ["timeout", "Client"] }
+	},
+	{
+		"id": "go-context-17",
+		"language": "go",
+		"repository": "go-service",
+		"title": "Request cancellation does not stop work",
+		"severity": "high",
+		"expected": { "path": "handler.go", "terms": ["context.Background", "parent"] }
+	},
+	{
+		"id": "go-context-18",
+		"language": "go",
+		"repository": "go-service",
+		"title": "Work ignores caller deadline",
+		"severity": "high",
+		"expected": { "path": "handler.go", "terms": ["ctx", "shadow", "Background"] }
+	},
+	{
+		"id": "go-shift-19",
+		"language": "go",
+		"repository": "go-service",
+		"title": "Retry delay grows beyond operational window",
+		"severity": "medium",
+		"expected": { "path": "handler.go", "terms": ["shift", "cap", "attempt"] }
+	},
+	{
+		"id": "go-shift-20",
+		"language": "go",
+		"repository": "go-service",
+		"title": "Large retry attempt overflows duration",
+		"severity": "high",
+		"expected": { "path": "handler.go", "terms": ["overflow", "Duration"] }
+	}
 ]

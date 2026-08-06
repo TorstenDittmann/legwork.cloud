@@ -1,1 +1,10 @@
-{"name":"typescript-eval-service","private":true,"scripts":{"typecheck":"tsc --noEmit"},"devDependencies":{"typescript":"5.9.2"}}
+{
+	"name": "typescript-eval-service",
+	"private": true,
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"typescript": "5.9.2"
+	}
+}

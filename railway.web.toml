@@ -1,9 +1,9 @@
 [build]
 builder = "RAILPACK"
-buildCommand = "pnpm install --frozen-lockfile && pnpm --filter @oncall-ai/web build"
+buildCommand = "bun install --frozen-lockfile && bun run --filter @oncall-ai/web build"
 
 [deploy]
-startCommand = "pnpm --filter @oncall-ai/web start"
+startCommand = "bun run --filter @oncall-ai/web start"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"

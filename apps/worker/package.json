@@ -1,27 +1,28 @@
 {
-  "name": "@oncall-ai/worker",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js",
-    "dev": "tsx watch src/index.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "tsc -p tsconfig.json --noEmit"
-  },
-  "dependencies": {
-    "@oncall-ai/agent": "workspace:*",
-    "@oncall-ai/contracts": "workspace:*",
-    "@oncall-ai/db": "workspace:*",
-    "@oncall-ai/github": "workspace:*",
-    "@oncall-ai/observability": "workspace:*",
-    "@oncall-ai/sandbox": "workspace:*",
-    "@oncall-ai/security": "workspace:*",
-    "drizzle-orm": "0.45.2",
-    "railway": "3.6.0",
-    "tsx": "4.20.5",
-    "undici": "7.29.0"
-  },
-  "devDependencies": { "typescript": "5.9.2" }
+	"name": "@oncall-ai/worker",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"start": "bun dist/index.js",
+		"dev": "bun --watch src/index.ts",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"lint": "oxlint src"
+	},
+	"dependencies": {
+		"@oncall-ai/agent": "workspace:*",
+		"@oncall-ai/contracts": "workspace:*",
+		"@oncall-ai/db": "workspace:*",
+		"@oncall-ai/github": "workspace:*",
+		"@oncall-ai/observability": "workspace:*",
+		"@oncall-ai/sandbox": "workspace:*",
+		"@oncall-ai/security": "workspace:*",
+		"drizzle-orm": "0.45.2",
+		"railway": "3.6.0",
+		"undici": "7.29.0"
+	},
+	"devDependencies": {
+		"typescript": "5.9.2"
+	}
 }

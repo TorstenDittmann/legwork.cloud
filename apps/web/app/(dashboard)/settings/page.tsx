@@ -1,21 +1,204 @@
 import { WorkOS } from "@workos-inc/node";
 import { and, desc, eq, gte, sql, sum } from "drizzle-orm";
 import { requireTenant } from "@oncall-ai/auth";
-import { auditEvents, createDatabase, organizations, serviceApiKeys, services, usageEvents } from "@oncall-ai/db";
+import {
+	auditEvents,
+	createDatabase,
+	organizations,
+	serviceApiKeys,
+	services,
+	usageEvents,
+} from "@oncall-ai/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { changeMemberRole, inviteMember, removeMember } from "./actions";
 
 export default async function SettingsPage() {
-  const tenant = await requireTenant(); const db = createDatabase(); const month = new Date(); month.setUTCDate(1); month.setUTCHours(0,0,0,0);
-  const [[organization], [usage], keys, audits] = await Promise.all([
-    db.select().from(organizations).where(eq(organizations.id, tenant.organizationId)).limit(1),
-    db.select({ analyses: sum(usageEvents.analyses).mapWith(Number), tokens: sum(sql<number>`${usageEvents.actualInputTokens}+${usageEvents.actualOutputTokens}+${usageEvents.reservedTokens}`).mapWith(Number) }).from(usageEvents).where(and(eq(usageEvents.organizationId, tenant.organizationId), gte(usageEvents.createdAt, month))),
-    db.select({ serviceName: services.name, prefix: serviceApiKeys.prefix, lastUsedAt: serviceApiKeys.lastUsedAt }).from(serviceApiKeys).innerJoin(services, eq(services.id, serviceApiKeys.serviceId)).where(and(eq(serviceApiKeys.organizationId, tenant.organizationId), eq(serviceApiKeys.active, true))),
-    db.select().from(auditEvents).where(and(eq(auditEvents.organizationId, tenant.organizationId), gte(auditEvents.createdAt, month))).orderBy(desc(auditEvents.createdAt)).limit(50),
-  ]);
-  let memberships: Awaited<ReturnType<WorkOS["userManagement"]["listOrganizationMemberships"]>>["data"] = []; let invitations: Awaited<ReturnType<WorkOS["userManagement"]["listInvitations"]>>["data"] = [];
-  if (tenant.role === "admin" && process.env.WORKOS_API_KEY) { const workos = new WorkOS(process.env.WORKOS_API_KEY); [memberships, invitations] = await Promise.all([workos.userManagement.listOrganizationMemberships({ organizationId: tenant.workosOrganizationId }).then((result) => result.data), workos.userManagement.listInvitations({ organizationId: tenant.workosOrganizationId }).then((result) => result.data)]); }
-  return <><p className="font-mono text-xs uppercase tracking-widest text-cyan-400">Organization</p><h1 className="mt-2 text-3xl font-semibold text-white">Settings</h1><div className="mt-8 grid gap-5 lg:grid-cols-2"><Card><CardHeader><CardTitle>Monthly usage</CardTitle></CardHeader><CardContent><p className="text-sm text-slate-400">{usage?.analyses??0} / {organization?.monthlyAnalysisQuota??50} analyses</p><div className="mt-2 h-2 rounded bg-slate-800"><div className="h-2 rounded bg-cyan-400" style={{width:`${Math.min(100,((usage?.analyses??0)/(organization?.monthlyAnalysisQuota??50))*100)}%`}} /></div><p className="mt-4 text-sm text-slate-400">{(usage?.tokens??0).toLocaleString()} / {(organization?.monthlyTokenQuota??5_000_000).toLocaleString()} model tokens</p></CardContent></Card><Card><CardHeader><CardTitle>Active API keys</CardTitle></CardHeader><CardContent className="space-y-3">{keys.map((key)=><div key={`${key.serviceName}:${key.prefix}`} className="text-sm"><span className="text-slate-300">{key.serviceName}</span><code className="ml-3 text-xs text-slate-500">{key.prefix}…</code></div>)}</CardContent></Card></div>{tenant.role==="admin"&&<section className="mt-10"><h2 className="mb-4 text-xl font-semibold text-white">Members and invitations</h2><form action={inviteMember} className="mb-4 flex max-w-xl gap-2"><Input name="email" type="email" required placeholder="teammate@example.com"/><select name="role" className="rounded border border-slate-700 bg-slate-950 px-3 text-sm"><option value="member">Member</option><option value="admin">Admin</option></select><Button type="submit">Invite</Button></form><Card><CardContent className="divide-y divide-slate-800 pt-6">{memberships.map((membership)=><div key={membership.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"><span className="font-mono text-xs text-slate-400">{membership.userId}</span><div className="flex gap-2"><form action={changeMemberRole}><input type="hidden" name="membershipId" value={membership.id}/><select name="role" defaultValue={membership.role.slug} className="h-8 rounded border border-slate-700 bg-slate-950 px-2 text-xs"><option value="member">Member</option><option value="admin">Admin</option></select><Button type="submit" size="sm" variant="ghost">Update</Button></form><form action={removeMember}><input type="hidden" name="membershipId" value={membership.id}/><input type="hidden" name="userId" value={membership.userId}/><Button type="submit" size="sm" variant="destructive">Remove</Button></form></div></div>)}{invitations.filter((invitation)=>invitation.state==="pending").map((invitation)=><div key={invitation.id} className="flex justify-between py-3 text-sm text-slate-400"><span>{invitation.email}</span><span>invited · {invitation.roleSlug}</span></div>)}</CardContent></Card></section>}<section className="mt-10"><h2 className="mb-4 text-xl font-semibold text-white">Audit events</h2><Card><CardContent className="divide-y divide-slate-800 pt-6">{audits.map((event)=><div key={event.id} className="flex justify-between py-3 text-sm"><span className="text-slate-300">{event.action}</span><span className="text-slate-600">{event.createdAt.toLocaleString()}</span></div>)}</CardContent></Card></section><p className="mt-10 max-w-3xl text-xs leading-5 text-slate-500">Selected incident context and requested code excerpts are processed through OpenRouter and its routed model provider under enforced zero-data-retention and data-collection-denied routing. Active incident data expires after 30 days. Backup-aging claims remain provisional until the deployed Turso backup policy is verified.</p></>;
+	const tenant = await requireTenant();
+	const db = createDatabase();
+	const month = new Date();
+	month.setUTCDate(1);
+	month.setUTCHours(0, 0, 0, 0);
+	const [[organization], [usage], keys, audits] = await Promise.all([
+		db.select().from(organizations).where(eq(organizations.id, tenant.organizationId)).limit(1),
+		db
+			.select({
+				analyses: sum(usageEvents.analyses).mapWith(Number),
+				tokens: sum(
+					sql<number>`${usageEvents.actualInputTokens}+${usageEvents.actualOutputTokens}+${usageEvents.reservedTokens}`,
+				).mapWith(Number),
+			})
+			.from(usageEvents)
+			.where(
+				and(
+					eq(usageEvents.organizationId, tenant.organizationId),
+					gte(usageEvents.createdAt, month),
+				),
+			),
+		db
+			.select({
+				serviceName: services.name,
+				prefix: serviceApiKeys.prefix,
+				lastUsedAt: serviceApiKeys.lastUsedAt,
+			})
+			.from(serviceApiKeys)
+			.innerJoin(services, eq(services.id, serviceApiKeys.serviceId))
+			.where(
+				and(
+					eq(serviceApiKeys.organizationId, tenant.organizationId),
+					eq(serviceApiKeys.active, true),
+				),
+			),
+		db
+			.select()
+			.from(auditEvents)
+			.where(
+				and(
+					eq(auditEvents.organizationId, tenant.organizationId),
+					gte(auditEvents.createdAt, month),
+				),
+			)
+			.orderBy(desc(auditEvents.createdAt))
+			.limit(50),
+	]);
+	let memberships: Awaited<
+		ReturnType<WorkOS["userManagement"]["listOrganizationMemberships"]>
+	>["data"] = [];
+	let invitations: Awaited<ReturnType<WorkOS["userManagement"]["listInvitations"]>>["data"] = [];
+	if (tenant.role === "admin" && process.env.WORKOS_API_KEY) {
+		const workos = new WorkOS(process.env.WORKOS_API_KEY);
+		[memberships, invitations] = await Promise.all([
+			workos.userManagement
+				.listOrganizationMemberships({ organizationId: tenant.workosOrganizationId })
+				.then((result) => result.data),
+			workos.userManagement
+				.listInvitations({ organizationId: tenant.workosOrganizationId })
+				.then((result) => result.data),
+		]);
+	}
+	return (
+		<>
+			<p className="font-mono text-xs uppercase tracking-widest text-cyan-400">Organization</p>
+			<h1 className="mt-2 text-3xl font-semibold text-white">Settings</h1>
+			<div className="mt-8 grid gap-5 lg:grid-cols-2">
+				<Card>
+					<CardHeader>
+						<CardTitle>Monthly usage</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<p className="text-sm text-slate-400">
+							{usage?.analyses ?? 0} / {organization?.monthlyAnalysisQuota ?? 50} analyses
+						</p>
+						<div className="mt-2 h-2 rounded bg-slate-800">
+							<div
+								className="h-2 rounded bg-cyan-400"
+								style={{
+									width: `${Math.min(100, ((usage?.analyses ?? 0) / (organization?.monthlyAnalysisQuota ?? 50)) * 100)}%`,
+								}}
+							/>
+						</div>
+						<p className="mt-4 text-sm text-slate-400">
+							{(usage?.tokens ?? 0).toLocaleString()} /{" "}
+							{(organization?.monthlyTokenQuota ?? 5_000_000).toLocaleString()} model tokens
+						</p>
+					</CardContent>
+				</Card>
+				<Card>
+					<CardHeader>
+						<CardTitle>Active API keys</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-3">
+						{keys.map((key) => (
+							<div key={`${key.serviceName}:${key.prefix}`} className="text-sm">
+								<span className="text-slate-300">{key.serviceName}</span>
+								<code className="ml-3 text-xs text-slate-500">{key.prefix}…</code>
+							</div>
+						))}
+					</CardContent>
+				</Card>
+			</div>
+			{tenant.role === "admin" && (
+				<section className="mt-10">
+					<h2 className="mb-4 text-xl font-semibold text-white">Members and invitations</h2>
+					<form action={inviteMember} className="mb-4 flex max-w-xl gap-2">
+						<Input name="email" type="email" required placeholder="teammate@example.com" />
+						<select
+							name="role"
+							className="rounded border border-slate-700 bg-slate-950 px-3 text-sm"
+						>
+							<option value="member">Member</option>
+							<option value="admin">Admin</option>
+						</select>
+						<Button type="submit">Invite</Button>
+					</form>
+					<Card>
+						<CardContent className="divide-y divide-slate-800 pt-6">
+							{memberships.map((membership) => (
+								<div
+									key={membership.id}
+									className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
+								>
+									<span className="font-mono text-xs text-slate-400">{membership.userId}</span>
+									<div className="flex gap-2">
+										<form action={changeMemberRole}>
+											<input type="hidden" name="membershipId" value={membership.id} />
+											<select
+												name="role"
+												defaultValue={membership.role.slug}
+												className="h-8 rounded border border-slate-700 bg-slate-950 px-2 text-xs"
+											>
+												<option value="member">Member</option>
+												<option value="admin">Admin</option>
+											</select>
+											<Button type="submit" size="sm" variant="ghost">
+												Update
+											</Button>
+										</form>
+										<form action={removeMember}>
+											<input type="hidden" name="membershipId" value={membership.id} />
+											<input type="hidden" name="userId" value={membership.userId} />
+											<Button type="submit" size="sm" variant="destructive">
+												Remove
+											</Button>
+										</form>
+									</div>
+								</div>
+							))}
+							{invitations
+								.filter((invitation) => invitation.state === "pending")
+								.map((invitation) => (
+									<div
+										key={invitation.id}
+										className="flex justify-between py-3 text-sm text-slate-400"
+									>
+										<span>{invitation.email}</span>
+										<span>invited · {invitation.roleSlug}</span>
+									</div>
+								))}
+						</CardContent>
+					</Card>
+				</section>
+			)}
+			<section className="mt-10">
+				<h2 className="mb-4 text-xl font-semibold text-white">Audit events</h2>
+				<Card>
+					<CardContent className="divide-y divide-slate-800 pt-6">
+						{audits.map((event) => (
+							<div key={event.id} className="flex justify-between py-3 text-sm">
+								<span className="text-slate-300">{event.action}</span>
+								<span className="text-slate-600">{event.createdAt.toLocaleString()}</span>
+							</div>
+						))}
+					</CardContent>
+				</Card>
+			</section>
+			<p className="mt-10 max-w-3xl text-xs leading-5 text-slate-500">
+				Selected incident context and requested code excerpts are processed through OpenRouter and
+				its routed model provider under enforced zero-data-retention and data-collection-denied
+				routing. Active incident data expires after 30 days. Backup-aging claims remain provisional
+				until the deployed Turso backup policy is verified.
+			</p>
+		</>
+	);
 }

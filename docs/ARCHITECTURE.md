@@ -27,21 +27,21 @@ Vendor behavior is contained behind these conceptual interfaces:
 
 ```ts
 interface SandboxProvider {
-  create(run: RunContext): Promise<SandboxHandle>;
-  upload(handle: SandboxHandle, files: AsyncIterable<SourceFile>): Promise<void>;
-  inspect(handle: SandboxHandle, operation: InspectionOperation): Promise<ToolResult>;
-  runCheck(handle: SandboxHandle, check: CheckRequest): Promise<ToolResult>;
-  destroy(handle: SandboxHandle): Promise<void>;
+	create(run: RunContext): Promise<SandboxHandle>;
+	upload(handle: SandboxHandle, files: AsyncIterable<SourceFile>): Promise<void>;
+	inspect(handle: SandboxHandle, operation: InspectionOperation): Promise<ToolResult>;
+	runCheck(handle: SandboxHandle, check: CheckRequest): Promise<ToolResult>;
+	destroy(handle: SandboxHandle): Promise<void>;
 }
 
 interface ModelProvider {
-  continueAgent(input: AgentTurn): Promise<AgentTurnResult>;
-  createDiagnosis(input: FinalDiagnosisInput): Promise<Diagnosis>;
+	continueAgent(input: AgentTurn): Promise<AgentTurnResult>;
+	createDiagnosis(input: FinalDiagnosisInput): Promise<Diagnosis>;
 }
 
 interface SourceProvider {
-  resolveRevision(repositoryId: string, requestedSha?: string): Promise<string>;
-  streamArchive(repositoryId: string, sha: string): Promise<ReadableStream>;
+	resolveRevision(repositoryId: string, requestedSha?: string): Promise<string>;
+	streamArchive(repositoryId: string, sha: string): Promise<ReadableStream>;
 }
 ```
 
