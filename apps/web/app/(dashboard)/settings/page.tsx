@@ -93,7 +93,7 @@ export default async function SettingsPage() {
 						<CardTitle>Monthly usage</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<p className="text-sm tabular-nums text-[var(--ink-muted)]">
+						<p className="text-sm tabular-nums text-ink-muted">
 							{usage?.analyses ?? 0} / {organization?.monthlyAnalysisQuota ?? 50} analyses
 						</p>
 						<div
@@ -102,16 +102,16 @@ export default async function SettingsPage() {
 							aria-valuemin={0}
 							aria-valuemax={organization?.monthlyAnalysisQuota ?? 50}
 							aria-valuenow={usage?.analyses ?? 0}
-							className="mt-2 h-1 bg-[var(--rule)]"
+							className="mt-2 h-1 bg-rule"
 						>
 							<div
-								className="h-1 bg-[var(--accent)]"
+								className="h-1 bg-accent"
 								style={{
 									width: `${Math.min(100, ((usage?.analyses ?? 0) / (organization?.monthlyAnalysisQuota ?? 50)) * 100)}%`,
 								}}
 							/>
 						</div>
-						<p className="mt-4 text-sm tabular-nums text-[var(--ink-muted)]">
+						<p className="mt-4 text-sm tabular-nums text-ink-muted">
 							{new Intl.NumberFormat("en").format(usage?.tokens ?? 0)} /{" "}
 							{new Intl.NumberFormat("en").format(organization?.monthlyTokenQuota ?? 5_000_000)}{" "}
 							model tokens
@@ -125,8 +125,8 @@ export default async function SettingsPage() {
 					<CardContent className="space-y-3">
 						{keys.map((key) => (
 							<div key={`${key.serviceName}:${key.prefix}`} className="text-sm">
-								<span className="text-[var(--ink-muted)]">{key.serviceName}</span>
-								<code translate="no" className="ml-3 text-xs text-[var(--ink-faint)]">
+								<span className="text-ink-muted">{key.serviceName}</span>
+								<code translate="no" className="ml-3 text-xs text-ink-faint">
 									{key.prefix}…
 								</code>
 							</div>
@@ -160,13 +160,13 @@ export default async function SettingsPage() {
 						</Button>
 					</form>
 					<Card>
-						<CardContent className="divide-y divide-[var(--rule)] pt-6">
+						<CardContent className="divide-y divide-rule pt-6">
 							{memberships.map((membership) => (
 								<div
 									key={membership.id}
 									className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
 								>
-									<span translate="no" className="font-mono text-xs text-[var(--ink-muted)]">
+									<span translate="no" className="font-mono text-xs text-ink-muted">
 										{membership.userId}
 									</span>
 									<div className="flex gap-2">
@@ -175,7 +175,7 @@ export default async function SettingsPage() {
 											<select
 												name="role"
 												defaultValue={membership.role.slug}
-												className="h-8 rounded-[3px] border border-[var(--rule-strong)] bg-[var(--canvas)] px-2 text-xs"
+												className="h-8 rounded-[3px] border border-rule-strong bg-surface px-2 text-xs"
 											>
 												<option value="member">Member</option>
 												<option value="admin">Admin</option>
@@ -199,7 +199,7 @@ export default async function SettingsPage() {
 								.map((invitation) => (
 									<div
 										key={invitation.id}
-										className="flex justify-between py-3 text-sm text-[var(--ink-muted)]"
+										className="flex justify-between py-3 text-sm text-ink-muted"
 									>
 										<span>{invitation.email}</span>
 										<span>invited · {invitation.roleSlug}</span>
@@ -212,11 +212,11 @@ export default async function SettingsPage() {
 			<section className="mt-10">
 				<SectionHeader>Audit Events</SectionHeader>
 				<Card>
-					<CardContent className="divide-y divide-[var(--rule)] pt-6">
+					<CardContent className="divide-y divide-rule pt-6">
 						{audits.map((event) => (
 							<div key={event.id} className="flex justify-between py-3 text-sm">
-								<span className="text-[var(--ink-muted)]">{event.action}</span>
-								<time className="font-mono text-[10px] text-[var(--ink-faint)]">
+								<span className="text-ink-muted">{event.action}</span>
+								<time className="font-mono text-[10px] text-ink-faint">
 									{new Intl.DateTimeFormat("en", {
 										dateStyle: "medium",
 										timeStyle: "short",
@@ -230,7 +230,7 @@ export default async function SettingsPage() {
 					<EmptyState title="No Audit Events">Organization changes will appear here.</EmptyState>
 				)}
 			</section>
-			<p className="mt-10 max-w-3xl border-t border-[var(--rule)] pt-6 text-xs leading-5 text-[var(--ink-faint)]">
+			<p className="mt-10 max-w-3xl border-t border-rule pt-6 text-xs leading-5 text-ink-faint">
 				Selected incident context and requested code excerpts are processed through OpenRouter and
 				its routed model provider. Provider privacy filtering is deferred for the MVP. Active
 				incident data expires after 30 days. Operational state is stored in the organization-scoped

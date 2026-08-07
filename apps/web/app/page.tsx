@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Check, LockKeyhole, TimerReset } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 const capabilities = [
@@ -17,31 +18,31 @@ const security = [
 export default function LandingPage() {
 	return (
 		<main className="min-h-screen">
-			<nav
-				aria-label="Main"
-				className="mx-auto flex max-w-[1240px] items-center justify-between border-b border-[var(--rule)] px-5 py-5 sm:px-8"
-			>
-				<Link href="/" className="font-display text-xl">
-					OnCall <i className="font-normal text-[var(--accent)]">AI</i>
-				</Link>
-				<Button asChild variant="outline" size="sm">
-					<Link href="/sign-in">Sign In</Link>
-				</Button>
+			<nav aria-label="Main" className="border-b border-rule bg-surface">
+				<div className="mx-auto flex max-w-[1240px] items-center justify-between px-5 py-4 sm:px-8">
+					<Link href="/" className="font-display text-lg font-semibold tracking-[-0.01em]">
+						OnCall <span className="text-accent">AI</span>
+					</Link>
+					<Button asChild variant="outline" size="sm">
+						<Link href="/sign-in">Sign In</Link>
+					</Button>
+				</div>
 			</nav>
-			<section className="journal-grid border-b border-[var(--rule)]">
-				<div className="mx-auto grid max-w-[1240px] lg:grid-cols-[1.05fr_.95fr]">
-					<div className="px-5 py-20 sm:px-8 sm:py-28 lg:border-r lg:border-[var(--rule)] lg:py-36">
-						<p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--accent)]">
+			<section className="journal-grid border-b border-rule">
+				<div className="mx-auto grid max-w-[1240px] items-center gap-12 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[1.05fr_.95fr] lg:py-28">
+					<div>
+						<Badge tone="live">
+							<span aria-hidden="true" className="size-1 bg-current" />
 							Read-only incident intelligence
-						</p>
-						<h1 className="mt-6 max-w-3xl font-display text-pretty text-6xl font-medium leading-[.94] tracking-[-.045em] sm:text-7xl xl:text-[92px]">
+						</Badge>
+						<h1 className="mt-6 max-w-3xl font-display text-pretty text-5xl font-semibold leading-[0.98] tracking-[-0.03em] text-ink sm:text-6xl xl:text-[80px]">
 							A diagnosis your on-call can verify.
 						</h1>
-						<p className="mt-7 max-w-xl text-base leading-7 text-[var(--ink-muted)] sm:text-lg">
+						<p className="mt-6 max-w-xl text-base leading-7 text-ink-muted sm:text-lg">
 							Inspect exact source snapshots in isolated sandboxes. Return the root cause, the
 							evidence, and the limits—without touching production.
 						</p>
-						<div className="mt-9 flex flex-wrap gap-3">
+						<div className="mt-8 flex flex-wrap gap-3">
 							<Button asChild size="lg">
 								<Link href="/onboarding">
 									Get Started <ArrowRight aria-hidden="true" className="size-4" />
@@ -52,91 +53,102 @@ export default function LandingPage() {
 							</Button>
 						</div>
 					</div>
-					<div className="flex items-center px-5 py-12 sm:px-8 lg:py-24">
-						<article className="w-full border border-[var(--rule-strong)] bg-[var(--canvas)]">
-							<header className="flex items-center justify-between border-b border-[var(--rule)] px-4 py-3">
-								<span className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-faint)]">
-									Investigation record / 0427
-								</span>
-								<span className="inline-flex items-center gap-2 font-mono text-[10px] text-[var(--success)]">
-									<span className="size-1.5 bg-[var(--success)]" />
-									VERIFIED
-								</span>
-							</header>
-							<div className="p-5 sm:p-7">
-								<p className="font-mono text-[10px] text-[var(--high)]">HIGH · PAYMENT API</p>
-								<h2 className="mt-3 font-display text-3xl leading-tight">
-									Concurrent cache eviction interrupts active archive reads
-								</h2>
-								<p className="mt-5 border-l-2 border-[var(--accent)] pl-4 text-sm leading-6 text-[var(--ink-muted)]">
-									The clear path removes the content-addressed store without coordinating with
-									active readers.
+					<article className="w-full rounded-[4px] border border-rule bg-surface shadow-[0_16px_40px_-16px_rgba(23,26,32,0.2),0_2px_6px_rgba(23,26,32,0.05)]">
+						<header className="flex items-center justify-between border-b border-rule px-4 py-3">
+							<span className="font-mono text-[10px] uppercase tracking-[0.08em] text-ink-faint">
+								Investigation record / 0427
+							</span>
+							<Badge tone="success">
+								<span aria-hidden="true" className="size-1 bg-current" />
+								Verified
+							</Badge>
+						</header>
+						<div className="p-5 sm:p-7">
+							<p className="font-mono text-[10px] uppercase tracking-[0.08em] text-high">
+								High · Payment API
+							</p>
+							<h2 className="mt-3 font-display text-2xl font-semibold leading-tight tracking-[-0.01em]">
+								Concurrent cache eviction interrupts active archive reads
+							</h2>
+							<p className="mt-4 border-l-2 border-accent pl-4 text-sm leading-6 text-ink-muted">
+								The clear path removes the content-addressed store without coordinating with
+								active readers.
+							</p>
+							<div className="mt-6 overflow-hidden rounded-[3px] border border-rule">
+								<p className="border-b border-rule bg-surface px-3 py-2 font-mono text-[10px] text-accent">
+									E-01 · internal/cache/layers.go:94–107
 								</p>
-								<div className="mt-7 border-y border-[var(--rule)] py-4 font-mono text-[11px] text-[var(--ink-faint)]">
-									<p>internal/cache/layers.go:94–107</p>
-									<p className="mt-2 text-[var(--ink-muted)]">
-										if err := os.RemoveAll(dir); err != nil &#123;
-									</p>
-								</div>
-								<div className="mt-5 grid grid-cols-2 gap-4 text-[10px]">
-									<div>
-										<p className="font-mono uppercase text-[var(--ink-faint)]">Revision</p>
-										<p className="mt-1 truncate font-mono">0fab160216e8</p>
-									</div>
-									<div>
-										<p className="font-mono uppercase text-[var(--ink-faint)]">Sandbox</p>
-										<p className="mt-1 text-[var(--success)]">Destroyed</p>
-									</div>
-								</div>
+								<pre
+									translate="no"
+									className="bg-surface-raised px-3 py-2.5 font-mono text-[11px] leading-5 text-ink-muted"
+								>
+									if err := os.RemoveAll(dir); err != nil &#123;
+								</pre>
 							</div>
-						</article>
-					</div>
-				</div>
-			</section>
-			<section className="mx-auto max-w-[1240px] px-5 py-20 sm:px-8">
-				<p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--accent)]">
-					The operating model
-				</p>
-				<div className="mt-8 border-t border-[var(--rule)]">
-					{capabilities.map(([n, title, copy]) => (
-						<div
-							key={n}
-							className="grid gap-3 border-b border-[var(--rule)] py-6 sm:grid-cols-[60px_220px_1fr]"
-						>
-							<span className="font-mono text-xs text-[var(--ink-faint)]">{n}</span>
-							<h2 className="font-display text-2xl">{title}</h2>
-							<p className="max-w-xl text-sm leading-6 text-[var(--ink-muted)]">{copy}</p>
+							<dl className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-[3px] border border-rule bg-rule">
+								<div className="bg-surface px-3 py-2.5">
+									<dt className="font-mono text-[9px] uppercase tracking-[0.08em] text-ink-faint">
+										Revision
+									</dt>
+									<dd className="mt-1 truncate font-mono text-xs text-ink" translate="no">
+										0fab160216e8
+									</dd>
+								</div>
+								<div className="bg-surface px-3 py-2.5">
+									<dt className="font-mono text-[9px] uppercase tracking-[0.08em] text-ink-faint">
+										Sandbox
+									</dt>
+									<dd className="mt-1 font-mono text-xs text-success">Destroyed</dd>
+								</div>
+							</dl>
 						</div>
-					))}
+					</article>
 				</div>
 			</section>
-			<section className="border-y border-[var(--rule)] bg-[var(--surface)]">
-				<div className="mx-auto grid max-w-[1240px] gap-10 px-5 py-20 sm:px-8 lg:grid-cols-2">
+			<section className="mx-auto max-w-[1240px] px-5 py-16 sm:px-8 sm:py-20">
+				<div className="flex flex-wrap items-baseline justify-between gap-4">
+					<h2 className="font-display text-2xl font-semibold tracking-[-0.01em]">
+						The operating model
+					</h2>
+					<span className="font-mono text-[10px] uppercase tracking-[0.08em] text-ink-faint">
+						Four-step pipeline
+					</span>
+				</div>
+				<ol className="mt-6 grid gap-px overflow-hidden rounded-[4px] border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-4">
+					{capabilities.map(([n, title, copy]) => (
+						<li key={n} className="bg-surface p-5">
+							<span className="font-mono text-[10px] text-accent">{n}</span>
+							<h3 className="mt-3 font-display text-lg font-semibold tracking-[-0.01em]">{title}</h3>
+							<p className="mt-2 text-sm leading-6 text-ink-muted">{copy}</p>
+						</li>
+					))}
+				</ol>
+			</section>
+			<section className="border-y border-rule bg-surface">
+				<div className="mx-auto grid max-w-[1240px] gap-10 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-2">
 					<div>
-						<p className="font-mono text-[10px] uppercase tracking-[.18em] text-[var(--accent)]">
-							Security boundary
-						</p>
-						<h2 className="mt-4 font-display text-4xl">Evidence in. Nothing out.</h2>
-						<p className="mt-4 max-w-lg text-sm leading-6 text-[var(--ink-muted)]">
+						<h2 className="font-display text-3xl font-semibold tracking-[-0.02em]">
+							Evidence in. Nothing out.
+						</h2>
+						<p className="mt-4 max-w-lg text-sm leading-6 text-ink-muted">
 							Repository commands run with no DNS, HTTP, HTTPS, private-network, or metadata access.
 							Sandboxes are temporary; installation credentials remain worker-only.
 						</p>
 					</div>
-					<div className="space-y-4 text-sm">
+					<ul className="divide-y divide-rule self-start rounded-[4px] border border-rule">
 						{security.map(([Icon, label]) => (
-							<div
-								key={label}
-								className="flex items-center gap-3 border-b border-[var(--rule)] pb-4"
-							>
-								<Icon aria-hidden="true" className="size-4 text-[var(--accent)]" />
-								<span>{label}</span>
-							</div>
+							<li key={label} className="flex items-center gap-3 px-4 py-4 text-sm">
+								<Icon aria-hidden="true" className="size-4 text-accent" />
+								{label}
+							</li>
 						))}
-					</div>
+					</ul>
 				</div>
 			</section>
 			<footer className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-5 px-5 py-12 sm:px-8">
-				<p className="font-display text-3xl">Build a record, not a guess.</p>
+				<p className="font-display text-2xl font-semibold tracking-[-0.01em]">
+					Build a record, not a guess.
+				</p>
 				<Button asChild>
 					<Link href="/onboarding">
 						Get Started <ArrowRight aria-hidden="true" className="size-4" />

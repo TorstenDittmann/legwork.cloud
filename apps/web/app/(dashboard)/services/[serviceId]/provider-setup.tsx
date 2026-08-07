@@ -34,9 +34,9 @@ export function ProviderSetup({
 					<Input id="integration-name" name="name" required />
 				</Field>
 				<Button disabled={pending}>{pending ? "Creating…" : "Create webhook"}</Button>
-				{state.error && <p className="text-sm text-[var(--danger)]">{state.error}</p>}
+				{state.error && <p className="text-sm text-danger">{state.error}</p>}
 				{state.webhookUrl && (
-					<div className="border border-[var(--rule)] p-3 text-xs">
+					<div className="border border-rule p-3 text-xs">
 						<p className="font-semibold">Copy these now. The secret will not be shown again.</p>
 						<p className="mt-2 break-all font-mono">URL: {state.webhookUrl}</p>
 						<p className="mt-2 break-all font-mono">Secret: {state.secret}</p>
@@ -55,7 +55,7 @@ export function ProviderSetup({
 						))}
 					</Select>
 				</Field>
-				<p className="text-xs text-[var(--ink-muted)]">
+				<p className="text-xs text-ink-muted">
 					Binding enables only the connection’s verified read capabilities. One enabled connection
 					per provider is retained.
 				</p>

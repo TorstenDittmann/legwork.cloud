@@ -43,11 +43,11 @@ export default async function ConnectionsPage() {
 									}
 								/>
 							</div>
-							<p className="text-[var(--ink-muted)]">{connection.baseUrl}</p>
-							<p className="text-[var(--ink-muted)]">
+							<p className="text-ink-muted">{connection.baseUrl}</p>
+							<p className="text-ink-muted">
 								Capabilities: {connection.capabilities.join(", ") || "none"}
 							</p>
-							<p className="text-xs text-[var(--ink-faint)]">
+							<p className="text-xs text-ink-faint">
 								{connection.lastVerifiedAt
 									? `Verified ${connection.lastVerifiedAt.toLocaleString()}`
 									: (connection.lastVerificationError ?? "Not verified")}

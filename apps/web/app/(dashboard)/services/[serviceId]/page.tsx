@@ -122,16 +122,16 @@ export default async function ServiceDetail({
 					<CardHeader>
 						<CardTitle>Ingestion</CardTitle>
 					</CardHeader>
-					<CardContent className="space-y-2 text-sm text-[var(--ink-muted)]">
+					<CardContent className="space-y-2 text-sm text-ink-muted">
 						<p>
 							Slug:{" "}
-							<code translate="no" className="text-[var(--ink)]">
+							<code translate="no" className="text-ink">
 								{row.service.slug}
 							</code>
 						</p>
 						<p>
 							Active key:{" "}
-							<code translate="no" className="text-[var(--ink)]">
+							<code translate="no" className="text-ink">
 								{row.keyPrefix}…
 							</code>
 						</p>
@@ -145,7 +145,7 @@ export default async function ServiceDetail({
 					<CardHeader>
 						<CardTitle>Repositories</CardTitle>
 					</CardHeader>
-					<CardContent className="space-y-2 text-sm text-[var(--ink-muted)]">
+					<CardContent className="space-y-2 text-sm text-ink-muted">
 						{mappings.map((mapping) => (
 							<p key={mapping.repositoryId}>
 								<Badge>{mapping.role}</Badge> <span className="ml-2">{mapping.fullName}</span>
@@ -160,7 +160,7 @@ export default async function ServiceDetail({
 						<CardTitle>Provider integrations</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="mb-5 grid gap-2 text-sm text-[var(--ink-muted)]">
+						<div className="mb-5 grid gap-2 text-sm text-ink-muted">
 							{alertRows.map((integration) => (
 								<p key={integration.id}>
 									{integration.name} · {integration.provider} webhook ·{" "}

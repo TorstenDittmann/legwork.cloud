@@ -77,47 +77,46 @@ export default async function DashboardPage() {
 					</Button>
 				}
 			/>
-			<div className="mt-7 grid border-y border-[var(--rule)] sm:grid-cols-3">
+			<dl className="mt-7 grid gap-px overflow-hidden rounded-[4px] border border-rule bg-rule sm:grid-cols-3">
 				{[
 					["Services", serviceCount?.value ?? 0],
 					["Incidents this month", incidentCount?.value ?? 0],
 					["Active analyses", activeCount?.value ?? 0],
-				].map(([label, value], index) => (
-					<div
-						key={label}
-						className={`py-5 sm:px-6 ${index ? "sm:border-l sm:border-[var(--rule)]" : ""}`}
-					>
-						<p className="font-mono text-[10px] uppercase tracking-wider text-[var(--ink-faint)]">
+				].map(([label, value]) => (
+					<div key={label} className="bg-surface px-5 py-4">
+						<dt className="font-mono text-[10px] uppercase tracking-[0.08em] text-ink-faint">
 							{label}
-						</p>
-						<p className="mt-2 font-display text-4xl tabular-nums">{value}</p>
+						</dt>
+						<dd className="mt-2 font-display text-3xl font-semibold tabular-nums tracking-[-0.01em]">
+							{value}
+						</dd>
 					</div>
 				))}
-			</div>
+			</dl>
 			<section className="mt-12">
 				<SectionHeader meta={`${recent.length} records`}>Recent Incidents</SectionHeader>
 				{recent.length ? (
-					<div>
+					<div className="rounded-[4px] border border-rule bg-surface shadow-[0_1px_2px_rgba(23,26,32,0.04)]">
 						{recent.map(({ incident, serviceName }) => {
 							const run = recentRuns.find((candidate) => candidate.incidentId === incident.id);
 							return (
 								<Link
 									key={incident.id}
 									href={`/incidents/${incident.id}`}
-									className="grid gap-3 border-b border-[var(--rule)] py-4 hover:bg-[var(--surface)] sm:grid-cols-[100px_minmax(0,1fr)_140px_120px] sm:px-2"
+									className="grid gap-3 border-b border-rule px-4 py-4 last:border-0 hover:bg-surface-raised/60 sm:grid-cols-[100px_minmax(0,1fr)_140px_120px] sm:items-center"
 								>
 									<SeverityMark severity={incident.severity} />
 									<div className="min-w-0">
-										<p className="truncate text-sm text-[var(--ink)]">{incident.title}</p>
-										<p className="mt-1 text-xs text-[var(--ink-faint)]">{serviceName}</p>
+										<p className="truncate text-sm font-medium text-ink">{incident.title}</p>
+										<p className="mt-1 text-xs text-ink-faint">{serviceName}</p>
 									</div>
-									<time className="font-mono text-[10px] text-[var(--ink-faint)]">
+									<time className="font-mono text-[10px] tabular-nums text-ink-faint">
 										{new Intl.DateTimeFormat("en", {
 											dateStyle: "medium",
 											timeStyle: "short",
 										}).format(incident.occurredAt)}
 									</time>
-									<StatusMark status={run?.status ?? "queued"} />
+									<StatusMark status={run?.status ?? "queued"} className="justify-self-start" />
 								</Link>
 							);
 						})}

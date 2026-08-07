@@ -31,27 +31,33 @@ export default async function RepositoriesPage() {
 					)
 				}
 			/>
-			<div className="mt-8 border-t border-[var(--rule-strong)]">
-				{rows.map((repository) => (
-					<div
-						key={repository.id}
-						className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--rule)] py-5 sm:px-2"
-					>
-						<div>
-							<p translate="no" className="font-display text-xl">
-								{repository.fullName}
-							</p>
-							<p className="mt-1 font-mono text-[10px] text-[var(--ink-faint)]">
-								default: {repository.defaultBranch}
-								{repository.removedAt ? " · removed from installation" : ""}
-							</p>
-						</div>
-						{tenant.role === "admin" && !repository.removedAt && (
-							<RepositoryToggle id={repository.id} initial={repository.selected} />
-						)}
+			<div className="mt-8">
+				{rows.length ? (
+					<div className="rounded-[4px] border border-rule bg-surface shadow-[0_1px_2px_rgba(23,26,32,0.04)]">
+						{rows.map((repository) => (
+							<div
+								key={repository.id}
+								className="flex flex-wrap items-center justify-between gap-4 border-b border-rule px-4 py-5 last:border-0"
+							>
+								<div>
+									<p
+										translate="no"
+										className="font-display text-lg font-semibold tracking-[-0.01em]"
+									>
+										{repository.fullName}
+									</p>
+									<p className="mt-1 font-mono text-[10px] text-ink-faint">
+										default: {repository.defaultBranch}
+										{repository.removedAt ? " · removed from installation" : ""}
+									</p>
+								</div>
+								{tenant.role === "admin" && !repository.removedAt && (
+									<RepositoryToggle id={repository.id} initial={repository.selected} />
+								)}
+							</div>
+						))}
 					</div>
-				))}
-				{rows.length === 0 && (
+				) : (
 					<EmptyState title="No Synchronized Repositories">
 						Connect or refresh the GitHub App installation to discover repositories.
 					</EmptyState>

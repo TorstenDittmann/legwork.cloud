@@ -78,7 +78,7 @@ export default async function IncidentsPage({
 					</Button>
 				}
 			/>
-			<form className="mt-7 grid gap-3 border-y border-[var(--rule)] py-4 md:grid-cols-6">
+			<form className="mt-7 grid gap-3 rounded-[4px] border border-rule bg-surface p-4 md:grid-cols-6">
 				<Field label="Status" htmlFor="status">
 					<Select
 						id="status"
@@ -155,43 +155,46 @@ export default async function IncidentsPage({
 				</div>
 			</form>
 			<div className="mt-6">
-				<div className="hidden grid-cols-[100px_minmax(0,1fr)_160px_160px_110px_100px] border-b border-[var(--rule-strong)] px-2 pb-2 font-mono text-[9px] uppercase tracking-wider text-[var(--ink-faint)] md:grid">
-					<span>Severity</span>
-					<span>Incident</span>
-					<span>Service</span>
-					<span>Occurred</span>
-					<span>Status</span>
-					<span>Duration</span>
-				</div>
-				{displayed.map(({ incident, serviceName, run }) => (
-					<div
-						key={incident.id}
-						className="content-auto grid gap-3 border-b border-[var(--rule)] py-4 md:grid-cols-[100px_minmax(0,1fr)_160px_160px_110px_100px] md:items-center md:px-2"
-					>
-						<SeverityMark severity={incident.severity} />
-						<div className="min-w-0">
-							<Link
-								href={`/incidents/${incident.id}`}
-								className="block truncate font-medium text-[var(--ink)] hover:text-[var(--accent)]"
-							>
-								{incident.title}
-							</Link>
+				{displayed.length ? (
+					<div className="rounded-[4px] border border-rule bg-surface shadow-[0_1px_2px_rgba(23,26,32,0.04)]">
+						<div className="hidden grid-cols-[100px_minmax(0,1fr)_160px_160px_130px_100px] gap-3 border-b border-rule-strong px-4 py-2.5 font-mono text-[9px] uppercase tracking-[0.08em] text-ink-faint md:grid">
+							<span>Severity</span>
+							<span>Incident</span>
+							<span>Service</span>
+							<span>Occurred</span>
+							<span>Status</span>
+							<span>Duration</span>
 						</div>
-						<span className="text-xs text-[var(--ink-muted)]">{serviceName}</span>
-						<time className="font-mono text-[10px] tabular-nums text-[var(--ink-faint)]">
-							{new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(
-								incident.occurredAt,
-							)}
-						</time>
-						<StatusMark status={run?.status ?? "queued"} />
-						<span className="font-mono text-[10px] tabular-nums text-[var(--ink-faint)]">
-							{run?.startedAt && run.completedAt
-								? formatDuration(run.completedAt.getTime() - run.startedAt.getTime())
-								: "—"}
-						</span>
+						{displayed.map(({ incident, serviceName, run }) => (
+							<div
+								key={incident.id}
+								className="content-auto grid gap-3 border-b border-rule px-4 py-4 last:border-0 md:grid-cols-[100px_minmax(0,1fr)_160px_160px_130px_100px] md:items-center"
+							>
+								<SeverityMark severity={incident.severity} />
+								<div className="min-w-0">
+									<Link
+										href={`/incidents/${incident.id}`}
+										className="block truncate font-medium text-ink hover:text-accent"
+									>
+										{incident.title}
+									</Link>
+								</div>
+								<span className="text-xs text-ink-muted">{serviceName}</span>
+								<time className="font-mono text-[10px] tabular-nums text-ink-faint">
+									{new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(
+										incident.occurredAt,
+									)}
+								</time>
+								<StatusMark status={run?.status ?? "queued"} className="justify-self-start" />
+								<span className="font-mono text-[10px] tabular-nums text-ink-faint">
+									{run?.startedAt && run.completedAt
+										? formatDuration(run.completedAt.getTime() - run.startedAt.getTime())
+										: "—"}
+								</span>
+							</div>
+						))}
 					</div>
-				))}
-				{displayed.length === 0 && (
+				) : (
 					<EmptyState title="No Matching Incidents">
 						Adjust the current filters or submit a new incident.
 					</EmptyState>

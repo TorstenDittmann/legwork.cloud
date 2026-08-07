@@ -121,20 +121,20 @@ export function ServiceEditor({
 				</Field>
 				<fieldset>
 					<legend className="text-xs font-medium">
-						Related Repositories <span className="text-[var(--ink-faint)]">(up to 2)</span>
+						Related Repositories <span className="text-ink-faint">(up to 2)</span>
 					</legend>
-					<div className="mt-2 grid gap-px border border-[var(--rule)] bg-[var(--rule)]">
+					<div className="mt-2 grid gap-px border border-rule bg-rule">
 						{repositories.map((repository) => (
 							<label
 								key={repository.id}
-								className="flex min-h-10 items-center gap-3 bg-[var(--canvas)] px-3 text-sm"
+								className="flex min-h-10 items-center gap-3 bg-canvas px-3 text-sm"
 							>
 								<input
 									type="checkbox"
 									name="relatedRepositoryIds"
 									value={repository.id}
 									defaultChecked={related.has(repository.id)}
-									className="size-4 accent-[var(--accent)]"
+									className="size-4 accent-accent"
 								/>
 								<span translate="no" className="min-w-0 truncate">
 									{repository.fullName}
@@ -157,7 +157,7 @@ export function ServiceEditor({
 						name="enabled"
 						type="checkbox"
 						defaultChecked={enabled}
-						className="size-4 accent-[var(--accent)]"
+						className="size-4 accent-accent"
 					/>
 					Accept new incidents
 				</label>
@@ -167,8 +167,8 @@ export function ServiceEditor({
 					{pending === "save" ? "Saving Service…" : "Save Service"}
 				</Button>
 			</form>
-			<div className="border-t border-[var(--rule)] pt-6">
-				<p className="text-sm text-[var(--ink-muted)]">
+			<div className="border-t border-rule pt-6">
+				<p className="text-sm text-ink-muted">
 					Rotating immediately revokes the current ingestion key.
 				</p>
 				<Button
@@ -181,11 +181,11 @@ export function ServiceEditor({
 					{pending === "rotate" ? "Rotating Key…" : "Rotate Ingestion Key"}
 				</Button>
 				{revealedKey && (
-					<div className="mt-4 border-l-2 border-[var(--warning)] bg-[var(--surface-raised)] p-4">
-						<p className="text-sm text-[var(--warning)]">
+					<div className="mt-4 border-l-2 border-warning bg-surface-raised p-4">
+						<p className="text-sm text-warning">
 							Copy this key now. It will not be shown again.
 						</p>
-						<code translate="no" className="mt-2 block overflow-x-auto text-xs text-[var(--ink)]">
+						<code translate="no" className="mt-2 block overflow-x-auto text-xs text-ink">
 							{revealedKey}
 						</code>
 					</div>

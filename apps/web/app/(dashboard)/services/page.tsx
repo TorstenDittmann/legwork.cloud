@@ -26,27 +26,33 @@ export default async function ServicesPage() {
 					)
 				}
 			/>
-			<div className="mt-8 border-t border-[var(--rule-strong)]">
-				{rows.map((service) => (
-					<div
-						key={service.id}
-						className="grid gap-3 border-b border-[var(--rule)] py-5 sm:grid-cols-[minmax(0,1fr)_140px] sm:items-center sm:px-2"
-					>
-						<div>
-							<Link
-								href={`/services/${service.id}`}
-								className="font-display text-xl text-[var(--ink)] hover:text-[var(--accent)]"
+			<div className="mt-8">
+				{rows.length ? (
+					<div className="rounded-[4px] border border-rule bg-surface shadow-[0_1px_2px_rgba(23,26,32,0.04)]">
+						{rows.map((service) => (
+							<div
+								key={service.id}
+								className="grid gap-3 border-b border-rule px-4 py-5 last:border-0 sm:grid-cols-[minmax(0,1fr)_140px] sm:items-center"
 							>
-								{service.name}
-							</Link>
-							<p className="mt-1 break-all font-mono text-[10px] text-[var(--ink-faint)]">
-								/api/v1/services/{service.slug}/incidents
-							</p>
-						</div>
-						<StatusMark status={service.enabled ? "enabled" : "disabled"} />
+								<div>
+									<Link
+										href={`/services/${service.id}`}
+										className="font-display text-lg font-semibold tracking-[-0.01em] text-ink hover:text-accent"
+									>
+										{service.name}
+									</Link>
+									<p className="mt-1 break-all font-mono text-[10px] text-ink-faint">
+										/api/v1/services/{service.slug}/incidents
+									</p>
+								</div>
+								<StatusMark
+									status={service.enabled ? "enabled" : "disabled"}
+									className="sm:justify-self-start"
+								/>
+							</div>
+						))}
 					</div>
-				))}
-				{rows.length === 0 && (
+				) : (
 					<EmptyState title="No Services Yet">
 						Connect GitHub, select a repository, and create the first intake endpoint.
 					</EmptyState>

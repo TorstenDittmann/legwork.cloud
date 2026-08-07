@@ -58,18 +58,20 @@ export function ServiceForm({
 			["Callback Secret", revealed.callbackSigningSecret],
 		];
 		return (
-			<div className="max-w-2xl border-l-2 border-[var(--warning)] bg-[var(--surface)] p-6">
-				<h2 className="font-display text-2xl text-[var(--ink)]">Copy These Secrets Now</h2>
-				<p className="mt-2 text-sm text-[var(--warning)]">They will not be shown again.</p>
+			<div className="max-w-2xl rounded-[4px] border border-rule border-l-2 border-l-warning bg-surface p-6 shadow-[0_1px_2px_rgba(23,26,32,0.04)]">
+				<h2 className="font-display text-2xl font-semibold tracking-[-0.01em] text-ink">
+					Copy These Secrets Now
+				</h2>
+				<p className="mt-2 text-sm text-warning">They will not be shown again.</p>
 				<div className="mt-5 space-y-3">
 					{secrets.map(([label, value]) => (
-						<div key={label} className="border border-[var(--rule)] bg-[var(--canvas)] p-4">
-							<p className="font-mono text-[9px] uppercase tracking-wider text-[var(--ink-faint)]">
+						<div key={label} className="rounded-[3px] border border-rule bg-surface-raised p-4">
+							<p className="font-mono text-[9px] uppercase tracking-[0.08em] text-ink-faint">
 								{label}
 							</p>
 							<code
 								translate="no"
-								className="mt-2 block overflow-x-auto text-xs text-[var(--ink-muted)]"
+								className="mt-2 block overflow-x-auto text-xs text-ink-muted"
 							>
 								{value}
 							</code>
@@ -124,19 +126,19 @@ export function ServiceForm({
 			</Field>
 			<fieldset>
 				<legend className="text-xs font-medium">
-					Related Repositories <span className="text-[var(--ink-faint)]">(up to 2)</span>
+					Related Repositories <span className="text-ink-faint">(up to 2)</span>
 				</legend>
-				<div className="mt-2 grid gap-px border border-[var(--rule)] bg-[var(--rule)]">
+				<div className="mt-2 grid gap-px overflow-hidden rounded-[3px] border border-rule bg-rule">
 					{repositories.map((repository) => (
 						<label
 							key={repository.id}
-							className="flex min-h-10 items-center gap-3 bg-[var(--canvas)] px-3 text-sm"
+							className="flex min-h-10 items-center gap-3 bg-surface px-3 text-sm"
 						>
 							<input
 								type="checkbox"
 								name="relatedRepositoryIds"
 								value={repository.id}
-								className="size-4 accent-[var(--accent)]"
+								className="size-4 accent-accent"
 							/>
 							<span translate="no" className="min-w-0 truncate">
 								{repository.fullName}

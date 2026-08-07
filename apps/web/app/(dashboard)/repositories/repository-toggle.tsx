@@ -30,7 +30,7 @@ export function RepositoryToggle({ id, initial }: { id: string; initial: boolean
 			</Button>
 			<p
 				aria-live="polite"
-				className={`mt-1 text-[10px] ${message.startsWith("Unable") ? "text-[var(--danger)]" : "text-[var(--ink-faint)]"}`}
+				className={`mt-1 text-[10px] ${message.startsWith("Unable") ? "text-danger" : "text-ink-faint"}`}
 			>
 				{message}
 			</p>
