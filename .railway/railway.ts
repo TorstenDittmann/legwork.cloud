@@ -12,7 +12,7 @@ export default defineRailway(() => {
 	const web = service("web", {
 		source: onCallAi,
 		build: "bun run --filter @oncall-ai/web build",
-		start: "bun run --filter @oncall-ai/web start",
+		start: "bun run db:migrate && bun run --filter @oncall-ai/web start",
 		preDeploy: "bun run db:migrate",
 		healthcheck: "/api/health",
 		healthcheckTimeout: 30,
@@ -54,7 +54,7 @@ export default defineRailway(() => {
 	const worker = service("worker", {
 		source: onCallAi,
 		build: "bun run --filter @oncall-ai/worker build",
-		start: "bun run --filter @oncall-ai/worker start",
+		start: "bun run db:migrate && bun run --filter @oncall-ai/worker start",
 		deploy: {
 			restartPolicyType: "ON_FAILURE",
 			restartPolicyMaxRetries: 5,
