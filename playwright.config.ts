@@ -12,7 +12,7 @@ export default defineConfig({
 			WORKOS_API_KEY: "sk_test_playwright",
 			WORKOS_CLIENT_ID: "client_test_playwright",
 			WORKOS_COOKIE_PASSWORD: "playwright-cookie-secret-32-chars",
-			DATABASE_PATH: "playwright.db",
+			DATABASE_URL: "file:playwright.db",
 		},
 	},
 });
