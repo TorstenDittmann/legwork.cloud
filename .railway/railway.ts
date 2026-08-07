@@ -21,7 +21,7 @@ export default defineRailway(() => {
 			restartPolicyMaxRetries: 3,
 		},
 		replicas: { "europe-west4-drams3a": 1 },
-			env: {
+		env: {
 			APP_URL: preserve(),
 			DATABASE_URL: preserve(),
 			DATA_ENCRYPTION_KEY: preserve(),
