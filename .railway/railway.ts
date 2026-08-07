@@ -21,7 +21,7 @@ export default defineRailway(() => {
 			restartPolicyMaxRetries: 3,
 		},
 		replicas: { "europe-west4-drams3a": 1 },
-		env: {
+			env: {
 			APP_URL: preserve(),
 			DATABASE_URL: preserve(),
 			DATA_ENCRYPTION_KEY: preserve(),
@@ -70,6 +70,7 @@ export default defineRailway(() => {
 			MAX_ORG_CONCURRENCY: preserve(),
 			OPENROUTER_API_KEY: preserve(),
 			OPENROUTER_MODEL: preserve(),
+			RAILWAY_TOKEN: preserve(),
 			SANDBOX_CAPABILITY_PROBE_PASSED: preserve(),
 			SANDBOX_COMMAND_EXECUTION: preserve(),
 			WORKER_CONCURRENCY: preserve(),
