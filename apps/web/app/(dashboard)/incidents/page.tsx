@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Field, Select } from "@/components/ui/form";
 import { EmptyState, PageHeader } from "@/components/ui/journal";
 import { SeverityMark, StatusMark } from "@/components/ui/status";
+import { formatDuration } from "@/lib/utils";
 
 export default async function IncidentsPage({
 	searchParams,
@@ -154,17 +155,18 @@ export default async function IncidentsPage({
 				</div>
 			</form>
 			<div className="mt-6">
-				<div className="hidden grid-cols-[100px_minmax(0,1fr)_180px_170px_120px] border-b border-[var(--rule-strong)] px-2 pb-2 font-mono text-[9px] uppercase tracking-wider text-[var(--ink-faint)] md:grid">
+				<div className="hidden grid-cols-[100px_minmax(0,1fr)_160px_160px_110px_100px] border-b border-[var(--rule-strong)] px-2 pb-2 font-mono text-[9px] uppercase tracking-wider text-[var(--ink-faint)] md:grid">
 					<span>Severity</span>
 					<span>Incident</span>
 					<span>Service</span>
 					<span>Occurred</span>
 					<span>Status</span>
+					<span>Duration</span>
 				</div>
 				{displayed.map(({ incident, serviceName, run }) => (
 					<div
 						key={incident.id}
-						className="content-auto grid gap-3 border-b border-[var(--rule)] py-4 md:grid-cols-[100px_minmax(0,1fr)_180px_170px_120px] md:items-center md:px-2"
+						className="content-auto grid gap-3 border-b border-[var(--rule)] py-4 md:grid-cols-[100px_minmax(0,1fr)_160px_160px_110px_100px] md:items-center md:px-2"
 					>
 						<SeverityMark severity={incident.severity} />
 						<div className="min-w-0">
@@ -182,6 +184,11 @@ export default async function IncidentsPage({
 							)}
 						</time>
 						<StatusMark status={run?.status ?? "queued"} />
+						<span className="font-mono text-[10px] tabular-nums text-[var(--ink-faint)]">
+							{run?.startedAt && run.completedAt
+								? formatDuration(run.completedAt.getTime() - run.startedAt.getTime())
+								: "—"}
+						</span>
 					</div>
 				))}
 				{displayed.length === 0 && (

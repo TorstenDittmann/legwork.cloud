@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InlineAlert, SectionHeader } from "@/components/ui/journal";
 import { SeverityMark, StatusMark } from "@/components/ui/status";
+import { formatDuration } from "@/lib/utils";
 
 type Data = {
 	incident: {
@@ -20,6 +21,8 @@ type Data = {
 		status: string;
 		failureCode?: string;
 		resolvedRevisions?: Array<{ repositoryId: string; sha: string }>;
+		startedAt?: string;
+		completedAt?: string;
 	} | null;
 	steps: Array<{
 		id: string;
@@ -148,6 +151,13 @@ export function IncidentLive({ incidentId }: { incidentId: string }) {
 						? 1
 						: 0;
 	const stages = ["Queued", "Provisioning", "Repositories", "Analyzing", "Synthesis", "Complete"];
+	const analysisDuration =
+		data.currentRun?.startedAt && data.currentRun.completedAt
+			? formatDuration(
+					new Date(data.currentRun.completedAt).getTime() -
+						new Date(data.currentRun.startedAt).getTime(),
+				)
+			: null;
 	return (
 		<>
 			<header className="border-b border-[var(--rule)] pb-7">
@@ -187,6 +197,7 @@ export function IncidentLive({ incidentId }: { incidentId: string }) {
 							new Date(data.incident.occurredAt),
 						)}
 					</time>
+					{analysisDuration && <span>Analysis duration {analysisDuration}</span>}
 					{data.currentRun?.resolvedRevisions?.map(({ repositoryId, sha }) => (
 						<span key={repositoryId} translate="no">
 							{sha.slice(0, 12)}
