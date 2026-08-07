@@ -35,7 +35,6 @@ describe("libSQL LangGraph checkpoints", () => {
 				workosOrganizationId: "org_graph",
 				name: "Graph",
 				slug: "graph",
-				betaAllowlisted: true,
 			})
 			.returning();
 		if (!organization) throw new Error("fixture setup failed");
@@ -164,7 +163,6 @@ describe("incident reservation", () => {
 				workosOrganizationId: "org_idem",
 				name: "Idem",
 				slug: "idem",
-				betaAllowlisted: true,
 			})
 			.returning();
 		if (!organization) throw new Error("fixture setup failed");
@@ -205,7 +203,6 @@ describe("incident reservation", () => {
 				workosOrganizationId: "org_rerun",
 				name: "Rerun",
 				slug: "rerun",
-				betaAllowlisted: true,
 			})
 			.returning();
 		if (!organization) throw new Error("fixture setup failed");

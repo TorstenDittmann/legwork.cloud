@@ -51,8 +51,7 @@ export async function createIncidentIdempotently(db: Database, params: CreateInc
 				.from(organizations)
 				.where(eq(organizations.id, params.organizationId))
 				.limit(1);
-			if (!organization?.betaAllowlisted)
-				throw new QuotaExceededError("Organization is not enabled for the private beta");
+			if (!organization) throw new Error("Organization not found");
 
 			const [usage] = await tx
 				.select({
@@ -175,8 +174,7 @@ export async function createRetryRun(
 				.from(organizations)
 				.where(eq(organizations.id, organizationId))
 				.limit(1);
-			if (!organization?.betaAllowlisted)
-				throw new QuotaExceededError("Organization is not enabled for the private beta");
+			if (!organization) throw new Error("Organization not found");
 			const [original] = await tx
 				.select({ status: analysisRuns.status, expiresAt: incidents.expiresAt })
 				.from(analysisRuns)

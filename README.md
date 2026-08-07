@@ -33,7 +33,7 @@ bun run dev
 bun run --filter @oncall-ai/worker dev
 ```
 
-The organization table defaults to `beta_allowlisted = false`. Enable invited beta organizations administratively before they can reserve analysis usage.
+Organizations can reserve analysis usage immediately after onboarding, subject to their configured monthly quotas.
 
 ## Railway deployment
 

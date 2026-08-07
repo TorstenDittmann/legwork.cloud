@@ -44,7 +44,7 @@ export default function LandingPage() {
 						<div className="mt-9 flex flex-wrap gap-3">
 							<Button asChild size="lg">
 								<Link href="/onboarding">
-									Start Private Beta <ArrowRight aria-hidden="true" className="size-4" />
+									Get Started <ArrowRight aria-hidden="true" className="size-4" />
 								</Link>
 							</Button>
 							<Button asChild size="lg" variant="ghost">
@@ -139,7 +139,7 @@ export default function LandingPage() {
 				<p className="font-display text-3xl">Build a record, not a guess.</p>
 				<Button asChild>
 					<Link href="/onboarding">
-						Start Private Beta <ArrowRight aria-hidden="true" className="size-4" />
+						Get Started <ArrowRight aria-hidden="true" className="size-4" />
 					</Link>
 				</Button>
 			</footer>

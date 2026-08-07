@@ -336,7 +336,6 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 			)
 			.limit(1);
 		if (!record) throw new Error("ANALYSIS_CONTEXT_NOT_FOUND");
-		if (!record.organization.betaAllowlisted) throw new Error("PRIVATE_BETA_ACCESS_REQUIRED");
 		const connected = await dependencies.db
 			.select({
 				repositoryId: repositories.id,
