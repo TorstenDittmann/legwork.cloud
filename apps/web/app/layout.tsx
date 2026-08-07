@@ -6,10 +6,10 @@ export const metadata: Metadata = {
 	title: { default: "OnCall AI", template: "%s — OnCall AI" },
 	description: "Evidence-backed incident diagnosis from exact source snapshots.",
 };
-export const viewport: Viewport = { themeColor: "#10100e", colorScheme: "dark" };
+export const viewport: Viewport = { themeColor: "#f7f8fa", colorScheme: "light" };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
 	return (
-		<html lang="en" className="bg-[var(--canvas)]">
+		<html lang="en" className="bg-canvas">
 			<body>
 				<AuthKitProvider>{children}</AuthKitProvider>
 			</body>

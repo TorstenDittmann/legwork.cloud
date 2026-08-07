@@ -133,7 +133,7 @@ export function IncidentLive({ incidentId }: { incidentId: string }) {
 			setRetrying(false);
 		}
 	}
-	if (error) return <p className="text-red-400">{error}</p>;
+	if (error) return <p className="text-danger">{error}</p>;
 	if (!data) return <p className="text-[var(--ink-faint)]">Loading Incident…</p>;
 	const diagnosis = data.diagnosis;
 	const terminal =
@@ -315,7 +315,7 @@ export function IncidentLive({ incidentId }: { incidentId: string }) {
 												{diagnosis.suggestedFix.patch}
 											</pre>
 										)}
-										<p className="mt-4 text-xs text-amber-300">
+										<p className="mt-4 text-xs text-warning">
 											Suggestion only; nothing was applied to GitHub.
 										</p>
 									</CardContent>
