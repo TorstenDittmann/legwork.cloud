@@ -6,5 +6,5 @@ test("landing page explains the read-only product boundary", async ({ page }) =>
 		page.getByRole("heading", { name: "A diagnosis your on-call can verify." }),
 	).toBeVisible();
 	await expect(page.getByText("Fail-closed execution")).toBeVisible();
-	await expect(page.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/sign-in");
+	await expect(page.getByRole("link", { name: "Sign In" })).toHaveAttribute("href", "/sign-in");
 });

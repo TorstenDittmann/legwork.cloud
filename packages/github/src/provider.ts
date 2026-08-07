@@ -1,6 +1,26 @@
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "@octokit/rest";
-import type { SourceProvider } from "@oncall-ai/contracts";
+import type { RepositoryDownload, SourceProvider } from "@oncall-ai/contracts";
+
+const ARCHIVE_HOST = "codeload.github.com";
+
+export function validateArchiveDownloadUrl(value: string): string {
+	let url: URL;
+	try {
+		url = new URL(value);
+	} catch {
+		throw new Error("GitHub archive redirect URL is invalid");
+	}
+	if (
+		url.protocol !== "https:" ||
+		url.hostname !== ARCHIVE_HOST ||
+		url.username ||
+		url.password ||
+		url.port
+	)
+		throw new Error("GitHub archive redirect target is not allowed");
+	return url.toString();
+}
 
 export interface GitHubAppConfig {
 	appId: string;
@@ -91,8 +111,10 @@ export class GitHubSourceProvider implements SourceProvider {
 		return sha;
 	}
 
-	async streamArchive(repositoryId: string, sha: string): Promise<ReadableStream<Uint8Array>> {
+	async createArchiveDownload(repositoryId: string, sha: string): Promise<RepositoryDownload> {
 		const repository = this.#get(repositoryId);
+		if (!/^[0-9a-f]{40}$/.test(sha))
+			throw new Error("Archive revision must be an exact commit SHA");
 		const token = await this.#token(repository);
 		const response = await fetch(
 			`https://api.github.com/repos/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.name)}/tarball/${sha}`,
@@ -103,11 +125,13 @@ export class GitHubSourceProvider implements SourceProvider {
 					"x-github-api-version": "2022-11-28",
 					"user-agent": "on-call-ai-worker",
 				},
-				redirect: "follow",
+				redirect: "manual",
 			},
 		);
-		if (!response.ok || !response.body)
-			throw new Error(`GitHub archive download failed (${response.status})`);
-		return response.body;
+		if (![301, 302, 303, 307, 308].includes(response.status))
+			throw new Error(`GitHub archive redirect failed (${response.status})`);
+		const location = response.headers.get("location");
+		if (!location) throw new Error("GitHub archive redirect did not include a location");
+		return { repositoryId, sha, url: validateArchiveDownloadUrl(location) };
 	}
 }

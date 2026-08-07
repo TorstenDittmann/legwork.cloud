@@ -39,6 +39,33 @@ export async function readLimitedJson(
 	}
 }
 
+export async function readLimitedBytes(request: Request, maxBytes = MAX_REQUEST_BYTES) {
+	const declared = Number(request.headers.get("content-length") ?? "0");
+	if (declared > maxBytes)
+		throw new HttpProblem(413, "Payload Too Large", `Request body exceeds ${maxBytes} bytes`);
+	if (!request.body) throw new HttpProblem(400, "Invalid Request", "A request body is required");
+	const reader = request.body.getReader();
+	const chunks: Uint8Array[] = [];
+	let size = 0;
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		size += value.byteLength;
+		if (size > maxBytes) {
+			await reader.cancel();
+			throw new HttpProblem(413, "Payload Too Large", `Request body exceeds ${maxBytes} bytes`);
+		}
+		chunks.push(value);
+	}
+	const body = new Uint8Array(size);
+	let offset = 0;
+	for (const chunk of chunks) {
+		body.set(chunk, offset);
+		offset += chunk.byteLength;
+	}
+	return body;
+}
+
 export class HttpProblem extends Error {
 	constructor(
 		readonly status: number,

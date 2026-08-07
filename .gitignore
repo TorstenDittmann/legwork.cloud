@@ -11,3 +11,6 @@ test-results
 *.db-*
 *.tsbuildinfo
 .DS_Store
+
+# Workspace utils cache
+.wsu/

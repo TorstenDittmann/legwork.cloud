@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Field, Select } from "@/components/ui/form";
+import { InlineAlert } from "@/components/ui/journal";
 
 interface RepositoryOption {
 	id: string;
@@ -33,6 +35,15 @@ export function ServiceEditor({
 	const [message, setMessage] = useState("");
 	const [error, setError] = useState("");
 	const [revealedKey, setRevealedKey] = useState<string | null>(null);
+	const [pending, setPending] = useState<"save" | "rotate" | null>(null);
+	const [dirty, setDirty] = useState(false);
+	useEffect(() => {
+		const warn = (event: BeforeUnloadEvent) => {
+			if (dirty) event.preventDefault();
+		};
+		window.addEventListener("beforeunload", warn);
+		return () => window.removeEventListener("beforeunload", warn);
+	}, [dirty]);
 	const primary = mappings.find((mapping) => mapping.role === "primary")?.repositoryId;
 	const related = new Set(
 		mappings.filter((mapping) => mapping.role === "related").map((mapping) => mapping.repositoryId),
@@ -42,6 +53,7 @@ export function ServiceEditor({
 		event.preventDefault();
 		setMessage("");
 		setError("");
+		setPending("save");
 		const form = new FormData(event.currentTarget);
 		const response = await fetch(`/api/services/${serviceId}`, {
 			method: "PATCH",
@@ -57,92 +69,125 @@ export function ServiceEditor({
 		const body = await response.json();
 		if (!response.ok) {
 			setError(body.detail ?? "Unable to update service");
+			setPending(null);
 			return;
 		}
 		setMessage("Service updated.");
+		setDirty(false);
+		setPending(null);
 		router.refresh();
 	}
 
 	async function rotateKey() {
+		if (
+			!window.confirm("Rotate this ingestion key? The current key will stop working immediately.")
+		)
+			return;
 		setMessage("");
 		setError("");
 		setRevealedKey(null);
+		setPending("rotate");
 		const response = await fetch(`/api/services/${serviceId}/rotate-key`, { method: "POST" });
 		const body = await response.json();
 		if (!response.ok) {
 			setError(body.detail ?? "Unable to rotate key");
+			setPending(null);
 			return;
 		}
 		setRevealedKey(body.ingestionKey);
+		setPending(null);
 		router.refresh();
 	}
 
 	return (
 		<div className="space-y-8">
-			<form onSubmit={save} className="space-y-5">
-				<label className="block text-sm">
-					Name
-					<Input name="name" required defaultValue={name} className="mt-2" />
-				</label>
-				<label className="block text-sm">
-					Primary repository
-					<select
+			<form onSubmit={save} onChange={() => setDirty(true)} className="space-y-5">
+				<Field label="Name" htmlFor="service-name">
+					<Input id="service-name" name="name" autoComplete="off" required defaultValue={name} />
+				</Field>
+				<Field label="Primary Repository" htmlFor="primary-repository">
+					<Select
+						id="primary-repository"
 						name="primaryRepositoryId"
 						required
 						defaultValue={primary}
-						className="mt-2 h-10 w-full rounded-md border border-slate-700 bg-slate-950 px-3"
 					>
 						{repositories.map((repository) => (
 							<option key={repository.id} value={repository.id}>
 								{repository.fullName}
 							</option>
 						))}
-					</select>
-				</label>
-				<label className="block text-sm">
-					Related repositories (up to two)
-					<select
-						name="relatedRepositoryIds"
-						multiple
-						size={Math.min(5, repositories.length)}
-						defaultValue={[...related]}
-						className="mt-2 w-full rounded-md border border-slate-700 bg-slate-950 p-3"
-					>
+					</Select>
+				</Field>
+				<fieldset>
+					<legend className="text-xs font-medium">
+						Related Repositories <span className="text-[var(--ink-faint)]">(up to 2)</span>
+					</legend>
+					<div className="mt-2 grid gap-px border border-[var(--rule)] bg-[var(--rule)]">
 						{repositories.map((repository) => (
-							<option key={repository.id} value={repository.id}>
-								{repository.fullName}
-							</option>
+							<label
+								key={repository.id}
+								className="flex min-h-10 items-center gap-3 bg-[var(--canvas)] px-3 text-sm"
+							>
+								<input
+									type="checkbox"
+									name="relatedRepositoryIds"
+									value={repository.id}
+									defaultChecked={related.has(repository.id)}
+									className="size-4 accent-[var(--accent)]"
+								/>
+								<span translate="no" className="min-w-0 truncate">
+									{repository.fullName}
+								</span>
+							</label>
 						))}
-					</select>
-				</label>
-				<label className="block text-sm">
-					Callback HTTPS URL
-					<Input name="callbackUrl" type="url" defaultValue={callbackUrl ?? ""} className="mt-2" />
-				</label>
+					</div>
+				</fieldset>
+				<Field label="Callback HTTPS URL" htmlFor="callback-url">
+					<Input
+						id="callback-url"
+						name="callbackUrl"
+						type="url"
+						autoComplete="url"
+						defaultValue={callbackUrl ?? ""}
+					/>
+				</Field>
 				<label className="flex items-center gap-3 text-sm">
 					<input
 						name="enabled"
 						type="checkbox"
 						defaultChecked={enabled}
-						className="size-4 accent-cyan-400"
+						className="size-4 accent-[var(--accent)]"
 					/>
 					Accept new incidents
 				</label>
-				{message && <p className="text-sm text-emerald-400">{message}</p>}
-				{error && <p className="text-sm text-red-400">{error}</p>}
-				<Button type="submit">Save service</Button>
+				{message && <InlineAlert tone="success">{message}</InlineAlert>}
+				{error && <InlineAlert tone="danger">{error}</InlineAlert>}
+				<Button type="submit" disabled={pending !== null}>
+					{pending === "save" ? "Saving Service…" : "Save Service"}
+				</Button>
 			</form>
-			<div className="border-t border-slate-800 pt-6">
-				<p className="text-sm text-slate-400">
+			<div className="border-t border-[var(--rule)] pt-6">
+				<p className="text-sm text-[var(--ink-muted)]">
 					Rotating immediately revokes the current ingestion key.
 				</p>
-				<Button type="button" variant="outline" className="mt-3" onClick={rotateKey}>
-					Rotate ingestion key
+				<Button
+					type="button"
+					variant="outline"
+					className="mt-3"
+					onClick={rotateKey}
+					disabled={pending !== null}
+				>
+					{pending === "rotate" ? "Rotating Key…" : "Rotate Ingestion Key"}
 				</Button>
 				{revealedKey && (
-					<div className="mt-4 rounded border border-amber-800 bg-amber-950/20 p-4">
-						<p className="text-sm text-amber-200">Copy this key now. It will not be shown again.</p>
-						<code className="mt-2 block overflow-x-auto text-xs text-slate-200">{revealedKey}</code>
+					<div className="mt-4 border-l-2 border-[var(--warning)] bg-[var(--surface-raised)] p-4">
+						<p className="text-sm text-[var(--warning)]">
+							Copy this key now. It will not be shown again.
+						</p>
+						<code translate="no" className="mt-2 block overflow-x-auto text-xs text-[var(--ink)]">
+							{revealedKey}
+						</code>
 					</div>
 				)}
 			</div>

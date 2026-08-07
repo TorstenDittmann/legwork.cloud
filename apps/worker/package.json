@@ -11,10 +11,14 @@
 		"lint": "oxlint src"
 	},
 	"dependencies": {
+		"@langchain/core": "1.2.5",
+		"@langchain/langgraph": "1.4.9",
+		"@langchain/langgraph-checkpoint": "1.1.3",
 		"@oncall-ai/agent": "workspace:*",
 		"@oncall-ai/contracts": "workspace:*",
 		"@oncall-ai/db": "workspace:*",
 		"@oncall-ai/github": "workspace:*",
+		"@oncall-ai/integrations": "workspace:*",
 		"@oncall-ai/observability": "workspace:*",
 		"@oncall-ai/sandbox": "workspace:*",
 		"@oncall-ai/security": "workspace:*",

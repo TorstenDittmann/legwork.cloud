@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { createIncidentRequestSchema, diagnosisSchema } from "./index";
 
 describe("incident contract", () => {
@@ -40,5 +41,36 @@ describe("diagnosis contract", () => {
 			limitations: [],
 		});
 		expect(result.success).toBe(false);
+	});
+
+	it("exposes required file line ranges in the provider JSON schema", () => {
+		const schema = z.toJSONSchema(diagnosisSchema) as {
+			properties: { evidence: { items: { anyOf: Array<{ required: string[] }> } } };
+		};
+		const variants = schema.properties.evidence.items.anyOf;
+		expect(variants).toHaveLength(3);
+		expect(variants[0]?.required).toEqual(
+			expect.arrayContaining([
+				"repositoryId",
+				"path",
+				"lineStart",
+				"lineEnd",
+				"excerpt",
+				"explanation",
+			]),
+		);
+		expect(variants[1]?.required).toEqual(
+			expect.arrayContaining(["repositoryId", "command", "excerpt", "explanation"]),
+		);
+		expect(variants[2]?.required).toEqual(
+			expect.arrayContaining([
+				"provider",
+				"sourceType",
+				"operation",
+				"locator",
+				"excerpt",
+				"explanation",
+			]),
+		);
 	});
 });

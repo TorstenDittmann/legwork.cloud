@@ -43,7 +43,7 @@ This file distinguishes locally verified behavior from staging gates. Do not con
 - [ ] Installation tokens restricted to selected repositories.
 - [ ] Queue duplicate delivery, worker crash, and expired-lease recovery against hosted Turso.
 - [ ] OpenRouter tool-call loop with recorded fixtures.
-- [ ] ZDR-unavailable route fails without privacy downgrade.
+- [ ] A route that cannot support required model parameters fails without silently dropping them.
 - [ ] Callback delivery, signature verification, address pinning, and complete retry schedule.
 - [ ] Retention purge against hosted Turso.
 - [ ] Turso backup aging and restore behavior documented.

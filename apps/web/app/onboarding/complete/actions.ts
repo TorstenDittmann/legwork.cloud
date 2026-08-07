@@ -2,7 +2,6 @@
 import { switchToOrganization, withAuth } from "@workos-inc/authkit-nextjs";
 import { WorkOS } from "@workos-inc/node";
 import { createDatabase, organizations } from "@oncall-ai/db";
-import { redirect } from "next/navigation";
 
 function workosClient() {
 	if (!process.env.WORKOS_API_KEY || !process.env.WORKOS_CLIENT_ID)
@@ -46,6 +45,5 @@ export async function completeOnboarding(formData: FormData) {
 			target: organizations.workosOrganizationId,
 			set: { name, updatedAt: new Date() },
 		});
-	await switchToOrganization(workosOrganizationId);
-	redirect("/dashboard");
+	await switchToOrganization(workosOrganizationId, { returnTo: "/dashboard" });
 }

@@ -43,7 +43,7 @@ export async function runCapabilityProbe(): Promise<CapabilityProbeResult> {
 		assertions.execution =
 			(await sandbox.exec("test -r /workspace/probe.txt", { timeoutSec: 5 })).exitCode === 0;
 		const network = await sandbox.exec(
-			"/usr/local/bin/ocai-run-check /workspace/repositories/probe node /workspace/network-probe.mjs",
+			"/usr/local/bin/ocai-run-check /workspace/repositories/probe bun /workspace/network-probe.mjs",
 			{ timeoutSec: 20 },
 		);
 		assertions.noEgressNamespaceAvailable = network.exitCode === 0;
@@ -54,7 +54,7 @@ export async function runCapabilityProbe(): Promise<CapabilityProbeResult> {
 		assertions.noPrivateDns = !network.stdout.includes("privateDns:reachable");
 		assertions.noMetadata = !network.stdout.includes("metadata:reachable");
 		const privilege = await sandbox.exec(
-			"/usr/local/bin/ocai-run-check /workspace/repositories/probe node /workspace/privilege-probe.mjs",
+			"/usr/local/bin/ocai-run-check /workspace/repositories/probe bun /workspace/privilege-probe.mjs",
 			{ timeoutSec: 10 },
 		);
 		assertions.privilegeProbeCompleted = privilege.exitCode === 0;
@@ -62,7 +62,7 @@ export async function runCapabilityProbe(): Promise<CapabilityProbeResult> {
 		assertions.cannotReconfigureNamespace = !privilege.stdout.includes("namespace-reconfigured");
 		assertions.noControlPlaneSecrets = !privilege.stdout.includes("secret-visible");
 		const timeout = await sandbox.exec(
-			"/usr/local/bin/ocai-run-check /workspace/repositories/probe node -e 'while (true) {}'",
+			"/usr/local/bin/ocai-run-check /workspace/repositories/probe bun -e 'while (true) {}'",
 			{ timeoutSec: 1 },
 		);
 		assertions.timeoutTermination = timeout.timedOut;

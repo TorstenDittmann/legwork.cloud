@@ -5,12 +5,15 @@ function required(name: string): string {
 }
 
 export function workerConfig() {
+	process.env.LANGCHAIN_TRACING_V2 = "false";
+	process.env.LANGSMITH_TRACING = "false";
 	return {
 		appUrl: required("APP_URL"),
 		githubAppId: required("GITHUB_APP_ID"),
 		githubPrivateKey: required("GITHUB_APP_PRIVATE_KEY").replaceAll("\\n", "\n"),
 		openRouterApiKey: required("OPENROUTER_API_KEY"),
 		encryptionKey: required("DATA_ENCRYPTION_KEY"),
+		railwayEnvironmentId: required("RAILWAY_ENVIRONMENT_ID"),
 		model: process.env.OPENROUTER_MODEL ?? "deepseek/deepseek-v4-flash-0731",
 		workerConcurrency: Number(process.env.WORKER_CONCURRENCY ?? "5"),
 		commandExecutionEnabled: process.env.SANDBOX_COMMAND_EXECUTION === "true",

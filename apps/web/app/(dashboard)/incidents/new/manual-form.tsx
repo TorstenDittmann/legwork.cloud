@@ -3,6 +3,8 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Field, Select, Textarea } from "@/components/ui/form";
+import { InlineAlert, SectionHeader } from "@/components/ui/journal";
 export function ManualIncidentForm({
 	services,
 }: {
@@ -10,8 +12,11 @@ export function ManualIncidentForm({
 }) {
 	const router = useRouter();
 	const [error, setError] = useState("");
+	const [pending, setPending] = useState(false);
 	async function submit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
+		setPending(true);
+		setError("");
 		const form = new FormData(event.currentTarget);
 		const response = await fetch("/api/incidents/manual", {
 			method: "POST",
@@ -28,75 +33,105 @@ export function ManualIncidentForm({
 			}),
 		});
 		const body = await response.json();
-		if (!response.ok) return setError(body.detail ?? "Submission failed");
+		if (!response.ok) {
+			setError(body.detail ?? "Submission failed. Check the incident details and try again.");
+			setPending(false);
+			return;
+		}
 		router.push(`/incidents/${body.incidentId}`);
 	}
 	return (
-		<form onSubmit={submit} className="max-w-2xl space-y-5">
-			<label className="block text-sm">
-				Service
-				<select
-					name="serviceId"
-					required
-					className="mt-2 h-10 w-full rounded-md border border-slate-700 bg-slate-950 px-3"
-				>
-					{services.map((service) => (
-						<option key={service.id} value={service.id}>
-							{service.name}
-						</option>
-					))}
-				</select>
-			</label>
-			<label className="block text-sm">
-				External ID
-				<Input name="externalId" required className="mt-2" />
-			</label>
-			<label className="block text-sm">
-				Title
-				<Input name="title" required className="mt-2" />
-			</label>
-			<label className="block text-sm">
-				Severity
-				<select
-					name="severity"
-					defaultValue="unknown"
-					className="mt-2 h-10 w-full rounded-md border border-slate-700 bg-slate-950 px-3"
-				>
-					{["critical", "high", "medium", "low", "unknown"].map((value) => (
-						<option key={value}>{value}</option>
-					))}
-				</select>
-			</label>
-			<label className="block text-sm">
-				Occurred at
-				<Input
-					name="occurredAt"
-					required
-					type="datetime-local"
-					defaultValue={new Date().toISOString().slice(0, 16)}
-					className="mt-2"
-				/>
-			</label>
-			<label className="block text-sm">
-				Environment
-				<Input name="environment" className="mt-2" />
-			</label>
-			<label className="block text-sm">
-				Description
-				<textarea
-					name="description"
-					className="mt-2 min-h-28 w-full rounded-md border border-slate-700 bg-slate-950 p-3 text-sm"
-				/>
-			</label>
-			<label className="block text-sm">
-				Stack trace
-				<textarea
-					name="stackTrace"
-					className="mt-2 min-h-40 w-full rounded-md border border-slate-700 bg-slate-950 p-3 font-mono text-xs"
-				/>
-			</label>
-			{error && <p className="text-sm text-red-400">{error}</p>}
-			<Button type="submit">Queue analysis</Button>
+		<form onSubmit={submit} className="max-w-4xl space-y-10">
+			<section>
+				<SectionHeader meta="Required">Incident Identity</SectionHeader>
+				<div className="grid gap-5 sm:grid-cols-2">
+					<Field label="Service" htmlFor="serviceId">
+						<Select id="serviceId" name="serviceId" required>
+							{services.map((service) => (
+								<option key={service.id} value={service.id}>
+									{service.name}
+								</option>
+							))}
+						</Select>
+					</Field>
+					<Field
+						label="External ID"
+						htmlFor="externalId"
+						hint="Your alert, ticket, or deployment identifier."
+					>
+						<Input
+							id="externalId"
+							name="externalId"
+							autoComplete="off"
+							spellCheck={false}
+							required
+							placeholder="alert-prod-1042…"
+						/>
+					</Field>
+					<Field label="Title" htmlFor="title" className="sm:col-span-2">
+						<Input
+							id="title"
+							name="title"
+							autoComplete="off"
+							required
+							placeholder="Describe the observable failure…"
+						/>
+					</Field>
+					<Field label="Severity" htmlFor="severity">
+						<Select id="severity" name="severity" defaultValue="unknown">
+							{["critical", "high", "medium", "low", "unknown"].map((value) => (
+								<option key={value}>{value}</option>
+							))}
+						</Select>
+					</Field>
+					<Field label="Occurred At" htmlFor="occurredAt">
+						<Input
+							id="occurredAt"
+							name="occurredAt"
+							required
+							type="datetime-local"
+							defaultValue={new Date().toISOString().slice(0, 16)}
+						/>
+					</Field>
+					<Field label="Environment" htmlFor="environment">
+						<Input
+							id="environment"
+							name="environment"
+							autoComplete="off"
+							placeholder="production / eu-west-1…"
+						/>
+					</Field>
+				</div>
+			</section>
+			<section>
+				<SectionHeader meta="Diagnostic context">Failure Signal</SectionHeader>
+				<div className="space-y-5">
+					<Field
+						label="Description"
+						htmlFor="description"
+						hint="Include expected behavior, what changed, and the observed impact."
+					>
+						<Textarea
+							id="description"
+							name="description"
+							placeholder="The deploy began failing after…"
+						/>
+					</Field>
+					<Field label="Stack Trace" htmlFor="stackTrace">
+						<Textarea
+							id="stackTrace"
+							name="stackTrace"
+							spellCheck={false}
+							className="min-h-48 font-mono text-xs"
+							placeholder="Paste the complete stack trace…"
+						/>
+					</Field>
+				</div>
+			</section>
+			{error && <InlineAlert tone="danger">{error}</InlineAlert>}
+			<Button type="submit" disabled={pending}>
+				{pending ? "Queuing Analysis…" : "Queue Analysis"}
+			</Button>
 		</form>
 	);
 }

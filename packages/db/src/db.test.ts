@@ -1,12 +1,17 @@
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { eq } from "drizzle-orm";
 import { rm } from "node:fs/promises";
+import { emptyCheckpoint } from "@langchain/langgraph-checkpoint";
 import {
 	claimJobs,
+	analysisRuns,
+	BunSqliteCheckpointSaver,
 	closeDatabase,
 	completeJob,
 	createDatabase,
 	createIncidentIdempotently,
+	createRetryRun,
 	deferJob,
 	enqueueJob,
 	failJob,
@@ -20,6 +25,61 @@ const databasePath = `/tmp/oncall-ai-db-test-${process.pid}.db`;
 const db = createDatabase(databasePath);
 beforeAll(async () => {
 	await migrate(db, { migrationsFolder: new URL("../migrations", import.meta.url).pathname });
+});
+
+describe("Bun SQLite LangGraph checkpoints", () => {
+	it("round-trips binary state and pending writes within the configured tenant run", async () => {
+		const [organization] = await db
+			.insert(organizations)
+			.values({
+				workosOrganizationId: "org_graph",
+				name: "Graph",
+				slug: "graph",
+				betaAllowlisted: true,
+			})
+			.returning();
+		if (!organization) throw new Error("fixture setup failed");
+		const [service] = await db
+			.insert(services)
+			.values({ organizationId: organization.id, name: "Graph API", slug: "graph-api" })
+			.returning();
+		if (!service) throw new Error("fixture setup failed");
+		const created = await createIncidentIdempotently(db, {
+			organizationId: organization.id,
+			serviceId: service.id,
+			idempotencyKey: "graph-checkpoint",
+			payload: {
+				externalId: "graph-checkpoint",
+				title: "Checkpoint test",
+				severity: "low",
+				occurredAt: new Date().toISOString(),
+			},
+		});
+		const saver = new BunSqliteCheckpointSaver({
+			db,
+			organizationId: organization.id,
+			runId: created.runId,
+			expiresAt: new Date(Date.now() + 60_000),
+		});
+		const checkpoint = {
+			...emptyCheckpoint(),
+			id: "00000000-0000-6000-8000-000000000001",
+			channel_values: { state: { bytes: new Uint8Array([1, 2, 3]) } },
+		};
+		const config = await saver.put(
+			{ configurable: { thread_id: created.runId } },
+			checkpoint,
+			{ source: "input", step: -1, parents: {} },
+			{},
+		);
+		await saver.putWrites(config, [["result", { ok: true }]], "task-1");
+		const tuple = await saver.getTuple(config);
+		expect(tuple?.checkpoint.channel_values).toEqual(checkpoint.channel_values);
+		expect(tuple?.pendingWrites).toEqual([["task-1", "result", { ok: true }]]);
+		await expect(saver.getTuple({ configurable: { thread_id: "another-run" } })).rejects.toThrow(
+			"thread_id must equal",
+		);
+	});
 });
 afterAll(async () => {
 	await closeDatabase();
@@ -136,5 +196,45 @@ describe("incident reservation", () => {
 			runId: first.runId,
 			duplicate: true,
 		});
+	});
+
+	it("allows a completed incident analysis to be run again", async () => {
+		const [organization] = await db
+			.insert(organizations)
+			.values({
+				workosOrganizationId: "org_rerun",
+				name: "Rerun",
+				slug: "rerun",
+				betaAllowlisted: true,
+			})
+			.returning();
+		if (!organization) throw new Error("fixture setup failed");
+		const [service] = await db
+			.insert(services)
+			.values({ organizationId: organization.id, name: "API", slug: "rerun-api" })
+			.returning();
+		if (!service) throw new Error("fixture setup failed");
+		const created = await createIncidentIdempotently(db, {
+			organizationId: organization.id,
+			serviceId: service.id,
+			idempotencyKey: "rerun",
+			payload: {
+				externalId: "incident-rerun",
+				title: "Failure",
+				severity: "high",
+				occurredAt: new Date().toISOString(),
+			},
+		});
+		await db
+			.update(analysisRuns)
+			.set({ status: "completed" })
+			.where(eq(analysisRuns.id, created.runId));
+		const retry = await createRetryRun(db, organization.id, created.incidentId, created.runId);
+		const [retryRun] = await db
+			.select()
+			.from(analysisRuns)
+			.where(eq(analysisRuns.id, retry.id))
+			.limit(1);
+		expect(retryRun).toMatchObject({ status: "queued", retryOfRunId: created.runId });
 	});
 });

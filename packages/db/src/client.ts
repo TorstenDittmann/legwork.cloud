@@ -1,4 +1,6 @@
 import { Database as SQLite } from "bun:sqlite";
+import { readFileSync } from "node:fs";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { drizzle, type BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import * as schema from "./schema";
 
@@ -6,9 +8,27 @@ let client: SQLite | undefined;
 let database: Database | undefined;
 export type Database = BunSQLiteDatabase<typeof schema>;
 
+function findWorkspaceRoot(start: string): string {
+	let directory = start;
+	while (true) {
+		try {
+			const manifest = JSON.parse(readFileSync(join(directory, "package.json"), "utf8")) as {
+				workspaces?: unknown;
+			};
+			if (Array.isArray(manifest.workspaces)) return directory;
+		} catch {
+			// Continue toward the filesystem root when this is not a workspace manifest.
+		}
+		const parent = dirname(directory);
+		if (parent === directory) return start;
+		directory = parent;
+	}
+}
+
 export function createDatabase(path = process.env.DATABASE_PATH ?? "local.db"): Database {
 	if (!database) {
-		client = new SQLite(path, { create: true });
+		const databasePath = isAbsolute(path) ? path : resolve(findWorkspaceRoot(process.cwd()), path);
+		client = new SQLite(databasePath, { create: true });
 		client.run("PRAGMA journal_mode = WAL");
 		client.run("PRAGMA foreign_keys = ON");
 		client.run("PRAGMA busy_timeout = 5000");

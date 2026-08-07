@@ -13,6 +13,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { changeMemberRole, inviteMember, removeMember } from "./actions";
+import { PageHeader, SectionHeader, EmptyState } from "@/components/ui/journal";
+import { Field, Select } from "@/components/ui/form";
+import { ConfirmSubmit } from "@/components/confirm-submit";
 
 export default async function SettingsPage() {
 	const tenant = await requireTenant();
@@ -79,28 +82,39 @@ export default async function SettingsPage() {
 	}
 	return (
 		<>
-			<p className="font-mono text-xs uppercase tracking-widest text-cyan-400">Organization</p>
-			<h1 className="mt-2 text-3xl font-semibold text-white">Settings</h1>
+			<PageHeader
+				eyebrow="Organization"
+				title="Settings"
+				description="Manage usage, access, credentials, and the organization audit record."
+			/>
 			<div className="mt-8 grid gap-5 lg:grid-cols-2">
 				<Card>
 					<CardHeader>
 						<CardTitle>Monthly usage</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<p className="text-sm text-slate-400">
+						<p className="text-sm tabular-nums text-[var(--ink-muted)]">
 							{usage?.analyses ?? 0} / {organization?.monthlyAnalysisQuota ?? 50} analyses
 						</p>
-						<div className="mt-2 h-2 rounded bg-slate-800">
+						<div
+							role="progressbar"
+							aria-label="Monthly analyses used"
+							aria-valuemin={0}
+							aria-valuemax={organization?.monthlyAnalysisQuota ?? 50}
+							aria-valuenow={usage?.analyses ?? 0}
+							className="mt-2 h-1 bg-[var(--rule)]"
+						>
 							<div
-								className="h-2 rounded bg-cyan-400"
+								className="h-1 bg-[var(--accent)]"
 								style={{
 									width: `${Math.min(100, ((usage?.analyses ?? 0) / (organization?.monthlyAnalysisQuota ?? 50)) * 100)}%`,
 								}}
 							/>
 						</div>
-						<p className="mt-4 text-sm text-slate-400">
-							{(usage?.tokens ?? 0).toLocaleString()} /{" "}
-							{(organization?.monthlyTokenQuota ?? 5_000_000).toLocaleString()} model tokens
+						<p className="mt-4 text-sm tabular-nums text-[var(--ink-muted)]">
+							{new Intl.NumberFormat("en").format(usage?.tokens ?? 0)} /{" "}
+							{new Intl.NumberFormat("en").format(organization?.monthlyTokenQuota ?? 5_000_000)}{" "}
+							model tokens
 						</p>
 					</CardContent>
 				</Card>
@@ -111,8 +125,10 @@ export default async function SettingsPage() {
 					<CardContent className="space-y-3">
 						{keys.map((key) => (
 							<div key={`${key.serviceName}:${key.prefix}`} className="text-sm">
-								<span className="text-slate-300">{key.serviceName}</span>
-								<code className="ml-3 text-xs text-slate-500">{key.prefix}…</code>
+								<span className="text-[var(--ink-muted)]">{key.serviceName}</span>
+								<code translate="no" className="ml-3 text-xs text-[var(--ink-faint)]">
+									{key.prefix}…
+								</code>
 							</div>
 						))}
 					</CardContent>
@@ -120,33 +136,46 @@ export default async function SettingsPage() {
 			</div>
 			{tenant.role === "admin" && (
 				<section className="mt-10">
-					<h2 className="mb-4 text-xl font-semibold text-white">Members and invitations</h2>
+					<SectionHeader>Members & Invitations</SectionHeader>
 					<form action={inviteMember} className="mb-4 flex max-w-xl gap-2">
-						<Input name="email" type="email" required placeholder="teammate@example.com" />
-						<select
-							name="role"
-							className="rounded border border-slate-700 bg-slate-950 px-3 text-sm"
-						>
-							<option value="member">Member</option>
-							<option value="admin">Admin</option>
-						</select>
-						<Button type="submit">Invite</Button>
+						<Field label="Email" htmlFor="invite-email" className="flex-1">
+							<Input
+								id="invite-email"
+								name="email"
+								type="email"
+								autoComplete="email"
+								spellCheck={false}
+								required
+								placeholder="teammate@example.com…"
+							/>
+						</Field>
+						<Field label="Role" htmlFor="invite-role">
+							<Select id="invite-role" name="role">
+								<option value="member">Member</option>
+								<option value="admin">Admin</option>
+							</Select>
+						</Field>
+						<Button type="submit" className="mt-6">
+							Invite Member
+						</Button>
 					</form>
 					<Card>
-						<CardContent className="divide-y divide-slate-800 pt-6">
+						<CardContent className="divide-y divide-[var(--rule)] pt-6">
 							{memberships.map((membership) => (
 								<div
 									key={membership.id}
 									className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
 								>
-									<span className="font-mono text-xs text-slate-400">{membership.userId}</span>
+									<span translate="no" className="font-mono text-xs text-[var(--ink-muted)]">
+										{membership.userId}
+									</span>
 									<div className="flex gap-2">
 										<form action={changeMemberRole}>
 											<input type="hidden" name="membershipId" value={membership.id} />
 											<select
 												name="role"
 												defaultValue={membership.role.slug}
-												className="h-8 rounded border border-slate-700 bg-slate-950 px-2 text-xs"
+												className="h-8 rounded-[3px] border border-[var(--rule-strong)] bg-[var(--canvas)] px-2 text-xs"
 											>
 												<option value="member">Member</option>
 												<option value="admin">Admin</option>
@@ -158,9 +187,9 @@ export default async function SettingsPage() {
 										<form action={removeMember}>
 											<input type="hidden" name="membershipId" value={membership.id} />
 											<input type="hidden" name="userId" value={membership.userId} />
-											<Button type="submit" size="sm" variant="destructive">
-												Remove
-											</Button>
+											<ConfirmSubmit message="Remove this member from the organization? They will immediately lose access.">
+												Remove Member
+											</ConfirmSubmit>
 										</form>
 									</div>
 								</div>
@@ -170,7 +199,7 @@ export default async function SettingsPage() {
 								.map((invitation) => (
 									<div
 										key={invitation.id}
-										className="flex justify-between py-3 text-sm text-slate-400"
+										className="flex justify-between py-3 text-sm text-[var(--ink-muted)]"
 									>
 										<span>{invitation.email}</span>
 										<span>invited · {invitation.roleSlug}</span>
@@ -181,23 +210,31 @@ export default async function SettingsPage() {
 				</section>
 			)}
 			<section className="mt-10">
-				<h2 className="mb-4 text-xl font-semibold text-white">Audit events</h2>
+				<SectionHeader>Audit Events</SectionHeader>
 				<Card>
-					<CardContent className="divide-y divide-slate-800 pt-6">
+					<CardContent className="divide-y divide-[var(--rule)] pt-6">
 						{audits.map((event) => (
 							<div key={event.id} className="flex justify-between py-3 text-sm">
-								<span className="text-slate-300">{event.action}</span>
-								<span className="text-slate-600">{event.createdAt.toLocaleString()}</span>
+								<span className="text-[var(--ink-muted)]">{event.action}</span>
+								<time className="font-mono text-[10px] text-[var(--ink-faint)]">
+									{new Intl.DateTimeFormat("en", {
+										dateStyle: "medium",
+										timeStyle: "short",
+									}).format(event.createdAt)}
+								</time>
 							</div>
 						))}
 					</CardContent>
 				</Card>
+				{audits.length === 0 && (
+					<EmptyState title="No Audit Events">Organization changes will appear here.</EmptyState>
+				)}
 			</section>
-			<p className="mt-10 max-w-3xl text-xs leading-5 text-slate-500">
+			<p className="mt-10 max-w-3xl border-t border-[var(--rule)] pt-6 text-xs leading-5 text-[var(--ink-faint)]">
 				Selected incident context and requested code excerpts are processed through OpenRouter and
-				its routed model provider under enforced zero-data-retention and data-collection-denied
-				routing. Active incident data expires after 30 days. Backup-aging claims remain provisional
-				until the deployed Turso backup policy is verified.
+				its routed model provider. Provider privacy filtering is deferred for the MVP. Active
+				incident data expires after 30 days. Operational state is stored in the organization-scoped
+				Bun SQLite database.
 			</p>
 		</>
 	);

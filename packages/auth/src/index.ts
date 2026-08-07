@@ -13,7 +13,7 @@ export interface TenantContext {
 export async function requireTenant(
 	requiredRole: OrganizationRole = "member",
 ): Promise<TenantContext> {
-	const session = await withAuth({ ensureSignedIn: true });
+	const session = await withAuth();
 	if (!session.user || !session.organizationId)
 		throw new AuthenticationError("An active organization is required");
 	const role: OrganizationRole =

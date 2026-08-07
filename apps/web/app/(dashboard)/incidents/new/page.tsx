@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { requireTenant } from "@oncall-ai/auth";
 import { createDatabase, services } from "@oncall-ai/db";
 import { ManualIncidentForm } from "./manual-form";
+import { PageHeader } from "@/components/ui/journal";
 export default async function NewIncidentPage() {
 	const tenant = await requireTenant();
 	const rows = await createDatabase()
@@ -10,8 +11,14 @@ export default async function NewIncidentPage() {
 		.where(and(eq(services.organizationId, tenant.organizationId), eq(services.enabled, true)));
 	return (
 		<>
-			<h1 className="mb-8 text-3xl font-semibold text-white">Submit a manual incident</h1>
-			<ManualIncidentForm services={rows} />
+			<PageHeader
+				eyebrow="Manual intake"
+				title="Submit an Incident"
+				description="Provide the failure signal and enough operational context to begin a repository investigation."
+			/>
+			<div className="mt-8">
+				<ManualIncidentForm services={rows} />
+			</div>
 		</>
 	);
 }

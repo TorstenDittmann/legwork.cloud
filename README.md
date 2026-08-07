@@ -1,18 +1,21 @@
 # OnCall AI
 
-Evidence-backed, read-only incident diagnosis for approved GitHub repositories. Each analysis resolves immutable commit SHAs, streams source into a disposable Railway Sandbox, uses a typed OpenRouter tool loop, validates every evidence citation, and destroys the sandbox.
+Evidence-backed, read-only incident diagnosis for approved GitHub repositories. Each analysis resolves immutable commit SHAs, gives a disposable Railway Sandbox temporary archive download capabilities, runs a durable LangGraph workflow, validates every evidence citation, and destroys the sandbox.
 
 For project continuation and implementation status, start with [`docs/HANDOFF.md`](./docs/HANDOFF.md). The documentation index is at [`docs/README.md`](./docs/README.md).
 
 ## Architecture
 
 - `apps/web`: Next.js 16 App Router dashboard and versioned HTTP API.
-- `apps/worker`: SQLite-backed leased job worker, GitHub retrieval, analysis orchestration, callbacks, and cleanup.
+- `apps/worker`: SQLite-backed leased job worker, durable LangGraph analysis lifecycle, callbacks, and cleanup.
 - `packages/db`: Drizzle schema for Bun SQLite, migrations, tenant queries, quotas, idempotency, and durable jobs.
 - `packages/auth`: WorkOS AuthKit active-organization and `admin`/`member` enforcement.
 - `packages/github`: signed installation state, webhook verification, short-lived installation tokens, exact-SHA archives.
 - `packages/sandbox`: Railway SDK `3.6.0` provider and mandatory no-egress capability probe.
-- `packages/agent`: OpenRouter tool loop, strict structured output, and evidence validation.
+- `packages/agent`: OpenRouter model boundary, strict structured output, and evidence validation.
+
+LangGraph checkpoints and pending writes live in the same Bun SQLite database as incidents and expire with their analysis run. LangSmith tracing is explicitly disabled; no LangSmith key or external checkpoint service is used.
+
 - `packages/security`: redaction, API keys, authenticated encryption, archive/path limits, callback HMAC, and SSRF controls.
 
 Bun 1.3.14 is the project runtime and package manager through `mise.toml`.

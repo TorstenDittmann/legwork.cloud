@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import {
+	blob,
 	index,
 	integer,
 	primaryKey,
@@ -7,7 +8,15 @@ import {
 	text,
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
-import type { CreateIncidentRequest, Diagnosis, RunStatus } from "@oncall-ai/contracts";
+import type {
+	CreateIncidentRequest,
+	Diagnosis,
+	NormalizedAlertEvent,
+	ProviderCapability,
+	ProviderConnectionConfig,
+	ProviderKind,
+	RunStatus,
+} from "@oncall-ai/contracts";
 
 const id = () =>
 	text("id")
@@ -108,6 +117,149 @@ export const services = sqliteTable(
 		updatedAt: updatedAt(),
 	},
 	(table) => [uniqueIndex("services_org_slug_idx").on(table.organizationId, table.slug)],
+);
+
+export const providerConnections = sqliteTable(
+	"provider_connections",
+	{
+		id: id(),
+		organizationId: tenantId(),
+		provider: text("provider", { enum: ["grafana", "sentry"] })
+			.$type<ProviderKind>()
+			.notNull(),
+		name: text("name").notNull(),
+		mode: text("mode").notNull(),
+		baseUrl: text("base_url").notNull(),
+		config: text("config", { mode: "json" }).$type<ProviderConnectionConfig>().notNull(),
+		credentialsCiphertext: text("credentials_ciphertext").notNull(),
+		capabilities: text("capabilities", { mode: "json" }).$type<ProviderCapability[]>().notNull(),
+		enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+		lastVerifiedAt: integer("last_verified_at", { mode: "timestamp" }),
+		lastVerificationError: text("last_verification_error"),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+	},
+	(table) => [
+		index("provider_connections_org_provider_idx").on(table.organizationId, table.provider),
+		index("provider_connections_org_enabled_idx").on(table.organizationId, table.enabled),
+	],
+);
+
+export const serviceProviderBindings = sqliteTable(
+	"service_provider_bindings",
+	{
+		id: id(),
+		organizationId: tenantId(),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => services.id, { onDelete: "cascade" }),
+		connectionId: text("connection_id")
+			.notNull()
+			.references(() => providerConnections.id, { onDelete: "cascade" }),
+		enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+		queryPolicy: text("query_policy", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+	},
+	(table) => [
+		uniqueIndex("service_provider_binding_connection_idx").on(table.serviceId, table.connectionId),
+		index("service_provider_bindings_org_service_idx").on(table.organizationId, table.serviceId),
+	],
+);
+
+export const alertIntegrations = sqliteTable(
+	"alert_integrations",
+	{
+		id: id(),
+		organizationId: tenantId(),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => services.id, { onDelete: "cascade" }),
+		connectionId: text("connection_id").references(() => providerConnections.id, {
+			onDelete: "set null",
+		}),
+		provider: text("provider", { enum: ["grafana", "sentry"] })
+			.$type<ProviderKind>()
+			.notNull(),
+		name: text("name").notNull(),
+		enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+		config: text("config", { mode: "json" })
+			.$type<Record<string, unknown>>()
+			.notNull()
+			.$defaultFn(() => ({})),
+		webhookSecretCiphertext: text("webhook_secret_ciphertext").notNull(),
+		lastReceivedAt: integer("last_received_at", { mode: "timestamp" }),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+	},
+	(table) => [
+		index("alert_integrations_org_service_idx").on(table.organizationId, table.serviceId),
+	],
+);
+
+export const externalIncidentLinks = sqliteTable(
+	"external_incident_links",
+	{
+		id: id(),
+		organizationId: tenantId(),
+		integrationId: text("integration_id")
+			.notNull()
+			.references(() => alertIntegrations.id, { onDelete: "cascade" }),
+		incidentId: text("incident_id")
+			.notNull()
+			.references(() => incidents.id, { onDelete: "cascade" }),
+		provider: text("provider", { enum: ["grafana", "sentry"] })
+			.$type<ProviderKind>()
+			.notNull(),
+		externalGroupKey: text("external_group_key").notNull(),
+		episodeKey: text("episode_key").notNull(),
+		state: text("state", { enum: ["firing", "acknowledged", "resolved"] }).notNull(),
+		startedAt: integer("started_at", { mode: "timestamp" }).notNull(),
+		acknowledgedAt: integer("acknowledged_at", { mode: "timestamp" }),
+		resolvedAt: integer("resolved_at", { mode: "timestamp" }),
+		lastSeenAt: integer("last_seen_at", { mode: "timestamp" }).notNull(),
+		notificationCount: integer("notification_count").notNull().default(1),
+		providerContext: text("provider_context", { mode: "json" })
+			.$type<NormalizedAlertEvent>()
+			.notNull(),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+		expiresAt: expiresAt(),
+	},
+	(table) => [
+		uniqueIndex("external_incident_links_episode_idx").on(table.integrationId, table.episodeKey),
+		index("external_incident_links_group_idx").on(
+			table.integrationId,
+			table.externalGroupKey,
+			table.state,
+		),
+		index("external_incident_links_expiry_idx").on(table.expiresAt),
+	],
+);
+
+export const integrationDeliveries = sqliteTable(
+	"integration_deliveries",
+	{
+		id: id(),
+		organizationId: tenantId(),
+		integrationId: text("integration_id")
+			.notNull()
+			.references(() => alertIntegrations.id, { onDelete: "cascade" }),
+		payloadHash: text("payload_hash").notNull(),
+		providerDeliveryId: text("provider_delivery_id"),
+		eventType: text("event_type").notNull(),
+		status: text("status", { enum: ["accepted", "duplicate", "failed"] }).notNull(),
+		failureCode: text("failure_code"),
+		receivedAt: integer("received_at", { mode: "timestamp" }).notNull(),
+		expiresAt: expiresAt(),
+	},
+	(table) => [
+		uniqueIndex("integration_deliveries_payload_idx").on(table.integrationId, table.payloadHash),
+		uniqueIndex("integration_deliveries_provider_id_idx")
+			.on(table.integrationId, table.providerDeliveryId)
+			.where(sql`${table.providerDeliveryId} is not null`),
+		index("integration_deliveries_expiry_idx").on(table.expiresAt),
+	],
 );
 
 export const serviceRepositories = sqliteTable(
@@ -245,12 +397,73 @@ export const agentSteps = sqliteTable(
 		sequence: integer("sequence").notNull(),
 		kind: text("kind").notNull(),
 		summary: text("summary").notNull(),
+		detail: text("detail"),
 		toolName: text("tool_name"),
 		durationMs: integer("duration_ms"),
 		createdAt: createdAt(),
 		expiresAt: expiresAt(),
 	},
 	(table) => [uniqueIndex("agent_steps_run_sequence_idx").on(table.runId, table.sequence)],
+);
+
+export const langgraphCheckpoints = sqliteTable(
+	"langgraph_checkpoints",
+	{
+		organizationId: tenantId(),
+		runId: text("run_id")
+			.notNull()
+			.references(() => analysisRuns.id, { onDelete: "cascade" }),
+		threadId: text("thread_id").notNull(),
+		checkpointNamespace: text("checkpoint_namespace").notNull().default(""),
+		checkpointId: text("checkpoint_id").notNull(),
+		parentCheckpointId: text("parent_checkpoint_id"),
+		type: text("type").notNull(),
+		checkpoint: blob("checkpoint", { mode: "buffer" }).notNull(),
+		metadata: blob("metadata", { mode: "buffer" }).notNull(),
+		createdAt: createdAt(),
+		expiresAt: expiresAt(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.threadId, table.checkpointNamespace, table.checkpointId] }),
+		index("langgraph_checkpoints_org_run_idx").on(table.organizationId, table.runId),
+		index("langgraph_checkpoints_expiry_idx").on(table.expiresAt),
+		index("langgraph_checkpoints_thread_idx").on(
+			table.threadId,
+			table.checkpointNamespace,
+			table.checkpointId,
+		),
+	],
+);
+
+export const langgraphCheckpointWrites = sqliteTable(
+	"langgraph_checkpoint_writes",
+	{
+		organizationId: tenantId(),
+		runId: text("run_id")
+			.notNull()
+			.references(() => analysisRuns.id, { onDelete: "cascade" }),
+		threadId: text("thread_id").notNull(),
+		checkpointNamespace: text("checkpoint_namespace").notNull().default(""),
+		checkpointId: text("checkpoint_id").notNull(),
+		taskId: text("task_id").notNull(),
+		writeIndex: integer("write_index").notNull(),
+		channel: text("channel").notNull(),
+		type: text("type").notNull(),
+		value: blob("value", { mode: "buffer" }).notNull(),
+		createdAt: createdAt(),
+		expiresAt: expiresAt(),
+	},
+	(table) => [
+		uniqueIndex("langgraph_checkpoint_writes_unique_idx").on(
+			table.threadId,
+			table.checkpointNamespace,
+			table.checkpointId,
+			table.taskId,
+			table.writeIndex,
+		),
+		index("langgraph_checkpoint_writes_org_run_idx").on(table.organizationId, table.runId),
+		index("langgraph_checkpoint_writes_expiry_idx").on(table.expiresAt),
+	],
 );
 
 export const diagnoses = sqliteTable("diagnoses", {

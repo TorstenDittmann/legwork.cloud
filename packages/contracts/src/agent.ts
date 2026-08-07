@@ -55,6 +55,46 @@ export const toolResultSchema = z
 	.strict();
 export type ToolResult = z.infer<typeof toolResultSchema>;
 
+const evidenceBase = {
+	repositoryId,
+	excerpt: z.string().max(16_384),
+	explanation: z.string().min(1).max(4_000),
+};
+
+export const diagnosisEvidenceSchema = z.union([
+	z
+		.object({
+			...evidenceBase,
+			path: repositoryPath,
+			lineStart: z.number().int().min(1),
+			lineEnd: z.number().int().min(1),
+		})
+		.strict()
+		.refine((evidence) => evidence.lineEnd >= evidence.lineStart, {
+			message: "lineEnd must be at least lineStart",
+			path: ["lineEnd"],
+		}),
+	z
+		.object({
+			...evidenceBase,
+			command: z.string().min(1).max(256),
+		})
+		.strict(),
+	z
+		.object({
+			provider: z.enum(["grafana", "sentry"]),
+			sourceType: z.enum(["logs", "metrics", "traces", "issue", "event", "release"]),
+			operation: z.string().min(1).max(128),
+			locator: z.record(z.string().max(128), z.string().max(2_048)),
+			query: z.string().max(2_048).optional(),
+			windowStart: z.string().datetime({ offset: true }).optional(),
+			windowEnd: z.string().datetime({ offset: true }).optional(),
+			excerpt: z.string().max(16_384),
+			explanation: z.string().min(1).max(4_000),
+		})
+		.strict(),
+]);
+
 export const diagnosisSchema = z
 	.object({
 		schemaVersion: z.literal("1"),
@@ -68,35 +108,7 @@ export const diagnosisSchema = z
 			})
 			.strict()
 			.nullable(),
-		evidence: z
-			.array(
-				z
-					.object({
-						repositoryId,
-						path: repositoryPath.optional(),
-						lineStart: z.number().int().min(1).optional(),
-						lineEnd: z.number().int().min(1).optional(),
-						command: z.string().max(256).optional(),
-						excerpt: z.string().max(16_384),
-						explanation: z.string().min(1).max(4_000),
-					})
-					.strict()
-					.superRefine((evidence, context) => {
-						if (evidence.path && (!evidence.lineStart || !evidence.lineEnd)) {
-							context.addIssue({
-								code: "custom",
-								message: "File evidence requires a complete line range",
-							});
-						}
-						if (evidence.lineStart && evidence.lineEnd && evidence.lineEnd < evidence.lineStart) {
-							context.addIssue({ code: "custom", message: "lineEnd must be at least lineStart" });
-						}
-						if (!evidence.path && !evidence.command) {
-							context.addIssue({ code: "custom", message: "Evidence requires a path or command" });
-						}
-					}),
-			)
-			.max(50),
+		evidence: z.array(diagnosisEvidenceSchema).max(50),
 		suggestedFix: z
 			.object({
 				description: z.string().min(1).max(4_000),

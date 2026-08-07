@@ -4,16 +4,20 @@
 	"private": true,
 	"scripts": {
 		"dev": "bun --bun next dev",
-		"build": "bun --bun next build",
+		"build": "NODE_ENV=production bun --bun next build",
 		"start": "bun --bun next start",
 		"typecheck": "tsc --noEmit",
 		"lint": "oxlint ."
 	},
 	"dependencies": {
+		"@fontsource-variable/ibm-plex-sans": "^5.3.0",
+		"@fontsource-variable/newsreader": "^5.3.0",
+		"@fontsource/ibm-plex-mono": "^5.3.0",
 		"@oncall-ai/auth": "workspace:*",
 		"@oncall-ai/contracts": "workspace:*",
 		"@oncall-ai/db": "workspace:*",
 		"@oncall-ai/github": "workspace:*",
+		"@oncall-ai/integrations": "workspace:*",
 		"@oncall-ai/observability": "workspace:*",
 		"@oncall-ai/security": "workspace:*",
 		"@radix-ui/react-slot": "1.2.3",

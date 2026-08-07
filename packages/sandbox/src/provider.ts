@@ -3,10 +3,11 @@ import { Sandbox } from "railway";
 import type {
 	CheckRequest,
 	InspectionOperation,
+	RepositoryPreparationProgress,
 	RunContext,
 	SandboxHandle,
 	SandboxProvider,
-	SourceFile,
+	SandboxRepositoryManifest,
 	ToolResult,
 } from "@oncall-ai/contracts";
 import { assertRelativeRepositoryPath } from "@oncall-ai/security";
@@ -15,10 +16,42 @@ import { analysisTemplate } from "./template";
 
 const MAX_OUTPUT = 64 * 1024;
 const WORKSPACE = "/workspace/repositories";
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SHA_PATTERN = /^[0-9a-f]{40}$/;
 
 export interface RailwaySandboxOptions {
 	commandExecutionEnabled: boolean;
 	capabilityProbePassed: boolean;
+}
+
+export function validateRepositoryManifest(
+	manifest: SandboxRepositoryManifest,
+): SandboxRepositoryManifest {
+	if (manifest.repositories.length < 1 || manifest.repositories.length > 3)
+		throw new Error("Repository manifest must contain between one and three repositories");
+	const identifiers = new Set<string>();
+	for (const repository of manifest.repositories) {
+		if (!UUID_PATTERN.test(repository.repositoryId) || identifiers.has(repository.repositoryId))
+			throw new Error("Repository manifest contains an invalid identifier");
+		if (!SHA_PATTERN.test(repository.sha))
+			throw new Error("Repository manifest contains an invalid revision");
+		let url: URL;
+		try {
+			url = new URL(repository.downloadUrl);
+		} catch {
+			throw new Error("Repository manifest contains an invalid download URL");
+		}
+		if (
+			url.protocol !== "https:" ||
+			url.hostname !== "codeload.github.com" ||
+			url.username ||
+			url.password ||
+			url.port
+		)
+			throw new Error("Repository manifest contains a disallowed download URL");
+		identifiers.add(repository.repositoryId);
+	}
+	return manifest;
 }
 
 function bounded(value: string): { output: string; truncated: boolean } {
@@ -35,6 +68,17 @@ function repositoryRoot(repositoryId: string): string {
 export class RailwaySandboxProvider implements SandboxProvider {
 	constructor(private readonly options: RailwaySandboxOptions) {}
 
+	async health(handle: SandboxHandle): Promise<"ready" | "missing" | "unhealthy"> {
+		try {
+			const sandbox = await Sandbox.connect(handle.id);
+			const result = await sandbox.exec("true", { timeoutSec: 5 });
+			return result.exitCode === 0 && !result.timedOut ? "ready" : "unhealthy";
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "";
+			return /not found|does not exist|destroyed|404/i.test(message) ? "missing" : "unhealthy";
+		}
+	}
+
 	async create(run: RunContext): Promise<SandboxHandle> {
 		const sandbox = await Sandbox.create(analysisTemplate(), {
 			idleTimeoutMinutes: 10,
@@ -44,19 +88,58 @@ export class RailwaySandboxProvider implements SandboxProvider {
 		return { id: sandbox.id, createdAt: new Date(), metadata: { runId: run.runId } };
 	}
 
-	async upload(handle: SandboxHandle, files: AsyncIterable<SourceFile>): Promise<void> {
+	async prepareRepositories(
+		handle: SandboxHandle,
+		manifest: SandboxRepositoryManifest,
+		incident: Uint8Array,
+		onProgress?: (progress: RepositoryPreparationProgress) => void,
+	): Promise<void> {
+		const started = performance.now();
+		validateRepositoryManifest(manifest);
 		const sandbox = await Sandbox.connect(handle.id);
-		for await (const file of files) {
-			const relative = assertRelativeRepositoryPath(file.path);
-			await sandbox.files.write(`/workspace/${relative}`, file.content, {
-				mode: file.mode ?? 0o644,
-			});
+		await Promise.all([
+			sandbox.files.write("/workspace/bootstrap-manifest.json", JSON.stringify(manifest), {
+				mode: 0o600,
+			}),
+			sandbox.files.write("/workspace/incident.json", incident, { mode: 0o600 }),
+		]);
+		let output = "";
+		const consume = (chunk: string) => {
+			output += chunk;
+			const lines = output.split("\n");
+			output = lines.pop() ?? "";
+			for (const line of lines) {
+				try {
+					const progress = JSON.parse(line) as RepositoryPreparationProgress;
+					if (progress.phase === "downloading" || progress.phase === "extracting")
+						onProgress?.(progress);
+				} catch {
+					// Bootstrap output is intentionally ignored unless it is a progress event.
+				}
+			}
+		};
+		const result = await sandbox.exec(
+			"/usr/local/bin/ocai-bootstrap-repositories /workspace/bootstrap-manifest.json",
+			{
+				timeoutSec: 180,
+				onStdout: consume,
+			},
+		);
+		if (result.exitCode !== 0 || result.timedOut) {
+			await sandbox.files.remove("/workspace/incident.json").catch(() => undefined);
+			throw new Error(
+				result.timedOut ? "Repository bootstrap timed out" : "Repository bootstrap failed",
+			);
 		}
-		const ownership = await sandbox.exec("chown -R 10001:10001 /workspace/repositories", {
-			timeoutSec: 30,
+		const ownership = await sandbox.exec("chown 10001:10001 /workspace/incident.json", {
+			timeoutSec: 10,
 		});
-		if (ownership.exitCode !== 0)
-			throw new Error("Failed to assign repository workspace to the analysis user");
+		if (ownership.exitCode !== 0) throw new Error("Failed to assign incident file ownership");
+		onProgress?.({
+			phase: "ready",
+			repositoryCount: manifest.repositories.length,
+			durationMs: Math.round(performance.now() - started),
+		});
 	}
 
 	async inspect(handle: SandboxHandle, operation: InspectionOperation): Promise<ToolResult> {

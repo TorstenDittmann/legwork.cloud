@@ -6,10 +6,10 @@
 		"packages/*"
 	],
 	"scripts": {
-		"build": "turbo build",
-		"dev": "turbo dev",
-		"lint": "turbo lint",
-		"typecheck": "turbo typecheck",
+		"build": "wsu build",
+		"dev": "bun --bun wsu dev",
+		"lint": "wsu run lint",
+		"typecheck": "wsu run typecheck",
 		"test": "vitest run --exclude packages/db/src/db.test.ts && bun x --bun vitest run packages/db/src/db.test.ts",
 		"test:watch": "vitest",
 		"test:e2e": "playwright test",
@@ -25,9 +25,9 @@
 		"@types/node": "22.18.0",
 		"oxfmt": "0.62.0",
 		"oxlint": "1.77.0",
-		"turbo": "2.10.8",
 		"typescript": "5.9.2",
 		"vitest": "3.2.6",
+		"workspace-utils": "2.0.3",
 		"zod": "4.1.5"
 	},
 	"overrides": {

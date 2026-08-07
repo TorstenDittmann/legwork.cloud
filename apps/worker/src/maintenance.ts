@@ -7,6 +7,8 @@ import {
 	createDatabase,
 	diagnoses,
 	incidents,
+	integrationDeliveries,
+	externalIncidentLinks,
 } from "@oncall-ai/db";
 import { destroyedSandboxes, logger, purgedRecords } from "@oncall-ai/observability";
 
@@ -16,6 +18,14 @@ export async function purgeExpired(now = new Date()): Promise<void> {
 		.delete(callbackDeliveries)
 		.where(lt(callbackDeliveries.expiresAt, now))
 		.returning({ id: callbackDeliveries.id });
+	const deletedDeliveries = await db
+		.delete(integrationDeliveries)
+		.where(lt(integrationDeliveries.expiresAt, now))
+		.returning({ id: integrationDeliveries.id });
+	const deletedLinks = await db
+		.delete(externalIncidentLinks)
+		.where(lt(externalIncidentLinks.expiresAt, now))
+		.returning({ id: externalIncidentLinks.id });
 	const deletedDiagnoses = await db
 		.delete(diagnoses)
 		.where(lt(diagnoses.expiresAt, now))
@@ -25,6 +35,8 @@ export async function purgeExpired(now = new Date()): Promise<void> {
 		.where(lt(agentSteps.expiresAt, now))
 		.returning({ id: agentSteps.id });
 	purgedRecords.inc({ table: "callback_deliveries" }, deletedCallbacks.length);
+	purgedRecords.inc({ table: "integration_deliveries" }, deletedDeliveries.length);
+	purgedRecords.inc({ table: "external_incident_links" }, deletedLinks.length);
 	purgedRecords.inc({ table: "diagnoses" }, deletedDiagnoses.length);
 	purgedRecords.inc({ table: "agent_steps" }, deletedSteps.length);
 	const deletedIncidents = await db

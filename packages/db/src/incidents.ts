@@ -195,8 +195,8 @@ export async function createRetryRun(
 					),
 				)
 				.limit(1);
-			if (!original || !["failed", "inconclusive"].includes(original.status))
-				throw new Error("Only failed or inconclusive runs may be retried");
+			if (!original || !["completed", "failed", "inconclusive"].includes(original.status))
+				throw new Error("Only terminal runs may be retried");
 			const [usage] = await tx
 				.select({
 					analyses: sum(usageEvents.analyses).mapWith(Number),
