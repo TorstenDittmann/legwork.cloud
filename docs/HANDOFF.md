@@ -63,7 +63,7 @@ These items require real staging credentials or external configuration and must 
 
 - WorkOS sign-in, organization creation, invitation, role update, and organization switching.
 - GitHub App installation, repository webhooks, suspension/removal, token minting, and exact-SHA download.
-- OpenRouter privacy-compatible routing and the selected model's real tool/structured-output behavior.
+- OpenRouter routing and the selected model's real tool/structured-output behavior.
 - Callback delivery to a real public HTTPS endpoint, including all retry intervals.
 - Railway Sandbox create/upload/execute/destroy lifecycle.
 - The mandatory no-egress capability probe.
@@ -90,7 +90,7 @@ These items require real staging credentials or external configuration and must 
 - Never put GitHub credentials, OpenRouter credentials, or control-plane secrets in a sandbox.
 - Never expose a generic shell tool to the model.
 - Never enable online dependency installation in a sandbox.
-- Never relax OpenRouter ZDR or data-collection policy after a routing failure.
+- Never relax required model parameters after a routing failure; provider privacy filtering is deferred for the MVP.
 - Never enable `run_check` from mocked probe results.
 - Never persist repository archives outside the active sandbox.
 - Never apply suggested patches or write to GitHub.

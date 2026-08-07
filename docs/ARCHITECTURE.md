@@ -20,6 +20,7 @@ Turso stores tenant configuration, incidents, run state, structured evidence, us
 - GitHub App: read-only metadata/contents and installation events.
 - Railway: disposable analysis sandboxes.
 - OpenRouter: model tool selection and structured diagnosis.
+- LangGraph: full incident lifecycle state machine with Bun SQLite checkpoints.
 
 ## Provider boundaries
 
@@ -27,21 +28,26 @@ Vendor behavior is contained behind these conceptual interfaces:
 
 ```ts
 interface SandboxProvider {
-  create(run: RunContext): Promise<SandboxHandle>;
-  upload(handle: SandboxHandle, files: AsyncIterable<SourceFile>): Promise<void>;
-  inspect(handle: SandboxHandle, operation: InspectionOperation): Promise<ToolResult>;
-  runCheck(handle: SandboxHandle, check: CheckRequest): Promise<ToolResult>;
-  destroy(handle: SandboxHandle): Promise<void>;
+	create(run: RunContext): Promise<SandboxHandle>;
+	prepareRepositories(
+		handle: SandboxHandle,
+		manifest: SandboxRepositoryManifest,
+		incident: Uint8Array,
+		onProgress?: (progress: RepositoryPreparationProgress) => void,
+	): Promise<void>;
+	inspect(handle: SandboxHandle, operation: InspectionOperation): Promise<ToolResult>;
+	runCheck(handle: SandboxHandle, check: CheckRequest): Promise<ToolResult>;
+	destroy(handle: SandboxHandle): Promise<void>;
 }
 
 interface ModelProvider {
-  continueAgent(input: AgentTurn): Promise<AgentTurnResult>;
-  createDiagnosis(input: FinalDiagnosisInput): Promise<Diagnosis>;
+	continueAgent(input: AgentTurn): Promise<AgentTurnResult>;
+	createDiagnosis(input: FinalDiagnosisInput): Promise<Diagnosis>;
 }
 
 interface SourceProvider {
-  resolveRevision(repositoryId: string, requestedSha?: string): Promise<string>;
-  streamArchive(repositoryId: string, sha: string): Promise<ReadableStream>;
+	resolveRevision(repositoryId: string, requestedSha?: string): Promise<string>;
+	streamArchive(repositoryId: string, sha: string): Promise<ReadableStream>;
 }
 ```
 
@@ -56,8 +62,9 @@ Caller
   -> incident + run + durable job in one Turso transaction
   -> worker lease
   -> exact GitHub SHAs and restricted installation token
-  -> validated archive stream
+  -> exact-SHA temporary GitHub archive capabilities
   -> disposable Railway Sandbox
+  -> controlled archive download and validation bootstrap
   -> bounded static inspection / optional fixed offline check
   -> OpenRouter structured diagnosis
   -> evidence validation and persistence
@@ -88,7 +95,9 @@ Queue guarantees:
 
 ## Source ingestion
 
-The worker stores GitHub installation and repository numeric IDs, never installation tokens. Tokens are minted only when resolving source and are not forwarded into the sandbox.
+The worker stores GitHub installation and repository numeric IDs, never installation tokens. Tokens are minted only to resolve source and obtain exact-SHA temporary archive redirects. Tokens and the GitHub App private key are never forwarded into the sandbox.
+
+The sandbox receives only temporary `codeload.github.com` archive capabilities in a short-lived manifest. Its privileged bootstrap downloads and validates those archives using Railway's public NAT egress, deletes the manifest and compressed archives, and then hands the extracted repositories to the unprivileged analyst user. Temporary URLs are never logged or placed in an exec command.
 
 Archive policy applies one shared budget across all repositories in a run:
 
@@ -99,7 +108,7 @@ Archive policy applies one shared budget across all repositories in a run:
 - No traversal paths.
 - No hard links or symbolic links.
 - Unsupported archive entry types are rejected.
-- Extraction applies one-file backpressure while uploading.
+- Extraction happens inside the sandbox before the run enters `analyzing`.
 
 ## Agent tool boundary
 
@@ -116,6 +125,8 @@ Model-controlled strings are schema-validated, path-contained, shell-quoted wher
 
 ## Sandbox execution gate
 
+Repository bootstrap is the only phase allowed to use the sandbox's public NAT egress. Agent inspection and approved repository commands run through `ocai-run-check`, which creates a no-egress network namespace. The capability probe verifies DNS, public HTTP, private-network, and metadata access remain unavailable inside that command boundary.
+
 Static inspection is always available after a sandbox is created. Repository execution requires both:
 
 ```text
@@ -129,7 +140,9 @@ The real probe must prove file/exec operations, no DNS/public/private/metadata r
 
 ## Model privacy and evidence
 
-OpenRouter requests require parameter support, ZDR routing, and data-collection denial. Routing failures must raise `MODEL_PRIVACY_ROUTE_UNAVAILABLE`; no fallback may weaken privacy.
+OpenRouter requests require parameter support and permit provider fallbacks. Provider data-collection filters and per-request ZDR enforcement are intentionally disabled for the MVP. Routing failures raise `MODEL_PRIVACY_ROUTE_UNAVAILABLE` rather than silently dropping required model parameters.
+
+The durable queue remains the outer scheduler. Each analysis run is a LangGraph thread keyed by its run ID, with checkpoints and pending writes stored tenant-scoped in Bun SQLite for the same 30-day retention period. Queue retries resume the latest checkpoint instead of repeating completed model and tool stages. LangSmith tracing is disabled and no checkpoint or trace data leaves the application database.
 
 The application sends incident context and only tool-requested excerpts/output. It does not send whole repositories or persist complete conversations or hidden reasoning.
 

@@ -148,7 +148,7 @@ Defaults:
 ### Phase 5: model agent — implemented, live quality evaluation pending
 
 - OpenRouter tool calls with `parallel_tool_calls: false`.
-- ZDR and data-collection-denied routing policy.
+- Required-parameter routing with provider fallbacks; provider privacy filters and per-request ZDR are deferred beyond the MVP.
 - Strict structured diagnosis.
 - Bounded tool loop and one repair attempt.
 - Evidence path, range, and excerpt validation.
