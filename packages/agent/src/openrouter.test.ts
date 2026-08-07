@@ -107,7 +107,7 @@ describe("OpenRouter tool calls", () => {
 		expect(result.rawToolCalls.map(({ name }) => name)).toEqual(["run_check", "run_check"]);
 	});
 
-	it("uses the configured request policy and operation-specific reasoning", async () => {
+	it("uses the configured request policy and medium reasoning for every operation", async () => {
 		const fetch = vi
 			.fn()
 			.mockResolvedValueOnce(response({ role: "assistant", content: "done" }))
@@ -151,7 +151,7 @@ describe("OpenRouter tool calls", () => {
 		const investigation = JSON.parse(String(fetch.mock.calls[0]?.[1]?.body));
 		const diagnosis = JSON.parse(String(fetch.mock.calls[1]?.[1]?.body));
 		const repair = JSON.parse(String(fetch.mock.calls[2]?.[1]?.body));
-		expect(investigation.reasoning.effort).toBe("low");
+		expect(investigation.reasoning.effort).toBe("medium");
 		expect(diagnosis.reasoning.effort).toBe("medium");
 		const suggestedFixSchema = diagnosis.response_format.json_schema.schema.properties.suggestedFix;
 		const suggestedFixObject = suggestedFixSchema.anyOf.find(

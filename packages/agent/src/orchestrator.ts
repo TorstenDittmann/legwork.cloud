@@ -129,7 +129,7 @@ export async function runDiagnosisAgent(
 		await activity({
 			kind: "reasoning",
 			summary: `Planning investigation step ${turn + 1}`,
-			detail: JSON.stringify({ model: modelName, reasoningEffort: "low" }, null, 2),
+			detail: JSON.stringify({ model: modelName, reasoningEffort: "medium" }, null, 2),
 		});
 		const modelStarted = performance.now();
 		const next = await model.continueAgent(messages, undefined, input.signal);
@@ -147,7 +147,7 @@ export async function runDiagnosisAgent(
 				? `The model requested ${toolCalls.length} tool${toolCalls.length === 1 ? "" : "s"}`
 				: "The model finished its investigation loop",
 			detail: JSON.stringify(
-				{ model: modelName, reasoningEffort: "low", message: next.message },
+				{ model: modelName, reasoningEffort: "medium", message: next.message },
 				null,
 				2,
 			),

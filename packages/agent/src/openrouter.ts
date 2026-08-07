@@ -149,7 +149,7 @@ export class OpenRouterProvider {
 
 	async #request(
 		body: Record<string, unknown>,
-		reasoningEffort: "low" | "medium",
+		reasoningEffort: "medium",
 		signal?: AbortSignal,
 	): Promise<OpenRouterResponse> {
 		const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -197,7 +197,7 @@ export class OpenRouterProvider {
 				})),
 				tool_choice: "auto",
 			},
-			"low",
+			"medium",
 			signal,
 		);
 		const raw = payload.choices?.[0]?.message;

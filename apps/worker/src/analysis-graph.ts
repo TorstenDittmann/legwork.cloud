@@ -547,7 +547,7 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 				activity({
 					kind: "node_retried",
 					summary: `Retrying investigation model request (attempt ${attempt}/3)`,
-					detail: JSON.stringify({ model: model.model, reasoningEffort: "low", attempt }),
+					detail: JSON.stringify({ model: model.model, reasoningEffort: "medium", attempt }),
 				}),
 		);
 		await activity({
@@ -556,7 +556,7 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 				? `The model requested ${result.rawToolCalls.length} tools`
 				: "The model finished its investigation",
 			detail: JSON.stringify(
-				{ model: model.model, reasoningEffort: "low", message: result.message },
+				{ model: model.model, reasoningEffort: "medium", message: result.message },
 				null,
 				2,
 			),
