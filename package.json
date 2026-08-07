@@ -25,6 +25,7 @@
 		"@types/node": "22.18.0",
 		"oxfmt": "0.62.0",
 		"oxlint": "1.77.0",
+		"railway": "3.6.0",
 		"typescript": "5.9.2",
 		"vitest": "3.2.6",
 		"workspace-utils": "2.0.3",

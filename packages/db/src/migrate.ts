@@ -1,4 +1,4 @@
-import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { migrate } from "drizzle-orm/libsql/migrator";
 import { createDatabase, closeDatabase } from "./client";
 
 await migrate(createDatabase(), {

@@ -2,7 +2,7 @@ import { and, count, eq, inArray, ne, sql } from "drizzle-orm";
 import {
 	agentSteps,
 	analysisRuns,
-	BunSqliteCheckpointSaver,
+	LibSqlCheckpointSaver,
 	createDatabase,
 	organizations,
 } from "@oncall-ai/db";
@@ -127,7 +127,7 @@ export async function analyzeIncident(
 		return activityWrites;
 	};
 
-	const checkpointer = new BunSqliteCheckpointSaver({
+	const checkpointer = new LibSqlCheckpointSaver({
 		db,
 		organizationId: run.organizationId,
 		runId,

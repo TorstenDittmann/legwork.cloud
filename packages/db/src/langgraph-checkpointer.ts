@@ -1,4 +1,4 @@
-import type { Database as BunDatabase } from "bun:sqlite";
+import type { Client, InStatement, Row } from "@libsql/client";
 import type { RunnableConfig } from "@langchain/core/runnables";
 import {
 	BaseCheckpointSaver,
@@ -30,15 +30,15 @@ interface WriteRow {
 
 const FILTER_KEYS = new Set(["source", "step"]);
 
-export class BunSqliteCheckpointSaver extends BaseCheckpointSaver {
-	readonly #client: BunDatabase;
+export class LibSqlCheckpointSaver extends BaseCheckpointSaver {
+	readonly #client: Client;
 	readonly #organizationId: string;
 	readonly #runId: string;
 	readonly #expiresAt: Date;
 
 	constructor(options: { db: Database; organizationId: string; runId: string; expiresAt: Date }) {
 		super();
-		this.#client = (options.db as Database & { $client: BunDatabase }).$client;
+		this.#client = (options.db as Database & { $client: Client }).$client;
 		this.#organizationId = options.organizationId;
 		this.#runId = options.runId;
 		this.#expiresAt = options.expiresAt;
@@ -74,21 +74,21 @@ export class BunSqliteCheckpointSaver extends BaseCheckpointSaver {
 	async #tuple(row: CheckpointRow): Promise<CheckpointTuple> {
 		const checkpoint = (await this.serde.loadsTyped(row.type, row.checkpoint)) as Checkpoint;
 		const metadata = (await this.serde.loadsTyped("json", row.metadata)) as CheckpointMetadata;
-		const writes = this.#client
-			.query<WriteRow, [string, string, string, string, string]>(
-				`SELECT task_id, channel, type, value
+		const result = await this.#client.execute({
+			sql: `SELECT task_id, channel, type, value
 				 FROM langgraph_checkpoint_writes
 				 WHERE organization_id = ? AND run_id = ? AND thread_id = ?
 				   AND checkpoint_namespace = ? AND checkpoint_id = ?
 				 ORDER BY task_id, write_index`,
-			)
-			.all(
+			args: [
 				this.#organizationId,
 				this.#runId,
 				this.#runId,
 				row.checkpoint_namespace,
 				row.checkpoint_id,
-			);
+			],
+		});
+		const writes = result.rows.map((write) => this.#writeRow(write));
 		return {
 			config: this.#config(this.#runId, row.checkpoint_namespace, row.checkpoint_id),
 			checkpoint,
@@ -112,33 +112,59 @@ export class BunSqliteCheckpointSaver extends BaseCheckpointSaver {
 		};
 	}
 
+	#bytes(value: unknown): Uint8Array {
+		if (value instanceof Uint8Array) return value;
+		if (value instanceof ArrayBuffer) return new Uint8Array(value);
+		throw new Error("Expected a binary libSQL column");
+	}
+
+	#checkpointRow(row: Row): CheckpointRow {
+		return {
+			checkpoint_namespace: String(row.checkpoint_namespace),
+			checkpoint_id: String(row.checkpoint_id),
+			parent_checkpoint_id:
+				row.parent_checkpoint_id === null ? null : String(row.parent_checkpoint_id),
+			type: String(row.type),
+			checkpoint: this.#bytes(row.checkpoint),
+			metadata: this.#bytes(row.metadata),
+		};
+	}
+
+	#writeRow(row: Row): WriteRow {
+		return {
+			task_id: String(row.task_id),
+			channel: String(row.channel),
+			type: String(row.type),
+			value: this.#bytes(row.value),
+		};
+	}
+
 	async getTuple(config: RunnableConfig): Promise<CheckpointTuple | undefined> {
 		const scope = this.#scope(config);
-		const row = scope.checkpointId
-			? this.#client
-					.query<CheckpointRow, [string, string, string, string, string]>(
-						`SELECT checkpoint_namespace, checkpoint_id, parent_checkpoint_id, type, checkpoint, metadata
+		const statement: InStatement = scope.checkpointId
+			? {
+					sql: `SELECT checkpoint_namespace, checkpoint_id, parent_checkpoint_id, type, checkpoint, metadata
 						 FROM langgraph_checkpoints
 						 WHERE organization_id = ? AND run_id = ? AND thread_id = ?
 						   AND checkpoint_namespace = ? AND checkpoint_id = ?`,
-					)
-					.get(
+					args: [
 						this.#organizationId,
 						this.#runId,
 						scope.threadId,
 						scope.namespace,
 						scope.checkpointId,
-					)
-			: this.#client
-					.query<CheckpointRow, [string, string, string, string]>(
-						`SELECT checkpoint_namespace, checkpoint_id, parent_checkpoint_id, type, checkpoint, metadata
+					],
+				}
+			: {
+					sql: `SELECT checkpoint_namespace, checkpoint_id, parent_checkpoint_id, type, checkpoint, metadata
 						 FROM langgraph_checkpoints
 						 WHERE organization_id = ? AND run_id = ? AND thread_id = ?
 						   AND checkpoint_namespace = ?
 						 ORDER BY checkpoint_id DESC LIMIT 1`,
-					)
-					.get(this.#organizationId, this.#runId, scope.threadId, scope.namespace);
-		return row ? this.#tuple(row) : undefined;
+					args: [this.#organizationId, this.#runId, scope.threadId, scope.namespace],
+				};
+		const row = (await this.#client.execute(statement)).rows[0];
+		return row ? this.#tuple(this.#checkpointRow(row)) : undefined;
 	}
 
 	async *list(
@@ -170,14 +196,13 @@ export class BunSqliteCheckpointSaver extends BaseCheckpointSaver {
 		}
 		const limit = Math.max(0, Math.min(options?.limit ?? 100, 1_000));
 		values.push(limit);
-		const rows = this.#client
-			.query<CheckpointRow, Array<string | number>>(
-				`SELECT checkpoint_namespace, checkpoint_id, parent_checkpoint_id, type, checkpoint, metadata
+		const result = await this.#client.execute({
+			sql: `SELECT checkpoint_namespace, checkpoint_id, parent_checkpoint_id, type, checkpoint, metadata
 				 FROM langgraph_checkpoints WHERE ${clauses.join(" AND ")}
 				 ORDER BY checkpoint_id DESC LIMIT ?`,
-			)
-			.all(...values);
-		for (const row of rows) yield await this.#tuple(row);
+			args: values,
+		});
+		for (const row of result.rows) yield await this.#tuple(this.#checkpointRow(row));
 	}
 
 	async put(
@@ -189,14 +214,12 @@ export class BunSqliteCheckpointSaver extends BaseCheckpointSaver {
 		const scope = this.#scope(config);
 		const [checkpointType, checkpointValue] = await this.serde.dumpsTyped(checkpoint);
 		const [, metadataValue] = await this.serde.dumpsTyped(metadata);
-		this.#client
-			.query(
-				`INSERT OR REPLACE INTO langgraph_checkpoints
+		await this.#client.execute({
+			sql: `INSERT OR REPLACE INTO langgraph_checkpoints
 				 (organization_id, run_id, thread_id, checkpoint_namespace, checkpoint_id,
 				  parent_checkpoint_id, type, checkpoint, metadata, created_at, expires_at)
 				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			)
-			.run(
+			args: [
 				this.#organizationId,
 				this.#runId,
 				scope.threadId,
@@ -208,7 +231,8 @@ export class BunSqliteCheckpointSaver extends BaseCheckpointSaver {
 				metadataValue,
 				Date.now(),
 				this.#expiresAt.getTime(),
-			);
+			],
+		});
 		return this.#config(scope.threadId, scope.namespace, checkpoint.id);
 	}
 
@@ -222,15 +246,13 @@ export class BunSqliteCheckpointSaver extends BaseCheckpointSaver {
 				return { channel, type, bytes, index: WRITES_IDX_MAP[channel] ?? index };
 			}),
 		);
-		const insert = this.#client.query(
-			`INSERT OR REPLACE INTO langgraph_checkpoint_writes
-			 (organization_id, run_id, thread_id, checkpoint_namespace, checkpoint_id,
-			  task_id, write_index, channel, type, value, created_at, expires_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		);
-		this.#client.transaction(() => {
-			for (const write of serialized)
-				insert.run(
+		await this.#client.batch(
+			serialized.map((write) => ({
+				sql: `INSERT OR REPLACE INTO langgraph_checkpoint_writes
+				 (organization_id, run_id, thread_id, checkpoint_namespace, checkpoint_id,
+				  task_id, write_index, channel, type, value, created_at, expires_at)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				args: [
 					this.#organizationId,
 					this.#runId,
 					scope.threadId,
@@ -243,24 +265,28 @@ export class BunSqliteCheckpointSaver extends BaseCheckpointSaver {
 					write.bytes,
 					Date.now(),
 					this.#expiresAt.getTime(),
-				);
-		})();
+				],
+			})),
+			"write",
+		);
 	}
 
 	async deleteThread(threadId: string): Promise<void> {
 		if (threadId !== this.#runId)
 			throw new Error("LangGraph thread_id must equal the configured analysis run ID");
-		this.#client.transaction(() => {
-			this.#client
-				.query(
-					"DELETE FROM langgraph_checkpoint_writes WHERE organization_id = ? AND run_id = ? AND thread_id = ?",
-				)
-				.run(this.#organizationId, this.#runId, threadId);
-			this.#client
-				.query(
-					"DELETE FROM langgraph_checkpoints WHERE organization_id = ? AND run_id = ? AND thread_id = ?",
-				)
-				.run(this.#organizationId, this.#runId, threadId);
-		})();
+		const args = [this.#organizationId, this.#runId, threadId];
+		await this.#client.batch(
+			[
+				{
+					sql: "DELETE FROM langgraph_checkpoint_writes WHERE organization_id = ? AND run_id = ? AND thread_id = ?",
+					args,
+				},
+				{
+					sql: "DELETE FROM langgraph_checkpoints WHERE organization_id = ? AND run_id = ? AND thread_id = ?",
+					args,
+				},
+			],
+			"write",
+		);
 	}
 }

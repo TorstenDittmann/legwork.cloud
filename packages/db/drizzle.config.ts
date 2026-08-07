@@ -4,6 +4,9 @@ export default defineConfig({
 	schema: "./src/schema.ts",
 	out: "./migrations",
 	dialect: "sqlite",
-	dbCredentials: { url: process.env.DATABASE_PATH ?? "local.db" },
+	dbCredentials: {
+		url: process.env.DATABASE_URL ?? "local.db",
+		authToken: process.env.DATABASE_AUTH_TOKEN,
+	},
 	strict: true,
 });

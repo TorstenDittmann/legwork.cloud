@@ -1,12 +1,12 @@
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
-import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { migrate } from "drizzle-orm/libsql/migrator";
 import { eq } from "drizzle-orm";
 import { rm } from "node:fs/promises";
 import { emptyCheckpoint } from "@langchain/langgraph-checkpoint";
 import {
 	claimJobs,
 	analysisRuns,
-	BunSqliteCheckpointSaver,
+	LibSqlCheckpointSaver,
 	closeDatabase,
 	completeJob,
 	createDatabase,
@@ -27,7 +27,7 @@ beforeAll(async () => {
 	await migrate(db, { migrationsFolder: new URL("../migrations", import.meta.url).pathname });
 });
 
-describe("Bun SQLite LangGraph checkpoints", () => {
+describe("libSQL LangGraph checkpoints", () => {
 	it("round-trips binary state and pending writes within the configured tenant run", async () => {
 		const [organization] = await db
 			.insert(organizations)
@@ -55,7 +55,7 @@ describe("Bun SQLite LangGraph checkpoints", () => {
 				occurredAt: new Date().toISOString(),
 			},
 		});
-		const saver = new BunSqliteCheckpointSaver({
+		const saver = new LibSqlCheckpointSaver({
 			db,
 			organizationId: organization.id,
 			runId: created.runId,
@@ -86,7 +86,7 @@ afterAll(async () => {
 	await rm(databasePath, { force: true });
 });
 
-describe("durable SQLite queue", () => {
+describe("durable libSQL queue", () => {
 	it("claims a singleton once and recovers a failed lease", async () => {
 		const first = await enqueueJob(
 			db,

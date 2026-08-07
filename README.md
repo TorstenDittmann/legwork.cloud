@@ -23,7 +23,7 @@ Bun 1.3.14 is the project runtime and package manager through `mise.toml`.
 ## Local setup
 
 1. Copy `.env.example` to `.env.local` and fill the required values.
-2. Set `DATABASE_PATH` if you do not want the default `local.db`, then run `bun run db:migrate`.
+2. Set `DATABASE_URL` if you do not want the default `file:local.db`, then run `bun run db:migrate`. Set `DATABASE_AUTH_TOKEN` when the remote endpoint requires authentication.
 3. In WorkOS AuthKit, configure the callback as `http://localhost:3000/auth/callback`, the sign-in URL as `http://localhost:3000/sign-in`, and create immutable `admin` and `member` role slugs. Set `member` as the default role.
 4. Create a read-only GitHub App with repository metadata and contents permissions plus `installation` and `installation_repositories` webhooks. Configure its setup callback as `/api/github/callback` and webhook URL as `/api/github/webhook`.
 5. Start the web and worker processes:
@@ -41,10 +41,10 @@ Create two Railway services from this repository and use these commands:
 
 | Service | Build                                                                       | Start                                      | Health         |
 | ------- | --------------------------------------------------------------------------- | ------------------------------------------ | -------------- |
-| Web     | `bun install --frozen-lockfile && bun run --filter @oncall-ai/web build`    | `bun run --filter @oncall-ai/web start`    | `/api/health`  |
-| Worker  | `bun install --frozen-lockfile && bun run --filter @oncall-ai/worker build` | `bun run --filter @oncall-ai/worker start` | process health |
+| Web     | `bun run --filter @oncall-ai/web build`    | `bun run --filter @oncall-ai/web start`    | `/api/health`  |
+| Worker  | `bun run --filter @oncall-ai/worker build` | `bun run --filter @oncall-ai/worker start` | process health |
 
-Both services must mount the same persistent Railway volume and use the same `DATABASE_PATH`. Only the worker receives the GitHub private key, OpenRouter key, and Railway token. The web service receives WorkOS credentials, GitHub webhook/setup secrets, and the data-encryption key. Scope shared values narrowly in Railway rather than exposing all secrets to both services.
+Both services use the same remote libSQL `DATABASE_URL`; local development uses `file:local.db`. Only the worker receives the GitHub private key and OpenRouter key. The web service receives WorkOS credentials and GitHub webhook/setup secrets. Scope shared values narrowly in Railway rather than exposing all secrets to both services.
 
 ## Sandbox command gate
 

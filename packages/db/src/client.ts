@@ -1,12 +1,12 @@
-import { Database as SQLite } from "bun:sqlite";
+import { createClient, type Client } from "@libsql/client";
 import { readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import { drizzle, type BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
+import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
 import * as schema from "./schema";
 
-let client: SQLite | undefined;
+let client: Client | undefined;
 let database: Database | undefined;
-export type Database = BunSQLiteDatabase<typeof schema>;
+export type Database = LibSQLDatabase<typeof schema>;
 
 function findWorkspaceRoot(start: string): string {
 	let directory = start;
@@ -25,13 +25,16 @@ function findWorkspaceRoot(start: string): string {
 	}
 }
 
-export function createDatabase(path = process.env.DATABASE_PATH ?? "local.db"): Database {
+function databaseUrl(value: string): string {
+	if (/^(file:|https?:|wss?:|libsql:)/.test(value)) return value;
+	const path = isAbsolute(value) ? value : resolve(findWorkspaceRoot(process.cwd()), value);
+	return `file:${path}`;
+}
+
+export function createDatabase(url = process.env.DATABASE_URL ?? "local.db"): Database {
 	if (!database) {
-		const databasePath = isAbsolute(path) ? path : resolve(findWorkspaceRoot(process.cwd()), path);
-		client = new SQLite(databasePath, { create: true });
-		client.run("PRAGMA journal_mode = WAL");
-		client.run("PRAGMA foreign_keys = ON");
-		client.run("PRAGMA busy_timeout = 5000");
+		const authToken = process.env.DATABASE_AUTH_TOKEN;
+		client = createClient({ url: databaseUrl(url), ...(authToken ? { authToken } : {}) });
 		database = drizzle(client, { schema });
 	}
 	return database;
