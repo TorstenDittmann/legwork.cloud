@@ -24,7 +24,7 @@
 	--color-medium: #8f6400;
 	--color-low: #2f6b50;
 	--color-success: #1e7f45;
-	--color-warning: #9a6700;
+	--color-warning: #8f6400;
 	--color-danger: #b42318;
 	--color-live: #157f3d;
 
@@ -32,30 +32,6 @@
 	--font-display--font-variation-settings: "wdth" 112;
 	--font-sans: "IBM Plex Sans Variable", ui-sans-serif, system-ui, sans-serif;
 	--font-mono: "IBM Plex Mono", ui-monospace, monospace;
-}
-
-/* Compat aliases while screens migrate from [var(--x)] arbitrary values to
-   semantic utilities. Delete once no TSX references var(--…) directly. */
-:root {
-	--canvas: var(--color-canvas);
-	--surface: var(--color-surface);
-	--surface-raised: var(--color-surface-raised);
-	--ink: var(--color-ink);
-	--ink-muted: var(--color-ink-muted);
-	--ink-faint: var(--color-ink-faint);
-	--rule: var(--color-rule);
-	--rule-strong: var(--color-rule-strong);
-	--accent: var(--color-accent);
-	--accent-hover: var(--color-accent-hover);
-	--critical: var(--color-critical);
-	--high: var(--color-high);
-	--medium: var(--color-medium);
-	--low: var(--color-low);
-	--success: var(--color-success);
-	--warning: var(--color-warning);
-	--danger: var(--color-danger);
-	--live: var(--color-live);
-	--font-ui: var(--font-sans);
 }
 
 @layer base {
@@ -112,12 +88,12 @@
 	background-image:
 		linear-gradient(
 			to right,
-			color-mix(in srgb, var(--color-rule) 55%, transparent) 1px,
+			color-mix(in srgb, var(--color-rule-strong) 45%, transparent) 1px,
 			transparent 1px
 		),
 		linear-gradient(
 			to bottom,
-			color-mix(in srgb, var(--color-rule) 40%, transparent) 1px,
+			color-mix(in srgb, var(--color-rule-strong) 32%, transparent) 1px,
 			transparent 1px
 		);
 	background-size: 48px 48px;

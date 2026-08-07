@@ -11,6 +11,9 @@ export const statusTone: Record<string, BadgeTone> = {
 	cancelled: "neutral",
 	enabled: "success",
 	disabled: "neutral",
+	pending: "warning",
+	passed: "success",
+	skipped: "neutral",
 };
 
 export function StatusMark({ status, className }: { status: string; className?: string }) {

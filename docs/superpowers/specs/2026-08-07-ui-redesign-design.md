@@ -18,7 +18,7 @@ single light theme.
 | `accent` / `accent-hover` | `#2432C7` / `#1B27A6` | deep ultramarine — the single signature hue |
 | `critical` / `danger` | `#B42318` | status hues, AA as text on canvas |
 | `high` | `#B54708` | |
-| `medium` / `warning` | `#8F6400` / `#9A6700` | |
+| `medium` / `warning` | `#8F6400` (shared) | warning was darkened from #9A6700 for AA on `surface-raised` |
 | `low` | `#2F6B50` | |
 | `success` | `#1E7F45` | |
 | `live` | `#157F3D` | |
