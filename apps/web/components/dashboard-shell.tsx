@@ -33,7 +33,7 @@ export async function DashboardShell({ children }: { children: React.ReactNode }
 		<div className="min-h-screen lg:grid lg:grid-cols-[224px_minmax(0,1fr)]">
 			<a
 				href="#main-content"
-				className="fixed left-3 top-3 z-[100] -translate-y-20 rounded-[3px] bg-[var(--ink)] px-3 py-2 text-sm text-[var(--canvas)] transition-transform focus:translate-y-0"
+				className="fixed left-3 top-3 z-[100] -translate-y-20 rounded-[3px] bg-ink px-3 py-2 text-sm text-canvas transition-transform focus:translate-y-0"
 			>
 				Skip to Main Content
 			</a>
