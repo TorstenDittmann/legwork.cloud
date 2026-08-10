@@ -66,7 +66,7 @@ export class IntegrationProviderError extends Error {
 		this.name = "IntegrationProviderError";
 	}
 }
-async function boundedJson(url: URL, token: string, signal?: AbortSignal) {
+export async function boundedJson(url: URL, token: string, signal?: AbortSignal) {
 	const resolved = await resolveSafeProviderUrl(url.origin);
 	const dispatcher = new Agent({
 		connect: {

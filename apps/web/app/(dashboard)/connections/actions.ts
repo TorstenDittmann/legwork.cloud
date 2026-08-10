@@ -4,8 +4,17 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireTenant } from "@oncall-ai/auth";
 import { createDatabase, providerConnections } from "@oncall-ai/db";
-import { assertSafeProviderUrl, investigationContextProviders } from "@oncall-ai/integrations";
+import {
+	assertSafeProviderUrl,
+	discoverGrafanaDatasources,
+	discoverSentryProjects,
+	inferProviderMode,
+	IntegrationProviderError,
+	investigationContextProviders,
+} from "@oncall-ai/integrations";
+import type { ProviderCredential, ResolvedProviderConnection } from "@oncall-ai/contracts";
 import { decryptSecret, encryptSecret } from "@oncall-ai/security";
+import type { ConnectionActionState, DiscoveryState } from "./state";
 
 function key() {
 	const value = process.env.DATA_ENCRYPTION_KEY;
@@ -17,10 +26,43 @@ async function admin() {
 	if (tenant.role !== "admin") throw new Error("Administrator access required");
 	return tenant;
 }
+function errorCode(error: unknown) {
+	return error instanceof IntegrationProviderError ? error.code : "PROVIDER_UNAVAILABLE";
+}
+
+const discoverySchema = z.object({
+	provider: z.enum(["grafana", "sentry"]),
+	baseUrl: z.string().url(),
+	token: z.string().min(1).max(16_384),
+});
+export async function discoverConnection(
+	_previous: DiscoveryState,
+	formData: FormData,
+): Promise<DiscoveryState> {
+	await admin();
+	const parsed = discoverySchema.safeParse(Object.fromEntries(formData));
+	if (!parsed.success) return { status: "error", code: "PROVIDER_QUERY_INVALID" };
+	try {
+		await assertSafeProviderUrl(parsed.data.baseUrl);
+		return parsed.data.provider === "grafana"
+			? {
+					status: "ok",
+					provider: "grafana",
+					datasources: await discoverGrafanaDatasources(parsed.data.baseUrl, parsed.data.token),
+				}
+			: {
+					status: "ok",
+					provider: "sentry",
+					projects: await discoverSentryProjects(parsed.data.baseUrl, parsed.data.token),
+				};
+	} catch (error) {
+		return { status: "error", code: errorCode(error) };
+	}
+}
+
 const inputSchema = z
 	.object({
 		provider: z.enum(["grafana", "sentry"]),
-		mode: z.enum(["grafana_cloud", "grafana_http", "sentry_cloud", "sentry_http"]),
 		name: z.string().trim().min(1).max(128),
 		baseUrl: z.string().url(),
 		token: z.string().min(1).max(16_384),
@@ -30,25 +72,57 @@ const inputSchema = z
 		metricsUid: z.string().max(128).optional(),
 		tracesUid: z.string().max(128).optional(),
 	})
-	.refine((value) => value.mode.startsWith(value.provider), {
-		message: "Provider and mode must match",
-		path: ["mode"],
-	})
 	.refine(
 		(value) => value.provider !== "sentry" || Boolean(value.organizationSlug && value.projectSlug),
 		{ message: "Sentry organization and project slugs are required", path: ["organizationSlug"] },
+	)
+	.refine(
+		(value) =>
+			value.provider !== "grafana" || Boolean(value.logsUid || value.metricsUid || value.tracesUid),
+		{ message: "Select at least one Grafana data source", path: ["logsUid"] },
 	);
-export async function createConnection(formData: FormData) {
+
+async function verifyRecord(record: ResolvedProviderConnection) {
+	const db = createDatabase();
+	const result = await investigationContextProviders[record.config.provider].testConnection(record);
+	await db
+		.update(providerConnections)
+		.set({
+			lastVerifiedAt: result.ok ? new Date() : null,
+			lastVerificationError: result.errorCode ?? null,
+			updatedAt: new Date(),
+		})
+		.where(
+			and(
+				eq(providerConnections.id, record.id),
+				eq(providerConnections.organizationId, record.organizationId),
+			),
+		);
+	return result;
+}
+
+export async function createConnection(
+	_previous: ConnectionActionState,
+	formData: FormData,
+): Promise<ConnectionActionState> {
 	const tenant = await admin();
-	const data = inputSchema.parse(Object.fromEntries(formData));
-	await assertSafeProviderUrl(data.baseUrl);
+	const entries = Object.fromEntries([...formData.entries()].filter(([, value]) => value !== ""));
+	const parsed = inputSchema.safeParse(entries);
+	if (!parsed.success)
+		return { status: "error", code: parsed.error.issues[0]?.message ?? "Invalid input" };
+	const data = parsed.data;
+	try {
+		await assertSafeProviderUrl(data.baseUrl);
+	} catch (error) {
+		return { status: "error", code: errorCode(error) };
+	}
+	const mode = inferProviderMode(data.provider, data.baseUrl);
 	const id = crypto.randomUUID();
 	const config =
 		data.provider === "grafana"
 			? {
 					provider: "grafana" as const,
-					mode:
-						data.mode === "grafana_cloud" ? ("grafana_cloud" as const) : ("grafana_http" as const),
+					mode: mode as "grafana_cloud" | "grafana_http",
 					grafanaUrl: data.baseUrl,
 					...(data.logsUid ? { logs: { uid: data.logsUid, type: "loki" as const } } : {}),
 					...(data.metricsUid
@@ -58,25 +132,17 @@ export async function createConnection(formData: FormData) {
 				}
 			: {
 					provider: "sentry" as const,
-					mode: data.mode === "sentry_cloud" ? ("sentry_cloud" as const) : ("sentry_http" as const),
+					mode: mode as "sentry_cloud" | "sentry_http",
 					sentryUrl: data.baseUrl,
 					organizationSlug: data.organizationSlug ?? "",
 					projectSlug: data.projectSlug ?? "",
 				};
-	const credential =
+	const credential: ProviderCredential =
 		data.provider === "sentry"
-			? { provider: "sentry" as const, apiToken: data.token }
-			: data.mode === "grafana_cloud"
-				? {
-						provider: "grafana" as const,
-						mode: "grafana_cloud" as const,
-						accessPolicyToken: data.token,
-					}
-				: {
-						provider: "grafana" as const,
-						mode: "grafana_http" as const,
-						serviceAccountToken: data.token,
-					};
+			? { provider: "sentry", apiToken: data.token }
+			: mode === "grafana_cloud"
+				? { provider: "grafana", mode: "grafana_cloud", accessPolicyToken: data.token }
+				: { provider: "grafana", mode: "grafana_http", serviceAccountToken: data.token };
 	const capabilities =
 		data.provider === "sentry"
 			? (["issues", "events", "releases"] as const)
@@ -90,7 +156,7 @@ export async function createConnection(formData: FormData) {
 			organizationId: tenant.organizationId,
 			provider: data.provider,
 			name: data.name,
-			mode: data.mode,
+			mode,
 			baseUrl: data.baseUrl,
 			config,
 			credentialsCiphertext: encryptSecret(
@@ -100,13 +166,23 @@ export async function createConnection(formData: FormData) {
 			),
 			capabilities: [...capabilities],
 		});
+	const verification = await verifyRecord({
+		id,
+		organizationId: tenant.organizationId,
+		config,
+		credential,
+		capabilities: [...capabilities],
+	});
 	revalidatePath("/connections");
+	return verification.ok
+		? { status: "created" }
+		: { status: "created_unverified", code: verification.errorCode ?? "PROVIDER_UNAVAILABLE" };
 }
+
 export async function testConnection(formData: FormData) {
 	const tenant = await admin();
 	const id = String(formData.get("id"));
-	const db = createDatabase();
-	const [record] = await db
+	const [record] = await createDatabase()
 		.select()
 		.from(providerConnections)
 		.where(
@@ -117,7 +193,7 @@ export async function testConnection(formData: FormData) {
 		)
 		.limit(1);
 	if (!record) throw new Error("Connection not found");
-	const result = await investigationContextProviders[record.provider].testConnection({
+	await verifyRecord({
 		id: record.id,
 		organizationId: record.organizationId,
 		config: record.config,
@@ -130,19 +206,6 @@ export async function testConnection(formData: FormData) {
 		),
 		capabilities: record.capabilities,
 	});
-	await db
-		.update(providerConnections)
-		.set({
-			lastVerifiedAt: result.ok ? new Date() : null,
-			lastVerificationError: result.errorCode ?? null,
-			updatedAt: new Date(),
-		})
-		.where(
-			and(
-				eq(providerConnections.id, id),
-				eq(providerConnections.organizationId, tenant.organizationId),
-			),
-		);
 	revalidatePath("/connections");
 }
 export async function toggleConnection(formData: FormData) {

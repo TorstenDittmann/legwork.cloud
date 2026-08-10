@@ -3,11 +3,10 @@ import { requireTenant } from "@oncall-ai/auth";
 import { createDatabase, providerConnections } from "@oncall-ai/db";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, Select } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/journal";
 import { StatusMark } from "@/components/ui/status";
-import { createConnection, testConnection, toggleConnection } from "./actions";
+import { AddConnectionForm } from "./add-connection-form";
+import { testConnection, toggleConnection } from "./actions";
 
 export default async function ConnectionsPage() {
 	const tenant = await requireTenant();
@@ -73,70 +72,7 @@ export default async function ConnectionsPage() {
 					</Card>
 				))}
 			</div>
-			{tenant.role === "admin" && (
-				<Card className="mt-8">
-					<CardHeader>
-						<CardTitle>Add connection</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<form action={createConnection} className="grid gap-4 md:grid-cols-2">
-							<Field label="Provider" htmlFor="provider">
-								<Select id="provider" name="provider">
-									<option value="grafana">Grafana</option>
-									<option value="sentry">Sentry</option>
-								</Select>
-							</Field>
-							<Field label="Mode" htmlFor="mode">
-								<Select id="mode" name="mode">
-									<option value="grafana_cloud">Grafana Cloud</option>
-									<option value="grafana_http">Self-hosted Grafana</option>
-									<option value="sentry_cloud">Sentry Cloud</option>
-									<option value="sentry_http">Self-hosted Sentry</option>
-								</Select>
-							</Field>
-							<Field label="Name" htmlFor="connection-name">
-								<Input id="connection-name" name="name" required />
-							</Field>
-							<Field label="HTTPS base URL" htmlFor="base-url">
-								<Input
-									id="base-url"
-									name="baseUrl"
-									type="url"
-									defaultValue="https://sentry.io"
-									required
-								/>
-							</Field>
-							<Field label="API token" htmlFor="provider-token">
-								<Input
-									id="provider-token"
-									name="token"
-									type="password"
-									autoComplete="new-password"
-									required
-								/>
-							</Field>
-							<Field label="Sentry organization slug" htmlFor="organization-slug">
-								<Input id="organization-slug" name="organizationSlug" />
-							</Field>
-							<Field label="Sentry project slug" htmlFor="project-slug">
-								<Input id="project-slug" name="projectSlug" />
-							</Field>
-							<Field label="Loki data-source UID" htmlFor="logs-uid">
-								<Input id="logs-uid" name="logsUid" />
-							</Field>
-							<Field label="Prometheus data-source UID" htmlFor="metrics-uid">
-								<Input id="metrics-uid" name="metricsUid" />
-							</Field>
-							<Field label="Tempo data-source UID" htmlFor="traces-uid">
-								<Input id="traces-uid" name="tracesUid" />
-							</Field>
-							<div className="md:col-span-2">
-								<Button type="submit">Save connection</Button>
-							</div>
-						</form>
-					</CardContent>
-				</Card>
-			)}
+			{tenant.role === "admin" && <AddConnectionForm />}
 		</>
 	);
 }
