@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const config: NextConfig = {
+	experimental: {
+		dynamicOnHover: true,
+	},
 	serverExternalPackages: ["bun:sqlite"],
 	transpilePackages: [
 		"@oncall-ai/auth",
