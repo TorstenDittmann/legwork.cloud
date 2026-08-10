@@ -17,6 +17,7 @@ export default defineRailway(() => {
 		healthcheck: "/api/health",
 		healthcheckTimeout: 30,
 		deploy: {
+			sleepApplication: true,
 			restartPolicyType: "ON_FAILURE",
 			restartPolicyMaxRetries: 3,
 		},
@@ -43,6 +44,7 @@ export default defineRailway(() => {
 			"/var/lib/sqld": libsqlVolume,
 		},
 		deploy: {
+			sleepApplication: true,
 			restartPolicyType: "ON_FAILURE",
 			restartPolicyMaxRetries: 10,
 		},
@@ -56,6 +58,7 @@ export default defineRailway(() => {
 		build: "bun run --filter @oncall-ai/worker build",
 		start: "bun run db:migrate && bun run --filter @oncall-ai/worker start",
 		deploy: {
+			sleepApplication: true,
 			restartPolicyType: "ON_FAILURE",
 			restartPolicyMaxRetries: 5,
 		},
