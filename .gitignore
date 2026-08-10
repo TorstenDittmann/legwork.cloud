@@ -14,3 +14,4 @@ test-results
 
 # Workspace utils cache
 .wsu/
+*.pem
