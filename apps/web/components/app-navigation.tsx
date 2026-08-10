@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Github, LogOut, Menu, Radio, Settings, Siren, Unplug, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,9 @@ const links = [
 	["/connections", Unplug, "Connections"],
 	["/settings", Settings, "Settings"],
 ] as const;
+
+// Supported by Next 16 at runtime, but not yet exposed by its public LinkProps type.
+const fullPrefetchOnHover = { unstable_dynamicOnHover: true } as const;
 
 export function AppNavigation({
 	organizations,
@@ -30,7 +33,6 @@ export function AppNavigation({
 	logout(): Promise<void>;
 }) {
 	const pathname = usePathname();
-	const router = useRouter();
 	const [open, setOpen] = useState(false);
 	const triggerRef = useRef<HTMLButtonElement>(null);
 	useEffect(() => setOpen(false), [pathname]);
@@ -91,15 +93,12 @@ export function AppNavigation({
 			<nav aria-label="Primary" className="flex-1 px-3 py-5">
 				{links.map(([href, Icon, label]) => {
 					const active = pathname.startsWith(href);
-					const prefetch = () => router.prefetch(href);
 					return (
 						<Link
+							{...fullPrefetchOnHover}
 							key={href}
 							href={href}
-							prefetch={false}
-							onMouseEnter={prefetch}
-							onFocus={prefetch}
-							onTouchStart={prefetch}
+							prefetch="auto"
 							aria-current={active ? "page" : undefined}
 							className={cn(
 								"mb-1 flex min-h-10 items-center gap-3 rounded-[3px] border-l-2 px-3 text-sm transition-[color,background-color,border-color]",
