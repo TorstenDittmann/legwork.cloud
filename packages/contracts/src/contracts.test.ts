@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { createIncidentRequestSchema, diagnosisSchema } from "./index";
+import { createIncidentRequestSchema, diagnosisSchema, githubActivityToolSchema } from "./index";
 
 describe("incident contract", () => {
 	it("accepts a normalized incident", () => {
@@ -28,6 +28,47 @@ describe("incident contract", () => {
 });
 
 describe("diagnosis contract", () => {
+	it("accepts bounded GitHub activity tools", () => {
+		expect(
+			githubActivityToolSchema.parse({
+				name: "github_recent_activity",
+				repositoryId: "repo-1",
+				lookbackHours: 24,
+			}),
+		).toMatchObject({ lookbackHours: 24 });
+		expect(
+			githubActivityToolSchema.safeParse({
+				name: "github_recent_activity",
+				repositoryId: "repo-1",
+				lookbackHours: 169,
+			}).success,
+		).toBe(false);
+	});
+
+	it("accepts GitHub activity as attributable evidence", () => {
+		const result = diagnosisSchema.safeParse({
+			schemaVersion: "1",
+			status: "diagnosed",
+			title: "Failed deployment",
+			summary: "A deployment failed immediately before the incident.",
+			rootCause: { statement: "The production deployment failed", confidence: 0.8 },
+			evidence: [
+				{
+					provider: "github",
+					sourceType: "deployments",
+					operation: "github_recent_activity",
+					locator: { repositoryId: "repo-1" },
+					excerpt: '"state": "failure"',
+					explanation: "The latest production deployment failed.",
+				},
+			],
+			suggestedFix: null,
+			checksRun: [],
+			limitations: [],
+		});
+		expect(result.success).toBe(true);
+	});
+
 	it("requires bounded, attributable evidence", () => {
 		const result = diagnosisSchema.safeParse({
 			schemaVersion: "1",

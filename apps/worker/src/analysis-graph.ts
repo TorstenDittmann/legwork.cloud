@@ -21,12 +21,14 @@ import {
 	agentToolSchema,
 	type AgentTool,
 	type Diagnosis,
+	type GitHubActivityTool,
 	type InspectionOperation,
 	type SandboxHandle,
 	type SandboxRepositoryManifest,
 	type ToolResult,
 	type ProviderToolRequest,
 	providerToolSchema,
+	githubActivityToolSchema,
 } from "@oncall-ai/contracts";
 import {
 	analysisRuns,
@@ -43,7 +45,11 @@ import {
 	externalIncidentLinks,
 	type Database,
 } from "@oncall-ai/db";
-import { GitHubSourceProvider, type RepositoryDescriptor } from "@oncall-ai/github";
+import {
+	GitHubActivityProvider,
+	GitHubSourceProvider,
+	type RepositoryDescriptor,
+} from "@oncall-ai/github";
 import { activeSandboxes, destroyedSandboxes } from "@oncall-ai/observability";
 import { RailwaySandboxProvider } from "@oncall-ai/sandbox";
 import { redactSecrets } from "@oncall-ai/security";
@@ -64,7 +70,7 @@ interface GraphRepository {
 interface ValidatedToolCall {
 	callId: string;
 	index: number;
-	tool: AgentTool | ProviderToolRequest;
+	tool: AgentTool | ProviderToolRequest | GitHubActivityTool;
 }
 
 interface IndexedToolResult {
@@ -122,7 +128,7 @@ export interface IncidentAnalysisState {
 	};
 	providerSnapshots: Array<{
 		callId: string;
-		provider: "grafana" | "sentry";
+		provider: "grafana" | "sentry" | "github";
 		operation: string;
 		locator: Record<string, string>;
 		query?: string;
@@ -605,7 +611,9 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 					tool:
 						call.name.startsWith("grafana_") || call.name.startsWith("sentry_")
 							? providerToolSchema.parse(candidate)
-							: agentToolSchema.parse(candidate),
+							: call.name === "github_recent_activity"
+								? githubActivityToolSchema.parse(candidate)
+								: agentToolSchema.parse(candidate),
 				});
 			} catch (error) {
 				errors.push(
@@ -814,6 +822,54 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 			...state,
 			toolResults: [...state.toolResults, { callId: call.callId, index: call.index, result }],
 		};
+	});
+
+	const executeGitHubTools = instrument("execute_github_tools", async (state) => {
+		const calls = state.validatedToolCalls.filter(
+			(call) => call.tool.name === "github_recent_activity",
+		);
+		if (!calls.length) return state;
+		const provider = new GitHubActivityProvider(
+			{ appId: dependencies.githubAppId, privateKey: dependencies.githubPrivateKey },
+			state.repositories,
+		);
+		const results = [...state.toolResults];
+		const snapshots = [...state.providerSnapshots];
+		await mapWithConcurrency(calls, 4, async (call) => {
+			if (call.tool.name !== "github_recent_activity") return;
+			await activity({
+				kind: "tool_started",
+				summary: `Reading the last ${call.tool.lookbackHours} hours of GitHub activity`,
+				detail: JSON.stringify(call.tool, null, 2),
+				toolName: call.tool.name,
+			});
+			const result = await provider.recentActivity(
+				call.tool.repositoryId,
+				call.tool.lookbackHours,
+				dependencies.signal,
+			);
+			results.push({ callId: call.callId, index: call.index, result });
+			if (result.status === "ok")
+				snapshots.push({
+					callId: call.callId,
+					provider: "github",
+					operation: call.tool.name,
+					locator: { repositoryId: call.tool.repositoryId },
+					output: result.output,
+					truncated: result.truncated,
+				});
+			await activity({
+				kind: "tool_completed",
+				summary:
+					result.status === "ok"
+						? "Read recent GitHub Actions and deployment activity"
+						: `GitHub activity unavailable${result.limitation ? ` — ${result.limitation}` : ""}`,
+				detail: JSON.stringify(result, null, 2),
+				toolName: call.tool.name,
+				durationMs: result.durationMs,
+			});
+		});
+		return { ...state, toolResults: results, providerSnapshots: snapshots };
 	});
 
 	const executeProviderTools = instrument("execute_provider_tools", async (state) => {
@@ -1137,6 +1193,7 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 		.addNode("ensure_sandbox", ensureSandbox)
 		.addNode("execute_static_tools", executeStaticTools)
 		.addNode("execute_check", executeCheck)
+		.addNode("execute_github_tools", executeGitHubTools)
 		.addNode("execute_provider_tools", executeProviderTools)
 		.addNode("append_tool_results", appendToolResults)
 		.addNode("synthesize_diagnosis", synthesize)
@@ -1160,7 +1217,8 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 		)
 		.addEdge("ensure_sandbox", "execute_static_tools")
 		.addEdge("execute_static_tools", "execute_check")
-		.addEdge("execute_check", "execute_provider_tools")
+		.addEdge("execute_check", "execute_github_tools")
+		.addEdge("execute_github_tools", "execute_provider_tools")
 		.addEdge("execute_provider_tools", "append_tool_results")
 		.addEdge("append_tool_results", "investigation_model")
 		.addEdge("synthesize_diagnosis", "hydrate_evidence")

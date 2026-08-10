@@ -44,6 +44,15 @@ export const agentToolSchema = z.discriminatedUnion("name", [
 
 export type AgentTool = z.infer<typeof agentToolSchema>;
 
+export const githubActivityToolSchema = z
+	.object({
+		name: z.literal("github_recent_activity"),
+		repositoryId,
+		lookbackHours: z.number().int().min(1).max(168),
+	})
+	.strict();
+export type GitHubActivityTool = z.infer<typeof githubActivityToolSchema>;
+
 export const toolResultSchema = z
 	.object({
 		status: z.enum(["ok", "error", "unavailable", "timed_out"]),
@@ -82,8 +91,17 @@ export const diagnosisEvidenceSchema = z.union([
 		.strict(),
 	z
 		.object({
-			provider: z.enum(["grafana", "sentry"]),
-			sourceType: z.enum(["logs", "metrics", "traces", "issue", "event", "release"]),
+			provider: z.enum(["grafana", "sentry", "github"]),
+			sourceType: z.enum([
+				"logs",
+				"metrics",
+				"traces",
+				"issue",
+				"event",
+				"release",
+				"actions",
+				"deployments",
+			]),
 			operation: z.string().min(1).max(128),
 			locator: z.record(z.string().max(128), z.string().max(2_048)),
 			query: z.string().max(2_048).optional(),

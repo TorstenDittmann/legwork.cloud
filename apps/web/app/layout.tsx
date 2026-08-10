@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { AuthKitProvider } from "@workos-inc/authkit-nextjs/components";
+import { QueryProvider } from "@/components/query-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -11,7 +12,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 	return (
 		<html lang="en" className="bg-canvas">
 			<body>
-				<AuthKitProvider>{children}</AuthKitProvider>
+				<AuthKitProvider>
+					<QueryProvider>{children}</QueryProvider>
+				</AuthKitProvider>
 			</body>
 		</html>
 	);

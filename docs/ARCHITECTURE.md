@@ -17,7 +17,7 @@ Turso stores tenant configuration, incidents, run state, structured evidence, us
 ### External providers
 
 - WorkOS: user sessions, organizations, memberships, invitations, and roles.
-- GitHub App: read-only metadata/contents and installation events.
+- GitHub App: read-only metadata, contents, Actions, Deployments, and installation events.
 - Railway: disposable analysis sandboxes.
 - OpenRouter: model tool selection and structured diagnosis.
 - LangGraph: full incident lifecycle state machine with Bun SQLite checkpoints.

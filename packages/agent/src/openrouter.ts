@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
 	agentToolSchema,
 	diagnosisSchema,
+	githubActivityToolSchema,
 	type Diagnosis,
 	type ModelToolDefinition,
 } from "@oncall-ai/contracts";
@@ -100,6 +101,16 @@ export function repositoryToolDefinitions(strict: boolean): ModelToolDefinition[
 				description: "Run one fixed offline check if security policy permits",
 				...(strict ? { strict: true } : {}),
 				parameters: z.toJSONSchema(agentToolSchema.options[3]),
+			},
+		},
+		{
+			type: "function",
+			function: {
+				name: "github_recent_activity",
+				description:
+					"List recent GitHub Actions workflow runs and deployments for an approved repository",
+				...(strict ? { strict: true } : {}),
+				parameters: z.toJSONSchema(githubActivityToolSchema),
 			},
 		},
 	];
