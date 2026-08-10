@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InlineAlert, RecordField, RecordFieldGrid, SectionHeader } from "@/components/ui/journal";
 import { SeverityMark, StatusMark, statusTone } from "@/components/ui/status";
 import { formatDuration } from "@/lib/utils";
+import { IncidentLoading } from "./incident-loading";
 
 type Data = {
 	incident: {
@@ -135,7 +136,7 @@ export function IncidentLive({ incidentId }: { incidentId: string }) {
 		}
 	}
 	if (error) return <p className="text-danger">{error}</p>;
-	if (!data) return <p className="text-ink-faint">Loading Incident…</p>;
+	if (!data) return <IncidentLoading />;
 	const diagnosis = data.diagnosis;
 	const terminal =
 		data.currentRun && ["completed", "failed", "inconclusive"].includes(data.currentRun.status);

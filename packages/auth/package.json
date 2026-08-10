@@ -13,9 +13,11 @@
 	"dependencies": {
 		"@oncall-ai/db": "workspace:*",
 		"@workos-inc/authkit-nextjs": "4.3.1",
-		"@workos-inc/node": "10.9.0"
+		"@workos-inc/node": "10.9.0",
+		"react": "19.2.3"
 	},
 	"devDependencies": {
+		"@types/react": "19.2.18",
 		"typescript": "5.9.2"
 	}
 }
