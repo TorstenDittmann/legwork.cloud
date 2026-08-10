@@ -11,10 +11,12 @@ import {
 	KeyRound,
 	LoaderCircle,
 	LockKeyhole,
+	Plus,
 	Server,
 	ShieldCheck,
 	Siren,
 	Waypoints,
+	X,
 } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -47,12 +49,16 @@ const providers = {
 		description: "Investigate logs, metrics, and traces around an incident.",
 		placeholder: "https://example.grafana.net",
 		Icon: Gauge,
+		credentialHint:
+			"Create a service account token with Viewer access to the data sources you want to use.",
 	},
 	sentry: {
 		name: "Sentry",
 		description: "Inspect issues, events, releases, and commit context.",
 		placeholder: "https://sentry.io",
 		Icon: Siren,
+		credentialHint:
+			"Use an organization token with project:read, event:read, and org:read permissions.",
 	},
 } as const;
 
@@ -68,7 +74,7 @@ const steps = [
 	[3, "Configure", "Select context"],
 ] as const;
 
-export function AddConnectionForm() {
+export function AddConnectionForm({ defaultOpen = false }: { defaultOpen?: boolean }) {
 	const [discovery, discover, discovering] = useActionState<DiscoveryState, FormData>(
 		discoverConnection,
 		{ status: "idle" },
@@ -85,6 +91,7 @@ export function AddConnectionForm() {
 	const [datasources, setDatasources] = useState({ logsUid: "", metricsUid: "", tracesUid: "" });
 	const [projectIndex, setProjectIndex] = useState(0);
 	const [dismissedComplete, setDismissedComplete] = useState(false);
+	const [open, setOpen] = useState(defaultOpen);
 
 	const discovered =
 		discovery.status === "ok" && discovery.provider === provider ? discovery : null;
@@ -129,9 +136,33 @@ export function AddConnectionForm() {
 		setProjectIndex(0);
 	}
 
+	function closeWizard() {
+		setOpen(false);
+		setStep(1);
+	}
+
 	const ProviderIcon = providers[provider].Icon;
 	const complete =
 		!dismissedComplete && (saved.status === "created" || saved.status === "created_unverified");
+
+	if (!open)
+		return (
+			<button
+				type="button"
+				onClick={() => setOpen(true)}
+				className="mt-8 flex w-full items-center justify-between rounded-[4px] border border-dashed border-rule-strong bg-surface/60 px-5 py-4 text-left transition hover:border-accent hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+			>
+				<span>
+					<span className="block font-display font-semibold">Add a provider connection</span>
+					<span className="mt-0.5 block text-sm text-ink-muted">
+						Guided setup takes about two minutes.
+					</span>
+				</span>
+				<span className="flex size-9 items-center justify-center rounded-[3px] bg-accent text-white">
+					<Plus className="size-4" aria-hidden="true" />
+				</span>
+			</button>
+		);
 
 	return (
 		<Card className="mt-10 overflow-hidden">
@@ -148,9 +179,22 @@ export function AddConnectionForm() {
 							Give investigations secure, read-only access to the signals they need.
 						</p>
 					</div>
-					<div className="flex items-center gap-2 text-xs text-ink-muted">
-						<LockKeyhole className="size-4 text-success" aria-hidden="true" />
-						Credentials are encrypted
+					<div className="flex items-center gap-3">
+						<div className="flex items-center gap-2 text-xs text-ink-muted">
+							<LockKeyhole className="size-4 text-success" aria-hidden="true" />
+							Credentials are encrypted
+						</div>
+						{!defaultOpen && (
+							<Button
+								type="button"
+								size="sm"
+								variant="ghost"
+								onClick={closeWizard}
+								aria-label="Close setup wizard"
+							>
+								<X className="size-4" />
+							</Button>
+						)}
 					</div>
 				</div>
 			</div>
@@ -203,6 +247,9 @@ export function AddConnectionForm() {
 							</p>
 							<Button type="button" variant="outline" className="mt-6" onClick={startOver}>
 								Add another connection
+							</Button>
+							<Button type="button" variant="ghost" className="mt-6" onClick={closeWizard}>
+								Done
 							</Button>
 						</div>
 					) : step === 1 ? (
@@ -328,6 +375,10 @@ export function AddConnectionForm() {
 												onChange={(event) => setToken(event.target.value)}
 											/>
 										</div>
+										<p className="mt-2 rounded-[3px] bg-canvas px-3 py-2 text-xs leading-5 text-ink-muted">
+											{providers[provider].credentialHint} The token is encrypted and never shown
+											again.
+										</p>
 									</Field>
 								</div>
 							) : (
@@ -335,6 +386,13 @@ export function AddConnectionForm() {
 									<input type="hidden" name="name" value={name} />
 									<input type="hidden" name="baseUrl" value={baseUrl} />
 									<input type="hidden" name="token" value={token} />
+									<div className="rounded-[4px] border border-rule bg-canvas/50 p-4">
+										<p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-faint">
+											Connection summary
+										</p>
+										<p className="mt-1 text-sm font-medium">{name}</p>
+										<p className="mt-0.5 break-all text-xs text-ink-muted">{baseUrl}</p>
+									</div>
 									{discovered?.provider === "grafana" &&
 										datasourceFields.map(([field, type, label, technology, Icon]) => {
 											const options = discovered.datasources.filter((item) => item.type === type);
@@ -457,7 +515,7 @@ export function AddConnectionForm() {
 									Back
 								</Button>
 								<div className="flex flex-wrap items-center justify-end gap-3">
-									{step === 2 && discovery.status === "error" && (
+									{step === 2 && (
 										<button
 											type="button"
 											className="text-xs text-ink-muted underline underline-offset-4 hover:text-ink"
@@ -466,7 +524,7 @@ export function AddConnectionForm() {
 												setStep(3);
 											}}
 										>
-											Enter details manually
+											Set up manually instead
 										</button>
 									)}
 									{step === 2 ? (
