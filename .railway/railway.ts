@@ -1,6 +1,6 @@
 import { defineRailway, github, image, preserve, project, service, volume } from "railway/iac";
 
-export default defineRailway(() => {
+export default defineRailway((ctx) => {
 	const onCallAi = github("TorstenDittmann/on-call-ai", { checkSuites: false });
 
 	const libsqlVolume = volume("libsql-volume", {
@@ -24,6 +24,7 @@ export default defineRailway(() => {
 		replicas: { "europe-west4-drams3a": 1 },
 		env: {
 			APP_URL: preserve(),
+			DATABASE_AUTH_TOKEN: ctx.shared.DATABASE_AUTH_TOKEN,
 			DATABASE_URL: preserve(),
 			DATA_ENCRYPTION_KEY: preserve(),
 			GITHUB_APP_SLUG: preserve(),
@@ -48,7 +49,11 @@ export default defineRailway(() => {
 			restartPolicyType: "ON_FAILURE",
 			restartPolicyMaxRetries: 10,
 		},
+		// Public access is safe only while SQLD_AUTH_JWT_KEY is live; verified 2026-08-10
+		// (unauthenticated /v2/pipeline returns 401).
+		domains: [{ domain: "libsql-production-f752.up.railway.app", port: 8080 }],
 		env: {
+			SQLD_AUTH_JWT_KEY: preserve(),
 			SQLD_DB_PATH: preserve(),
 			SQLD_NODE: preserve(),
 		},
@@ -64,6 +69,7 @@ export default defineRailway(() => {
 		replicas: { "europe-west4-drams3a": 1 },
 		env: {
 			APP_URL: preserve(),
+			DATABASE_AUTH_TOKEN: ctx.shared.DATABASE_AUTH_TOKEN,
 			DATABASE_URL: preserve(),
 			DATA_ENCRYPTION_KEY: preserve(),
 			GITHUB_APP_ID: preserve(),
