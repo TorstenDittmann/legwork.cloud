@@ -58,7 +58,6 @@ export default defineRailway(() => {
 		build: "bun run --filter @oncall-ai/worker build",
 		start: "bun run db:migrate && bun run --filter @oncall-ai/worker start",
 		deploy: {
-			sleepApplication: true,
 			restartPolicyType: "ON_FAILURE",
 			restartPolicyMaxRetries: 5,
 		},
