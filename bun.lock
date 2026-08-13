@@ -14,7 +14,7 @@
         "railway": "3.6.0",
         "typescript": "5.9.2",
         "vitest": "3.2.6",
-        "workspace-utils": "2.0.3",
+        "workspace-utils": "2.1.0",
         "zod": "4.1.5",
       },
     },
@@ -1107,7 +1107,7 @@
 
     "why-is-node-running": ["why-is-node-running@2.3.0", "", { "dependencies": { "siginfo": "2.0.0", "stackback": "0.0.2" }, "bin": { "why-is-node-running": "cli.js" } }, "sha512-hUrmaWBdVDcxvYqnyh09zunKzROWjbZTiNy8dBEjkS7ehEDQibXJ7XvlmtbwuTclUiIyN+CyXQD4Vmko8fNm8w=="],
 
-    "workspace-utils": ["workspace-utils@2.0.3", "", { "dependencies": { "commander": "^14.0.3", "fast-glob": "^3.3.3", "picocolors": "^1.1.1", "yaml": "^2.8.2" }, "peerDependencies": { "typescript": "^5.9.3" }, "bin": { "workspace-utils": "dist/index.js", "wsu": "dist/index.js" } }, "sha512-DxOqOXzhJRqXcd4y9aC3uJgGkDkgU/UyHn9yeTfmZE+iGkS4ncUIjJ/8D2Qjveh/To+RpDBmEGTLp+gUqXV3kA=="],
+    "workspace-utils": ["workspace-utils@2.1.0", "", { "dependencies": { "commander": "^14.0.3", "fast-glob": "^3.3.3", "picocolors": "^1.1.1", "yaml": "^2.8.2" }, "peerDependencies": { "typescript": "^5.9.3" }, "bin": { "workspace-utils": "dist/index.js", "wsu": "dist/index.js" } }, "sha512-xG6Knqp+3ttuStDFukHliqbF//p7uvApc2VQtggidpxcBPFuhySpZueSmn3Cm8PEPh5YeYaJUOcXofKFHnZA1Q=="],
 
     "wrap-ansi": ["wrap-ansi@7.0.0", "", { "dependencies": { "ansi-styles": "^4.0.0", "string-width": "^4.1.0", "strip-ansi": "^6.0.0" } }, "sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q=="],
 
