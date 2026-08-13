@@ -13,6 +13,7 @@ import {
 	services,
 } from "@oncall-ai/db";
 import { logger } from "@oncall-ai/observability";
+import { buildAnalysisTemplate } from "@oncall-ai/sandbox";
 import { analyzeIncident, OrganizationConcurrencyDeferredError } from "./analysis";
 import { CallbackRetryError, deliverCallback } from "./callbacks";
 import { workerConfig } from "./config";
@@ -23,6 +24,9 @@ const config = workerConfig();
 const db = createDatabase();
 const workerId = crypto.randomUUID();
 let stopping = false;
+
+await buildAnalysisTemplate();
+logger.info("Railway sandbox template is ready");
 
 async function enqueueAutomaticCallback(runId: string): Promise<void> {
 	const [record] = await db

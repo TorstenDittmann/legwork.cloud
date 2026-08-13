@@ -210,3 +210,7 @@ SCRIPT
 chmod 0755 /usr/local/bin/ocai-run-check`)
 		.workdir("/workspace");
 }
+
+export async function buildAnalysisTemplate(): Promise<void> {
+	await analysisTemplate().build();
+}
