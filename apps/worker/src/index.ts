@@ -9,6 +9,7 @@ import {
 	enqueueJob,
 	failJob,
 	incidents,
+	notificationDeliveries,
 	reconcileUsage,
 	services,
 } from "@legwork/db";
@@ -19,6 +20,11 @@ import { CallbackRetryError, deliverCallback } from "./callbacks";
 import { workerConfig } from "./config";
 import { syncGitHubInstallation } from "./github-sync";
 import { destroyOrphanedSandboxes, purgeExpired } from "./maintenance";
+import {
+	deliverNotification,
+	enqueueNotifications,
+	NotificationRetryError,
+} from "./notifications";
 
 const config = workerConfig();
 const db = createDatabase();
@@ -147,6 +153,7 @@ const timers = [
 			const runId = String(data.runId);
 			await analyzeIncident(runId, config);
 			await enqueueAutomaticCallback(runId);
+			await enqueueNotifications(runId);
 		},
 		async (data, retry) => {
 			const runId = String(data.runId);
@@ -182,6 +189,7 @@ const timers = [
 					await reconcileUsage(db, run.organizationId, runId, 0, 0);
 				}
 				await enqueueAutomaticCallback(runId);
+				await enqueueNotifications(runId);
 			}
 		},
 	),
@@ -203,6 +211,29 @@ const timers = [
 					.where(eq(callbackDeliveries.id, String(data.deliveryId)));
 		},
 	),
+		pollQueue(
+			"deliver-notification",
+			{
+				concurrency: 10,
+				leaseMs: 60_000,
+				retryDelay: (error) => (error instanceof NotificationRetryError ? error.delaySeconds : 60),
+			},
+			async (data) => {
+				await deliverNotification(String(data.deliveryId), {
+					appUrl: config.appUrl,
+					encryptionKey: config.encryptionKey,
+					resendApiKey: config.resendApiKey,
+					resendFromAddress: config.resendFromAddress,
+				});
+			},
+			async (data, retry) => {
+				if (!retry)
+					await db
+						.update(notificationDeliveries)
+						.set({ status: "permanently_failed", updatedAt: new Date() })
+						.where(eq(notificationDeliveries.id, String(data.deliveryId)));
+			},
+		),
 	pollQueue(
 		"sync-github",
 		{ concurrency: 2, leaseMs: 120_000, retryDelay: () => 60 },

@@ -15,6 +15,10 @@ import {
 	deferJob,
 	enqueueJob,
 	failJob,
+	insertNotificationDeliveries,
+	listRoutableChannels,
+	notificationChannels,
+	notificationChannelServices,
 	organizations,
 	services,
 	tenantQueries,
@@ -233,5 +237,98 @@ describe("incident reservation", () => {
 			.where(eq(analysisRuns.id, retry.id))
 			.limit(1);
 		expect(retryRun).toMatchObject({ status: "queued", retryOfRunId: created.runId });
+	});
+});
+describe("notification channel routing", () => {
+	async function fixture(slug: string) {
+		const [organization] = await db
+			.insert(organizations)
+			.values({ workosOrganizationId: `org_${slug}`, name: slug, slug })
+			.returning();
+		if (!organization) throw new Error("fixture setup failed");
+		const [service] = await db
+			.insert(services)
+			.values({ organizationId: organization.id, name: "API", slug: `${slug}-api` })
+			.returning();
+		if (!service) throw new Error("fixture setup failed");
+		const created = await createIncidentIdempotently(db, {
+			organizationId: organization.id,
+			serviceId: service.id,
+			idempotencyKey: `${slug}-key`,
+			payload: {
+				externalId: `incident-${slug}`,
+				title: "Failure",
+				severity: "high",
+				occurredAt: new Date().toISOString(),
+			},
+		});
+		return { organization, service, created };
+	}
+	async function channel(
+		organizationId: string,
+		overrides: Partial<typeof notificationChannels.$inferInsert> = {},
+	) {
+		const [row] = await db
+			.insert(notificationChannels)
+			.values({
+				organizationId,
+				kind: "slack",
+				mode: "webhook",
+				name: "#incidents",
+				destinationCiphertext: "ciphertext",
+				destinationHint: "hooks.slack.com/services/T/B/…",
+				events: ["analysis.completed", "analysis.inconclusive", "analysis.failed"],
+				...overrides,
+			})
+			.returning();
+		if (!row) throw new Error("fixture setup failed");
+		return row;
+	}
+
+	it("reports an unbound channel as routable to every service", async () => {
+		const { organization } = await fixture("routable");
+		await channel(organization.id);
+		const channels = await listRoutableChannels(db, organization.id);
+		expect(channels).toHaveLength(1);
+		expect(channels[0]?.serviceIds).toEqual([]);
+	});
+
+	it("reports the bound services of a narrowed channel", async () => {
+		const { organization, service } = await fixture("narrowed");
+		const bound = await channel(organization.id, { name: "#payments" });
+		await db.insert(notificationChannelServices).values({
+			organizationId: organization.id,
+			channelId: bound.id,
+			serviceId: service.id,
+		});
+		const channels = await listRoutableChannels(db, organization.id);
+		expect(channels[0]?.serviceIds).toEqual([service.id]);
+	});
+
+	it("omits disabled channels entirely", async () => {
+		const { organization } = await fixture("disabled");
+		await channel(organization.id, { enabled: false });
+		expect(await listRoutableChannels(db, organization.id)).toEqual([]);
+	});
+
+	it("never leaks another organization's channels", async () => {
+		const mine = await fixture("mine");
+		const theirs = await fixture("theirs");
+		await channel(theirs.organization.id);
+		expect(await listRoutableChannels(db, mine.organization.id)).toEqual([]);
+	});
+
+	it("inserts a delivery once per run even when the enqueue is repeated", async () => {
+		const { organization, created } = await fixture("idempotent");
+		const target = await channel(organization.id);
+		const row = {
+			organizationId: organization.id,
+			channelId: target.id,
+			runId: created.runId,
+			event: "analysis.completed" as const,
+			expiresAt: new Date(Date.now() + 86_400_000),
+		};
+		expect(await insertNotificationDeliveries(db, [row])).toHaveLength(1);
+		expect(await insertNotificationDeliveries(db, [row])).toHaveLength(0);
 	});
 });
