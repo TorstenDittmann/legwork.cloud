@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { Agent, request } from "undici";
 import type { CallbackEvent } from "@legwork/contracts";
 import {
@@ -78,30 +78,6 @@ export async function enqueueNotifications(runId: string): Promise<void> {
 			"deliver-notification",
 			{ deliveryId: delivery.id },
 			{ singletonKey: delivery.id, maxAttempts: 4 },
-		);
-}
-
-/** Queues an operator-triggered test message. The delivery carries no run. */
-export async function enqueueTestNotification(
-	organizationId: string,
-	channelId: string,
-): Promise<void> {
-	const db = createDatabase();
-	const [delivery] = await db
-		.insert(notificationDeliveries)
-		.values({
-			organizationId,
-			channelId,
-			event: "notification.test",
-			expiresAt: new Date(Date.now() + 24 * 60 * 60_000),
-		})
-		.returning({ id: notificationDeliveries.id });
-	if (delivery)
-		await enqueueJob(
-			db,
-			"deliver-notification",
-			{ deliveryId: delivery.id },
-			{ singletonKey: delivery.id, maxAttempts: 1 },
 		);
 }
 
@@ -251,19 +227,5 @@ export async function deliverNotification(
 		logger.warn(
 			{ deliveryId, channelId: record.channel.id, error: outcome.error },
 			"notification permanently failed",
-		);
-}
-
-/** Marks any deliveries for a channel as stopped when the channel is deleted mid-flight. */
-export async function cancelPendingNotifications(channelId: string): Promise<void> {
-	const db = createDatabase();
-	await db
-		.update(notificationDeliveries)
-		.set({ status: "permanently_failed", error: "Channel removed", updatedAt: new Date() })
-		.where(
-			and(
-				eq(notificationDeliveries.channelId, channelId),
-				inArray(notificationDeliveries.status, ["pending", "retrying"]),
-			),
 		);
 }

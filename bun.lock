@@ -28,6 +28,7 @@
         "@legwork/db": "workspace:*",
         "@legwork/github": "workspace:*",
         "@legwork/integrations": "workspace:*",
+        "@legwork/notifications": "workspace:*",
         "@legwork/observability": "workspace:*",
         "@legwork/security": "workspace:*",
         "@libsql/client": "^0.17.4",

@@ -45,12 +45,23 @@ function parseWebhook(kind: "slack" | "discord", raw: string): ParsedDestination
 }
 
 const addressPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// Control characters would let a recipient smuggle additional mail headers.
-const controlCharacters = /[\u0000-\u001f\u007f]/;
+
+/**
+ * A control character would let a recipient smuggle additional mail headers. Checked by code point
+ * rather than a character class, because `\s` misses NUL and an unanchored `$` can match before a
+ * trailing newline.
+ */
+function hasControlCharacter(value: string): boolean {
+	for (const character of value) {
+		const code = character.codePointAt(0) ?? 0;
+		if (code < 0x20 || code === 0x7f) return true;
+	}
+	return false;
+}
 
 function parseEmail(raw: string): ParsedDestination {
 	const address = raw.trim();
-	if (controlCharacters.test(address) || !addressPattern.test(address))
+	if (hasControlCharacter(address) || !addressPattern.test(address))
 		throw new NotificationDestinationError("A valid email address is required");
 	const [local = "", domain = ""] = address.split("@");
 	return { destination: address, hint: `${local.slice(0, 1)}•••@${domain}` };

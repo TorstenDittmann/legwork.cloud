@@ -86,3 +86,24 @@ export async function insertNotificationDeliveries(
 		.onConflictDoNothing()
 		.returning({ id: notificationDeliveries.id });
 }
+
+/**
+ * An operator-triggered test carries no run, so it bypasses the per-run unique index and can be
+ * repeated. The worker sends it, keeping the mail credential out of the web service.
+ */
+export async function createTestNotificationDelivery(
+	db: Database,
+	organizationId: string,
+	channelId: string,
+): Promise<{ id: string } | undefined> {
+	const [delivery] = await db
+		.insert(notificationDeliveries)
+		.values({
+			organizationId,
+			channelId,
+			event: "notification.test",
+			expiresAt: new Date(Date.now() + 24 * 60 * 60_000),
+		})
+		.returning({ id: notificationDeliveries.id });
+	return delivery;
+}

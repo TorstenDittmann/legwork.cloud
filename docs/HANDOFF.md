@@ -68,6 +68,8 @@ These items require real staging credentials or external configuration and must 
 - Turso production migration, concurrency behavior, and restore/backup retention policy.
 - Full authenticated Playwright scenarios.
 - The live 20-case agent-quality evaluation. Fixtures exist, but the current test only validates fixture attribution and coverage.
+- Real Slack and Discord webhook delivery. Destination parsing, rendering, routing, and the retry state machine are unit-tested, but no message has been posted to a live webhook.
+- Resend email delivery. It stays unsendable until a sending domain is verified; `legwork.dev` is a placeholder, so `RESEND_FROM_ADDRESS` has no verified domain behind it yet.
 
 ## Safe continuation order
 

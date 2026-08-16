@@ -7,6 +7,7 @@ import {
 	createDatabase,
 	diagnoses,
 	incidents,
+	notificationDeliveries,
 	integrationDeliveries,
 	externalIncidentLinks,
 } from "@legwork/db";
@@ -22,6 +23,10 @@ export async function purgeExpired(now = new Date()): Promise<void> {
 		.delete(integrationDeliveries)
 		.where(lt(integrationDeliveries.expiresAt, now))
 		.returning({ id: integrationDeliveries.id });
+	const deletedNotifications = await db
+		.delete(notificationDeliveries)
+		.where(lt(notificationDeliveries.expiresAt, now))
+		.returning({ id: notificationDeliveries.id });
 	const deletedLinks = await db
 		.delete(externalIncidentLinks)
 		.where(lt(externalIncidentLinks.expiresAt, now))
@@ -36,6 +41,7 @@ export async function purgeExpired(now = new Date()): Promise<void> {
 		.returning({ id: agentSteps.id });
 	purgedRecords.inc({ table: "callback_deliveries" }, deletedCallbacks.length);
 	purgedRecords.inc({ table: "integration_deliveries" }, deletedDeliveries.length);
+	purgedRecords.inc({ table: "notification_deliveries" }, deletedNotifications.length);
 	purgedRecords.inc({ table: "external_incident_links" }, deletedLinks.length);
 	purgedRecords.inc({ table: "diagnoses" }, deletedDiagnoses.length);
 	purgedRecords.inc({ table: "agent_steps" }, deletedSteps.length);
