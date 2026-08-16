@@ -36,6 +36,23 @@ bun run --filter @legwork/worker dev
 
 Organizations can reserve analysis usage immediately after onboarding, subject to their configured monthly quotas.
 
+## Billing
+
+The public pricing page lives at `/pricing`. Paid Team and Scale checkouts use Dodo Payments
+hosted checkout sessions, and signed subscription webhooks update the organization quotas. Create
+monthly and annual recurring products in the Dodo dashboard, set the eight `DODO_PAYMENTS_*`
+values shown in `.env.example`, and register this HTTPS webhook endpoint:
+
+```text
+https://your-domain.example/api/billing/dodo/webhook
+```
+
+Subscribe it to the subscription lifecycle events (`active`, `updated`, `renewed`, `on_hold`,
+`paused`, `unpaused`, `plan_changed`, `cancelled`, `failed`, and `expired`). The displayed prices
+and enforced entitlements share the typed configuration in `apps/web/src/lib/pricing.ts`; keep the
+Dodo product prices aligned with that file. Use `test_mode` and Dodo's webhook tester before
+switching the credentials and environment to `live_mode`.
+
 ## Notification channels
 
 Add Slack, Discord, or email destinations at `/notifications`. Slack and Discord take an incoming

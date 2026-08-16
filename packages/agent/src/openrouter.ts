@@ -41,10 +41,13 @@ export interface DiagnosisModelProvider {
 	): Promise<{ diagnosis: Diagnosis; usage: { inputTokens: number; outputTokens: number } }>;
 }
 
-const providerPolicy = {
+const providerPolicy = (model: string) => ({
 	require_parameters: true,
 	allow_fallbacks: true,
-} as const;
+	...(model === "deepseek/deepseek-v4-flash-0731"
+		? { max_price: { prompt: 0.14, completion: 0.28 } }
+		: {}),
+});
 export const MAX_TOOL_CALLS_PER_TURN = 8;
 
 export class ModelToolCallLimitError extends Error {
@@ -168,7 +171,7 @@ export class OpenRouterProvider {
 			headers: { authorization: `Bearer ${this.apiKey}`, "content-type": "application/json" },
 			body: JSON.stringify({
 				model: this.model,
-				provider: providerPolicy,
+				provider: providerPolicy(this.model),
 				reasoning: { effort: reasoningEffort, exclude: true },
 				...body,
 			}),

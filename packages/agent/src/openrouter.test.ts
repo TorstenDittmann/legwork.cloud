@@ -144,7 +144,7 @@ describe("OpenRouter tool calls", () => {
 				}),
 			);
 		globalThis.fetch = fetch as typeof globalThis.fetch;
-		const provider = new OpenRouterProvider("key", "model");
+		const provider = new OpenRouterProvider("key", "deepseek/deepseek-v4-flash-0731");
 		await provider.continueAgent([]);
 		await provider.createDiagnosis([]);
 		await provider.createDiagnosis([], "repair this result");
@@ -165,6 +165,7 @@ describe("OpenRouter tool calls", () => {
 		expect(investigation.provider).toEqual({
 			require_parameters: true,
 			allow_fallbacks: true,
+			max_price: { prompt: 0.14, completion: 0.28 },
 		});
 		expect(investigation).not.toHaveProperty("temperature");
 		expect(investigation.provider).not.toHaveProperty("data_collection");
@@ -179,6 +180,7 @@ describe("OpenRouter tool calls", () => {
 		globalThis.fetch = fetch as typeof globalThis.fetch;
 		await new OpenRouterProvider("key", "openai/gpt-5.6-luna").continueAgent([]);
 		const request = JSON.parse(String(fetch.mock.calls[0]?.[1]?.body));
+		expect(request.provider).not.toHaveProperty("max_price");
 		expect(request.tools).toSatisfy((tools: Array<{ function: { strict?: boolean } }>) =>
 			tools.every((tool) => tool.function.strict === undefined),
 		);

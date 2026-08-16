@@ -20,6 +20,7 @@
 					Every repository, service, incident, and run is scoped to the active WorkOS organization.
 				</p>
 				<form method="POST" action="?/complete" class="mt-7" use:enhance>
+					<input type="hidden" name="returnTo" value={data.returnTo} />
 					{#if !data.organizationId}
 						<label class="block">
 							<span class="mb-1.5 block text-sm font-medium text-ink">Organization name</span>

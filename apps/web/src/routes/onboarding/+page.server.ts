@@ -14,6 +14,12 @@ const slugify = (name: string, id: string) =>
 			.slice(0, 96) || 'organization'
 	}-${id.slice(-8).toLowerCase()}`;
 
+function safeReturnTo(value: FormDataEntryValue | string | null): string {
+	return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//')
+		? value
+		: '/dashboard';
+}
+
 // AuthKit's switchOrganization returns a Response carrying the refreshed
 // session cookies; copy them onto the action's cookies before redirecting.
 function forwardSetCookies(cookies: Cookies, response: Response) {
@@ -45,17 +51,20 @@ function forwardSetCookies(cookies: Cookies, response: Response) {
 	}
 }
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
+	const returnTo = safeReturnTo(url.searchParams.get('returnTo'));
 	if (!locals.auth.user) redirect(302, await authKit.getSignInUrl({ returnTo: '/onboarding' }));
-	if (await isOnboarded(locals)) redirect(302, '/dashboard');
-	return { organizationId: locals.auth.organizationId ?? null };
+	if (await isOnboarded(locals)) redirect(302, returnTo);
+	return { organizationId: locals.auth.organizationId ?? null, returnTo };
 };
 
 export const actions: Actions = {
 	complete: async (event) => {
 		const { locals, request } = event;
 		if (!locals.auth.user) throw new Error('Authentication required');
-		if (await isOnboarded(locals)) redirect(303, '/dashboard');
+		const formData = await request.formData();
+		const returnTo = safeReturnTo(formData.get('returnTo'));
+		if (await isOnboarded(locals)) redirect(303, returnTo);
 		const workos = createWorkOS();
 		let workosOrganizationId = locals.auth.organizationId;
 		let name: string;
@@ -63,7 +72,6 @@ export const actions: Actions = {
 			const organization = await workos.organizations.getOrganization(workosOrganizationId);
 			name = organization.name;
 		} else {
-			const formData = await request.formData();
 			name = String(formData.get('name') ?? '').trim();
 			if (name.length < 2 || name.length > 255)
 				return fail(400, { message: 'Organization name must be 2–255 characters' });
@@ -86,6 +94,6 @@ export const actions: Actions = {
 			event.cookies,
 			await authKit.switchOrganization(event, { organizationId: workosOrganizationId })
 		);
-		redirect(302, '/dashboard');
+		redirect(302, returnTo);
 	}
 };
