@@ -1,9 +1,9 @@
 import { fail, json } from '@sveltejs/kit';
 import { z } from 'zod';
-import { AuthenticationError, AuthorizationError } from '@oncall-ai/auth/roles';
-import { MAX_REQUEST_BYTES, problem } from '@oncall-ai/contracts';
-import { QuotaExceededError } from '@oncall-ai/db';
-import { logger } from '@oncall-ai/observability';
+import { AuthenticationError, AuthorizationError } from '@legwork/auth/roles';
+import { MAX_REQUEST_BYTES, problem } from '@legwork/contracts';
+import { QuotaExceededError } from '@legwork/db';
+import { logger } from '@legwork/observability';
 
 export async function readLimitedJson(
 	request: Request,

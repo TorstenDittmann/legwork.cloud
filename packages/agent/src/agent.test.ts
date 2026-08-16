@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Diagnosis, SandboxProvider, ToolResult } from "@oncall-ai/contracts";
+import type { Diagnosis, SandboxProvider, ToolResult } from "@legwork/contracts";
 import {
 	describeTool,
 	describeToolResult,

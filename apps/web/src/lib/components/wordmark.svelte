@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Siren } from '@lucide/svelte';
+	import { Footprints } from '@lucide/svelte';
 	import { cn } from '$lib/utils';
 
 	let { class: className }: { class?: string } = $props();
@@ -7,7 +7,7 @@
 
 <span class={cn('inline-flex items-center gap-2', className)}>
 	<span aria-hidden="true" class="grid size-7 place-items-center rounded-lg bg-accent text-white">
-		<Siren class="size-4" stroke-width={2.2} />
+		<Footprints class="size-4" stroke-width={2.2} />
 	</span>
-	<span class="text-[15px] font-semibold tracking-[-0.01em] text-ink">OnCall AI</span>
+	<span class="font-display text-[17px] font-semibold tracking-[-0.015em] text-ink">Legwork</span>
 </span>

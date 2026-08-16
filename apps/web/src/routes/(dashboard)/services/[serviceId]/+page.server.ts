@@ -11,9 +11,9 @@ import {
 	serviceProviderBindings,
 	serviceRepositories,
 	services
-} from '@oncall-ai/db';
-import { providerKindSchema } from '@oncall-ai/contracts';
-import { encryptSecret, generateApiKey, resolveSafeCallbackUrl } from '@oncall-ai/security';
+} from '@legwork/db';
+import { providerKindSchema } from '@legwork/contracts';
+import { encryptSecret, generateApiKey, resolveSafeCallbackUrl } from '@legwork/security';
 import { env } from '$env/dynamic/private';
 import { requireEncryptionKey } from '$lib/server/config';
 import { HttpProblem, problemFail } from '$lib/server/http';

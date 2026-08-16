@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import { and, eq, inArray } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
-import { createDatabase, githubInstallations, repositories } from '@oncall-ai/db';
-import { verifyGitHubWebhook } from '@oncall-ai/github';
+import { createDatabase, githubInstallations, repositories } from '@legwork/db';
+import { verifyGitHubWebhook } from '@legwork/github';
 import { problemResponse, readLimitedBytes } from '$lib/server/http';
 import type { RequestHandler } from './$types';
 

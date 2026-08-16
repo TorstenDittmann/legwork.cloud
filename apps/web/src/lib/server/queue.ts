@@ -1,4 +1,4 @@
-import { createDatabase, enqueueJob } from '@oncall-ai/db';
+import { createDatabase, enqueueJob } from '@legwork/db';
 
 export async function enqueueAnalysis(runId: string): Promise<void> {
 	await enqueueJob(

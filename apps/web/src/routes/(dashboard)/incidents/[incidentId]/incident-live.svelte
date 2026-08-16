@@ -16,7 +16,8 @@
 	import StatusMark from '$lib/components/ui/status-mark.svelte';
 	import { statusTone } from '$lib/components/ui/status';
 	import { formatDateTime, formatDuration, formatTime } from '$lib/utils';
-	import type { Diagnosis } from '@oncall-ai/contracts';
+	import { foldSteps, type FeedEntry } from '$lib/incident-feed';
+	import type { Diagnosis } from '@legwork/contracts';
 
 	// Matches the SSE `incident` event payload. The server-load snapshot feeds the same
 	// five-field shape, but arrives via devalue: its date columns are real `Date`s (SSE
@@ -47,6 +48,7 @@
 			kind: string;
 			toolName?: string | null;
 			durationMs?: number | null;
+			correlationId?: string | null;
 			createdAt: string | Date;
 		}>;
 		diagnosis: Diagnosis | null;
@@ -66,9 +68,25 @@
 	let retrying = $state(false);
 	let retryError = $state('');
 	let showJump = $state(false);
+	let showInternal = $state(false);
 	let transcriptEl = $state<HTMLDivElement | null>(null);
 	let followTranscript = true;
 	let lastStepsLength: number | undefined;
+
+	const entries = $derived(foldSteps(data.steps));
+	const visibleEntries = $derived(showInternal ? entries : entries.filter((e) => !e.internal));
+	const internalCount = $derived(entries.length - entries.filter((e) => !e.internal).length);
+	const runningCount = $derived(entries.filter((e) => e.state === 'running').length);
+
+	// Drives the elapsed counter on in-flight entries; only ticks while something runs.
+	let now = $state(Date.now());
+	$effect(() => {
+		if (!runningCount) return;
+		const id = setInterval(() => (now = Date.now()), 1000);
+		return () => clearInterval(id);
+	});
+
+	const elapsedMs = (startedAt: string | Date) => now - new Date(startedAt).getTime();
 
 	$effect(() => {
 		const source = new EventSource(`/api/incidents/${initial.incident.id}/events`);
@@ -90,7 +108,7 @@
 	});
 
 	$effect(() => {
-		const length = data.steps.length;
+		const length = visibleEntries.length;
 		if (length === lastStepsLength) return;
 		const previousLength = lastStepsLength;
 		lastStepsLength = length;
@@ -417,6 +435,11 @@
 						Jump to latest
 					</Button>
 				{/if}
+				{#if internalCount}
+					<Button size="sm" variant="ghost" onclick={() => (showInternal = !showInternal)}>
+						{showInternal ? 'Hide' : 'Show'} internal ({internalCount})
+					</Button>
+				{/if}
 				<span
 					aria-live="polite"
 					class="inline-flex items-center gap-1.5 text-xs font-medium {connected
@@ -424,7 +447,7 @@
 						: 'text-warning'}"
 				>
 					<span aria-hidden="true" class="size-1.5 rounded-full bg-current"></span>
-					{data.steps.length} events · {connected ? 'live' : 'reconnecting'}
+					{visibleEntries.length} events · {connected ? 'live' : 'reconnecting'}
 				</span>
 			</div>
 		</div>
@@ -437,47 +460,78 @@
 			}}
 			class="h-[38rem] overflow-y-auto overscroll-contain scroll-smooth rounded-xl border border-rule bg-surface px-4 shadow-card"
 		>
-			{#each data.steps as step (step.id)}
-				<div
-					class="agent-log-entry grid grid-cols-[2rem_minmax(0,1fr)] items-start gap-2 border-b border-rule py-3.5 last:border-0 md:grid-cols-[2rem_8rem_minmax(0,1fr)_auto]"
-				>
-					<span class="pt-0.5 text-right font-mono text-[11px] text-ink-faint tabular-nums">
-						{step.sequence}
-					</span>
-					<div class="flex min-w-0 items-center gap-1.5 pt-0.5">
-						<span
-							class="truncate rounded-full bg-surface-raised px-2 py-0.5 text-[11px] font-medium text-ink-muted"
-						>
-							{step.kind.replaceAll('_', ' ')}
+			{#snippet row(entry: FeedEntry, expandable: boolean)}
+				<span aria-hidden="true" class="flex justify-center">
+					{#if entry.state === 'running'}
+						<span class="relative flex size-1.5">
+							<span
+								class="absolute inline-flex h-full w-full animate-ping rounded-full bg-live opacity-60"
+							></span>
+							<span class="relative inline-flex size-1.5 rounded-full bg-live"></span>
 						</span>
-					</div>
-					<div class="min-w-0">
-						<p class="text-sm leading-5 text-ink-muted">{step.summary}</p>
-						{#if step.detail}
-							<details class="group mt-1.5">
-								<summary
-									class="cursor-pointer list-none text-xs font-medium text-ink-faint hover:text-ink-muted"
-								>
-									<span class="group-open:hidden">▸ Show payload</span>
-									<span class="hidden group-open:inline">▾ Hide payload</span>
-									<span class="ml-2 font-normal opacity-60">{step.detail.length} chars</span>
-								</summary>
+					{:else if entry.state === 'failed'}
+						<span class="size-1.5 rounded-full bg-danger"></span>
+					{:else}
+						<span class="size-1.5 rounded-full bg-rule-strong"></span>
+					{/if}
+				</span>
+				<span class="truncate font-mono text-[10px] tracking-tight text-ink-faint">
+					{entry.kind.replace(/_(started|completed|failed)$/, '').replaceAll('_', ' ')}
+				</span>
+				<span
+					class="min-w-0 truncate text-[13px] {entry.state === 'failed'
+						? 'text-danger'
+						: 'text-ink-muted'}"
+				>
+					{entry.summary}
+					{#if expandable}<span class="ml-1 text-ink-faint opacity-50">▸</span>{/if}
+				</span>
+				<span class="flex items-center gap-2 font-mono text-[10px] text-ink-faint tabular-nums">
+					{#if entry.toolName}<span class="hidden sm:inline">{entry.toolName}</span>{/if}
+					{#if entry.state === 'running'}
+						<span class="text-live">{formatDuration(elapsedMs(entry.createdAt))}</span>
+					{:else if entry.durationMs != null}
+						<span>{entry.durationMs}ms</span>
+					{/if}
+					<span class="opacity-70">{formatTime(entry.createdAt)}</span>
+				</span>
+			{/snippet}
+
+			{#each visibleEntries as entry (entry.id)}
+				{@const expandable =
+					!!entry.detail || !!entry.resultDetail || entry.startSummary !== entry.summary}
+				{#if expandable}
+					<details class="agent-log-entry group border-b border-rule last:border-0">
+						<summary
+							class="grid cursor-pointer list-none grid-cols-[0.75rem_4.5rem_minmax(0,1fr)_auto] items-center gap-x-2.5 py-1 hover:bg-surface-raised sm:grid-cols-[0.75rem_7rem_minmax(0,1fr)_auto]"
+						>
+							{@render row(entry, true)}
+						</summary>
+						<div class="pb-2.5 pl-[1.25rem]">
+							{#if entry.startSummary !== entry.summary}
+								<p class="text-xs leading-5 text-ink-faint">{entry.startSummary}</p>
+							{/if}
+							{#if entry.detail}
 								<pre
 									translate="no"
-									class="mt-2 rounded-lg bg-surface-raised p-3 font-mono text-xs leading-5 break-words whitespace-pre-wrap text-ink-muted">{step.detail}</pre>
-							</details>
-						{/if}
-					</div>
+									class="mt-1.5 rounded-lg bg-surface-raised p-2.5 font-mono text-[11px] leading-5 break-words whitespace-pre-wrap text-ink-muted">{entry.detail}</pre>
+							{/if}
+							{#if entry.resultDetail}
+								<pre
+									translate="no"
+									class="mt-1.5 rounded-lg bg-surface-raised p-2.5 font-mono text-[11px] leading-5 break-words whitespace-pre-wrap text-ink-muted">{entry.resultDetail}</pre>
+							{/if}
+						</div>
+					</details>
+				{:else}
 					<div
-						class="col-start-2 flex items-center gap-2 pt-0.5 font-mono text-[11px] text-ink-faint md:col-start-auto"
+						class="agent-log-entry grid grid-cols-[0.75rem_4.5rem_minmax(0,1fr)_auto] items-center gap-x-2.5 border-b border-rule py-1 last:border-0 sm:grid-cols-[0.75rem_7rem_minmax(0,1fr)_auto]"
 					>
-						{#if step.toolName}<span>{step.toolName}</span>{/if}
-						{#if step.durationMs != null}<span>{step.durationMs}ms</span>{/if}
-						<span>{formatTime(step.createdAt)}</span>
+						{@render row(entry, false)}
 					</div>
-				</div>
+				{/if}
 			{/each}
-			{#if !data.steps.length}
+			{#if !visibleEntries.length}
 				<p class="py-6 text-sm text-ink-faint">Waiting for analysis…</p>
 			{/if}
 		</div>

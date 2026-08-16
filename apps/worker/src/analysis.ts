@@ -5,9 +5,9 @@ import {
 	LibSqlCheckpointSaver,
 	createDatabase,
 	organizations,
-} from "@oncall-ai/db";
-import { analysisDuration, logger } from "@oncall-ai/observability";
-import { RailwaySandboxProvider } from "@oncall-ai/sandbox";
+} from "@legwork/db";
+import { analysisDuration, logger } from "@legwork/observability";
+import { RailwaySandboxProvider } from "@legwork/sandbox";
 import { runIncidentAnalysisGraph } from "./analysis-graph";
 
 export interface AnalyzeDependencies {
@@ -97,6 +97,7 @@ export async function analyzeIncident(
 		detail?: string;
 		toolName?: string;
 		durationMs?: number;
+		correlationId?: string;
 	}) => {
 		activitySequence += 1;
 		const sequence = activitySequence;
@@ -121,6 +122,7 @@ export async function analyzeIncident(
 				detail: activity.detail,
 				toolName: activity.toolName,
 				durationMs: activity.durationMs,
+				correlationId: activity.correlationId,
 				expiresAt: run.expiresAt,
 			});
 		});

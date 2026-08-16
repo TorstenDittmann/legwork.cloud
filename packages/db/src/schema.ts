@@ -16,7 +16,7 @@ import type {
 	ProviderConnectionConfig,
 	ProviderKind,
 	RunStatus,
-} from "@oncall-ai/contracts";
+} from "@legwork/contracts";
 
 const id = () =>
 	text("id")
@@ -400,6 +400,9 @@ export const agentSteps = sqliteTable(
 		detail: text("detail"),
 		toolName: text("tool_name"),
 		durationMs: integer("duration_ms"),
+		// Pairs a `*_started` step with its `*_completed`/`*_failed` counterpart. Null on
+		// rows written before this column existed, and on steps that stand alone.
+		correlationId: text("correlation_id"),
 		createdAt: createdAt(),
 		expiresAt: expiresAt(),
 	},

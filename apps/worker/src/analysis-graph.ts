@@ -16,7 +16,7 @@ import {
 	type ChatMessage,
 	type RawModelToolCall,
 	type SnapshotIndex,
-} from "@oncall-ai/agent";
+} from "@legwork/agent";
 import {
 	agentToolSchema,
 	type AgentTool,
@@ -29,7 +29,7 @@ import {
 	type ProviderToolRequest,
 	providerToolSchema,
 	githubActivityToolSchema,
-} from "@oncall-ai/contracts";
+} from "@legwork/contracts";
 import {
 	analysisRuns,
 	diagnoses,
@@ -44,17 +44,17 @@ import {
 	serviceProviderBindings,
 	externalIncidentLinks,
 	type Database,
-} from "@oncall-ai/db";
+} from "@legwork/db";
 import {
 	GitHubActivityProvider,
 	GitHubSourceProvider,
 	type RepositoryDescriptor,
-} from "@oncall-ai/github";
-import { activeSandboxes, destroyedSandboxes } from "@oncall-ai/observability";
-import { RailwaySandboxProvider } from "@oncall-ai/sandbox";
-import { redactSecrets } from "@oncall-ai/security";
-import { decryptSecret } from "@oncall-ai/security";
-import { investigationContextProviders, providerToolDefinitions } from "@oncall-ai/integrations";
+} from "@legwork/github";
+import { activeSandboxes, destroyedSandboxes } from "@legwork/observability";
+import { RailwaySandboxProvider } from "@legwork/sandbox";
+import { redactSecrets } from "@legwork/security";
+import { decryptSecret } from "@legwork/security";
+import { investigationContextProviders, providerToolDefinitions } from "@legwork/integrations";
 
 interface GraphRepository {
 	repositoryId: string;
@@ -162,6 +162,7 @@ export interface IncidentAnalysisGraphDependencies {
 		detail?: string;
 		toolName?: string;
 		durationMs?: number;
+		correlationId?: string;
 	}): Promise<void>;
 }
 
@@ -289,7 +290,14 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 		(name: string, node: (state: IncidentAnalysisState) => Promise<IncidentAnalysisState>) =>
 		async ({ data }: typeof GraphState.State) => {
 			const started = performance.now();
-			await activity({ kind: "node_started", summary: `${name} started`, detail: name });
+			// Fresh per invocation so a retried node opens its own feed entry.
+			const correlationId = crypto.randomUUID();
+			await activity({
+				kind: "node_started",
+				summary: `${name} started`,
+				detail: name,
+				correlationId,
+			});
 			try {
 				const next = await node(data);
 				await activity({
@@ -297,6 +305,7 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 					summary: `${name} completed`,
 					detail: name,
 					durationMs: Math.round(performance.now() - started),
+					correlationId,
 				});
 				return { data: next };
 			} catch (error) {
@@ -305,6 +314,7 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 					summary: `${name} failed`,
 					detail: error instanceof Error ? error.message.slice(0, 2_000) : "Node failed",
 					durationMs: Math.round(performance.now() - started),
+					correlationId,
 				});
 				throw error;
 			}
@@ -767,6 +777,7 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 				summary: describeTool(call.tool),
 				detail: JSON.stringify(call.tool, null, 2),
 				toolName: call.tool.name,
+				correlationId: call.callId,
 			});
 			const result = await provider.inspect(handle(state), call.tool);
 			results.push({ callId: call.callId, index: call.index, result });
@@ -794,6 +805,7 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 				detail: JSON.stringify(result, null, 2),
 				toolName: call.tool.name,
 				durationMs: result.durationMs,
+				correlationId: call.callId,
 			});
 			return result;
 		});
@@ -809,6 +821,7 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 			summary: describeTool(call.tool),
 			detail: JSON.stringify(call.tool, null, 2),
 			toolName: call.tool.name,
+			correlationId: call.callId,
 		});
 		const result = await provider.runCheck(handle(state), call.tool);
 		await activity({
@@ -817,6 +830,7 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 			detail: JSON.stringify(result, null, 2),
 			toolName: call.tool.name,
 			durationMs: result.durationMs,
+			correlationId: call.callId,
 		});
 		return {
 			...state,
@@ -842,6 +856,7 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 				summary: `Reading the last ${call.tool.lookbackHours} hours of GitHub activity`,
 				detail: JSON.stringify(call.tool, null, 2),
 				toolName: call.tool.name,
+				correlationId: call.callId,
 			});
 			const result = await provider.recentActivity(
 				call.tool.repositoryId,
@@ -867,6 +882,7 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 				detail: JSON.stringify(result, null, 2),
 				toolName: call.tool.name,
 				durationMs: result.durationMs,
+				correlationId: call.callId,
 			});
 		});
 		return { ...state, toolResults: results, providerSnapshots: snapshots };

@@ -2,7 +2,7 @@
 
 ## Objective
 
-OnCall AI is a private-beta, multi-tenant incident-debugging SaaS. It accepts normalized incidents for a service, resolves approved GitHub repositories at immutable commit SHAs, analyzes source in a disposable Railway Sandbox through a constrained OpenRouter agent, presents an evidence-backed diagnosis, sends a signed callback, and removes retained incident content after 30 days.
+Legwork is a private-beta, multi-tenant incident-debugging SaaS. It accepts normalized incidents for a service, resolves approved GitHub repositories at immutable commit SHAs, analyzes source in a disposable Railway Sandbox through a constrained OpenRouter agent, presents an evidence-backed diagnosis, sends a signed callback, and removes retained incident content after 30 days.
 
 ## Current state
 
@@ -43,7 +43,7 @@ pnpm check
 pnpm build
 pnpm test:e2e
 pnpm audit
-pnpm --filter @oncall-ai/db generate
+pnpm --filter @legwork/db generate
 ```
 
 Results at handoff:
@@ -79,7 +79,7 @@ These items require real staging credentials or external configuration and must 
 4. Configure WorkOS roles and URLs, then test onboarding and cross-organization denial.
 5. Configure the read-only GitHub App and run installation/webhook/exact-SHA tests.
 6. Exercise OpenRouter with recorded fixtures and confirm privacy-route failure remains fail-closed.
-7. Run `pnpm --filter @oncall-ai/sandbox probe` against the real Railway project.
+7. Run `pnpm --filter @legwork/sandbox probe` against the real Railway project.
 8. Leave command execution disabled unless every probe assertion passes.
 9. Expand and execute the authenticated E2E suite and live agent evaluation.
 10. Verify Turso backup aging before making any public backup-deletion promise.

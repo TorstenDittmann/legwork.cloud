@@ -11,9 +11,9 @@ import {
 	incidents,
 	reconcileUsage,
 	services,
-} from "@oncall-ai/db";
-import { logger } from "@oncall-ai/observability";
-import { buildAnalysisTemplate } from "@oncall-ai/sandbox";
+} from "@legwork/db";
+import { logger } from "@legwork/observability";
+import { buildAnalysisTemplate } from "@legwork/sandbox";
 import { analyzeIncident, OrganizationConcurrencyDeferredError } from "./analysis";
 import { CallbackRetryError, deliverCallback } from "./callbacks";
 import { workerConfig } from "./config";

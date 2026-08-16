@@ -1,4 +1,4 @@
-import type { ProviderKind } from "@oncall-ai/contracts";
+import type { ProviderKind } from "@legwork/contracts";
 import { assertSafeProviderUrl, boundedJson, IntegrationProviderError } from "./providers";
 
 const MAX_DISCOVERED = 200;

@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
-import { createDatabase, serviceApiKeys, services } from '@oncall-ai/db';
-import { hashApiKey } from '@oncall-ai/security';
+import { createDatabase, serviceApiKeys, services } from '@legwork/db';
+import { hashApiKey } from '@legwork/security';
 import { HttpProblem } from './http';
 
 export async function authenticateServiceRequest(request: Request, slug: string) {

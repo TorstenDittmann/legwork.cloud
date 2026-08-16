@@ -7,7 +7,7 @@ declare global {
 			auth: import('@workos/authkit-sveltekit').AuthKitAuth;
 		}
 		interface PageData {
-			/** Page title rendered by the root layout as "<title> — OnCall AI". */
+			/** Page title rendered by the root layout as "<title> — Legwork". */
 			title?: string;
 		}
 		// interface PageState {}

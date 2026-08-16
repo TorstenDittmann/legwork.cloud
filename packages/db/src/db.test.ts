@@ -21,7 +21,7 @@ import {
 	TenantNotFoundError,
 } from "./index";
 
-const databasePath = `/tmp/oncall-ai-db-test-${process.pid}.db`;
+const databasePath = `/tmp/legwork-db-test-${process.pid}.db`;
 const db = createDatabase(databasePath);
 beforeAll(async () => {
 	await migrate(db, { migrationsFolder: new URL("../migrations", import.meta.url).pathname });

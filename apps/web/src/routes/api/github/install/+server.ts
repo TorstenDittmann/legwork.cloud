@@ -1,6 +1,6 @@
 import { isHttpError, isRedirect, redirect } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
-import { createInstallationState } from '@oncall-ai/github';
+import { createInstallationState } from '@legwork/github';
 import { problemResponse } from '$lib/server/http';
 import { requireTenant } from '$lib/server/tenant';
 import type { RequestHandler } from './$types';

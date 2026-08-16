@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { Agent, request } from "undici";
-import type { CallbackEvent, CallbackPayload } from "@oncall-ai/contracts";
+import type { CallbackEvent, CallbackPayload } from "@legwork/contracts";
 import {
 	analysisRuns,
 	callbackDeliveries,
@@ -8,9 +8,9 @@ import {
 	diagnoses,
 	incidents,
 	services,
-} from "@oncall-ai/db";
-import { callbackAttempts } from "@oncall-ai/observability";
-import { decryptSecret, resolveSafeCallbackUrl, signCallback } from "@oncall-ai/security";
+} from "@legwork/db";
+import { callbackAttempts } from "@legwork/observability";
+import { decryptSecret, resolveSafeCallbackUrl, signCallback } from "@legwork/security";
 
 export class CallbackRetryError extends Error {
 	constructor(
@@ -117,10 +117,10 @@ export async function deliverCallback(
 			body: rawBody,
 			headers: {
 				"content-type": "application/json",
-				"x-oncallai-event": event,
-				"x-oncallai-delivery": record.delivery.id,
-				"x-oncallai-timestamp": String(timestamp),
-				"x-oncallai-signature": signCallback(timestamp, rawBody, secret),
+				"x-legwork-event": event,
+				"x-legwork-delivery": record.delivery.id,
+				"x-legwork-timestamp": String(timestamp),
+				"x-legwork-signature": signCallback(timestamp, rawBody, secret),
 			},
 			headersTimeout: 10_000,
 			bodyTimeout: 10_000,

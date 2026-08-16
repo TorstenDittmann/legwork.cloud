@@ -5,7 +5,7 @@ import {
 	githubActivityToolSchema,
 	type Diagnosis,
 	type ModelToolDefinition,
-} from "@oncall-ai/contracts";
+} from "@legwork/contracts";
 import { AGENT_SYSTEM_PROMPT, FINAL_SYSTEM_PROMPT } from "./prompt";
 
 export class ModelPrivacyRouteUnavailableError extends Error {

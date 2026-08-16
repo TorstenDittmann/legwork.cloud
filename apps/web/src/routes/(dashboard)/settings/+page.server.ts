@@ -7,7 +7,7 @@ import {
 	serviceApiKeys,
 	services,
 	usageEvents
-} from '@oncall-ai/db';
+} from '@legwork/db';
 import { env } from '$env/dynamic/private';
 import { createWorkOS } from '$lib/server/config';
 import { requireTenant } from '$lib/server/tenant';

@@ -4,7 +4,7 @@ import {
 	type ModelToolDefinition,
 	type ProviderCapability,
 	type ProviderKind,
-} from "@oncall-ai/contracts";
+} from "@legwork/contracts";
 
 const metadata = [
 	["grafana_query_logs", "Query bounded Grafana logs around the incident", "grafana", "logs"],

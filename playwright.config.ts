@@ -4,7 +4,7 @@ export default defineConfig({
 	testDir: "./apps/web/e2e",
 	use: { baseURL: "http://localhost:3000", trace: "retain-on-failure" },
 	webServer: {
-		command: "bun run --filter @oncall-ai/web dev",
+		command: "bun run --filter @legwork/web dev",
 		url: "http://localhost:3000",
 		reuseExistingServer: !process.env.CI,
 		env: {

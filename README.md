@@ -1,4 +1,4 @@
-# OnCall AI
+# Legwork
 
 Evidence-backed, read-only incident diagnosis for approved GitHub repositories. Each analysis resolves immutable commit SHAs, gives a disposable Railway Sandbox temporary archive download capabilities, runs a durable LangGraph workflow, validates every evidence citation, and destroys the sandbox.
 
@@ -30,7 +30,7 @@ Bun 1.3.14 is the project runtime and package manager through `mise.toml`.
 
 ```sh
 bun run dev
-bun run --filter @oncall-ai/worker dev
+bun run --filter @legwork/worker dev
 ```
 
 Organizations can reserve analysis usage immediately after onboarding, subject to their configured monthly quotas.
@@ -39,10 +39,10 @@ Organizations can reserve analysis usage immediately after onboarding, subject t
 
 Create two Railway services from this repository and use these commands:
 
-| Service | Build                                      | Start                                      | Health         |
-| ------- | ------------------------------------------ | ------------------------------------------ | -------------- |
-| Web     | `bun run --filter @oncall-ai/web build`    | `bun run --filter @oncall-ai/web start`    | `/api/health`  |
-| Worker  | `bun run --filter @oncall-ai/worker build` | `bun run --filter @oncall-ai/worker start` | process health |
+| Service | Build                                    | Start                                    | Health         |
+| ------- | ---------------------------------------- | ---------------------------------------- | -------------- |
+| Web     | `bun run --filter @legwork/web build`    | `bun run --filter @legwork/web start`    | `/api/health`  |
+| Worker  | `bun run --filter @legwork/worker build` | `bun run --filter @legwork/worker start` | process health |
 
 Both services use the same remote libSQL `DATABASE_URL`; local development uses `file:local.db`. Only the worker receives the GitHub private key and OpenRouter key. The web service receives WorkOS credentials and GitHub webhook/setup secrets. Scope shared values narrowly in Railway rather than exposing all secrets to both services.
 
@@ -51,7 +51,7 @@ Both services use the same remote libSQL `DATABASE_URL`; local development uses 
 Repository code execution is disabled by default. With Railway Sandbox credentials configured, run:
 
 ```sh
-bun run --filter @oncall-ai/sandbox probe
+bun run --filter @legwork/sandbox probe
 ```
 
 The probe creates a real sandbox and checks file transfer, execution, DNS, public HTTP, Railway private DNS, metadata endpoints, UID/capability isolation, namespace reconfiguration, secret visibility, timeout termination, and destruction. Set both of these only after the complete probe returns `passed: true` in the target environment:

@@ -1,5 +1,5 @@
 {
-	"name": "@oncall-ai/sandbox",
+	"name": "@legwork/sandbox",
 	"files": ["dist"],
 	"version": "0.0.0",
 	"private": true,
@@ -13,8 +13,8 @@
 		"probe": "bun src/probe-cli.ts"
 	},
 	"dependencies": {
-		"@oncall-ai/contracts": "workspace:*",
-		"@oncall-ai/security": "workspace:*",
+		"@legwork/contracts": "workspace:*",
+		"@legwork/security": "workspace:*",
 		"railway": "3.6.0"
 	},
 	"devDependencies": {

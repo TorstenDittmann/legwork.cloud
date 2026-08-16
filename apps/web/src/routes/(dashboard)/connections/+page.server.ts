@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { createDatabase, providerConnections } from '@oncall-ai/db';
+import { createDatabase, providerConnections } from '@legwork/db';
 import {
 	assertSafeProviderUrl,
 	discoverGrafanaDatasources,
@@ -9,13 +9,13 @@ import {
 	inferProviderMode,
 	IntegrationProviderError,
 	investigationContextProviders
-} from '@oncall-ai/integrations';
+} from '@legwork/integrations';
 import {
 	providerKindSchema,
 	type ProviderCredential,
 	type ResolvedProviderConnection
-} from '@oncall-ai/contracts';
-import { decryptSecret, encryptSecret } from '@oncall-ai/security';
+} from '@legwork/contracts';
+import { decryptSecret, encryptSecret } from '@legwork/security';
 import { requireEncryptionKey } from '$lib/server/config';
 import { requireTenant } from '$lib/server/tenant';
 import type { ConnectionActionState, DiscoveryState } from './state';

@@ -1,6 +1,6 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
-import { auditEvents, createDatabase, githubInstallations, repositories } from '@oncall-ai/db';
+import { auditEvents, createDatabase, githubInstallations, repositories } from '@legwork/db';
 import { HttpProblem, problemFail } from '$lib/server/http';
 import { requireTenant } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';

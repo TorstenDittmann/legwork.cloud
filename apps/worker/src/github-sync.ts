@@ -1,6 +1,6 @@
 import { and, eq, notInArray } from "drizzle-orm";
-import { createDatabase, githubInstallations, repositories } from "@oncall-ai/db";
-import { listInstallationRepositories } from "@oncall-ai/github";
+import { createDatabase, githubInstallations, repositories } from "@legwork/db";
+import { listInstallationRepositories } from "@legwork/github";
 
 export async function syncGitHubInstallation(
 	id: string,

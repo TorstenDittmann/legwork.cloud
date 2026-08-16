@@ -1,6 +1,6 @@
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "@octokit/rest";
-import type { RepositoryDownload, SourceProvider } from "@oncall-ai/contracts";
+import type { RepositoryDownload, SourceProvider } from "@legwork/contracts";
 
 const ARCHIVE_HOST = "codeload.github.com";
 
@@ -123,7 +123,7 @@ export class GitHubSourceProvider implements SourceProvider {
 					accept: "application/vnd.github+json",
 					authorization: `Bearer ${token}`,
 					"x-github-api-version": "2022-11-28",
-					"user-agent": "on-call-ai-worker",
+					"user-agent": "legwork-worker",
 				},
 				redirect: "manual",
 			},

@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import type { NormalizedAlertEvent, ProviderKind } from "@oncall-ai/contracts";
+import type { NormalizedAlertEvent, ProviderKind } from "@legwork/contracts";
 
 export const MAX_WEBHOOK_BYTES = 256 * 1024;
 export class IntegrationError extends Error {

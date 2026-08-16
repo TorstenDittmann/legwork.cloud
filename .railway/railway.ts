@@ -1,7 +1,7 @@
 import { defineRailway, github, image, preserve, project, service, volume } from "railway/iac";
 
 export default defineRailway((ctx) => {
-	const onCallAi = github("TorstenDittmann/on-call-ai", { checkSuites: false });
+	const legworkRepo = github("TorstenDittmann/on-call-ai", { checkSuites: false });
 
 	const libsqlVolume = volume("libsql-volume", {
 		alerts: { usage: { "100": {}, "80": {}, "95": {} } },
@@ -10,9 +10,9 @@ export default defineRailway((ctx) => {
 		sizeMB: 5000,
 	});
 	const web = service("web", {
-		source: onCallAi,
-		build: "bun run --filter @oncall-ai/web build",
-		start: "bun run db:migrate && bun run --filter @oncall-ai/web start",
+		source: legworkRepo,
+		build: "bun run --filter @legwork/web build",
+		start: "bun run db:migrate && bun run --filter @legwork/web start",
 		preDeploy: "bun run db:migrate",
 		healthcheck: "/api/health",
 		healthcheckTimeout: 30,
@@ -59,9 +59,9 @@ export default defineRailway((ctx) => {
 		},
 	});
 	const worker = service("worker", {
-		source: onCallAi,
-		build: "bun run --filter @oncall-ai/worker build",
-		start: "bun run db:migrate && bun run --filter @oncall-ai/worker start",
+		source: legworkRepo,
+		build: "bun run --filter @legwork/worker build",
+		start: "bun run db:migrate && bun run --filter @legwork/worker start",
 		deploy: {
 			restartPolicyType: "ON_FAILURE",
 			restartPolicyMaxRetries: 5,
@@ -85,7 +85,7 @@ export default defineRailway((ctx) => {
 		},
 	});
 
-	return project("oncall.ai", {
+	return project("legwork", {
 		resources: [web, libsql, worker, libsqlVolume],
 	});
 });

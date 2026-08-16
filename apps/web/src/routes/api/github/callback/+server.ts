@@ -1,8 +1,8 @@
 import { isHttpError, isRedirect, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
-import { auditEvents, createDatabase, githubInstallations } from '@oncall-ai/db';
-import { verifyInstallationState } from '@oncall-ai/github';
+import { auditEvents, createDatabase, githubInstallations } from '@legwork/db';
+import { verifyInstallationState } from '@legwork/github';
 import { HttpProblem, problemResponse } from '$lib/server/http';
 import { enqueueGitHubSync } from '$lib/server/queue';
 import { requireTenant } from '$lib/server/tenant';

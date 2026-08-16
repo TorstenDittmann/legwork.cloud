@@ -2,7 +2,7 @@ import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { createGunzip } from "node:zlib";
 import tar, { type Headers } from "tar-stream";
-import type { SourceFile } from "@oncall-ai/contracts";
+import type { SourceFile } from "@legwork/contracts";
 import { assertRelativeRepositoryPath } from "./paths";
 
 export interface ArchiveLimits {

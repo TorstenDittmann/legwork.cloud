@@ -20,7 +20,7 @@ export function problem(
 	errors?: Record<string, string[]>,
 ): ProblemDetails {
 	return {
-		type: `https://oncall.ai/problems/${title.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}`,
+		type: `https://legwork.dev/problems/${title.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}`,
 		title,
 		status,
 		...(detail ? { detail } : {}),

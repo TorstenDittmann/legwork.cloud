@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
-import { createIncidentRequestSchema, MAX_IDEMPOTENCY_KEY_LENGTH } from '@oncall-ai/contracts';
-import { consumeServiceRateLimit, createDatabase, createIncidentIdempotently } from '@oncall-ai/db';
-import { redactSecrets } from '@oncall-ai/security';
+import { createIncidentRequestSchema, MAX_IDEMPOTENCY_KEY_LENGTH } from '@legwork/contracts';
+import { consumeServiceRateLimit, createDatabase, createIncidentIdempotently } from '@legwork/db';
+import { redactSecrets } from '@legwork/security';
 import { HttpProblem, problemResponse, readLimitedJson } from '$lib/server/http';
 import { authenticateServiceRequest } from '$lib/server/service-auth';
 import type { RequestHandler } from './$types';

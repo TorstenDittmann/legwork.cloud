@@ -5,8 +5,8 @@ import type {
 	SandboxHandle,
 	SandboxProvider,
 	ToolResult,
-} from "@oncall-ai/contracts";
-import { agentToolSchema } from "@oncall-ai/contracts";
+} from "@legwork/contracts";
+import { agentToolSchema } from "@legwork/contracts";
 import type { SnapshotIndex } from "./evidence";
 import { hydrateDiagnosisEvidence, validateDiagnosisEvidence } from "./evidence";
 import type { ChatMessage, DiagnosisModelProvider } from "./openrouter";
@@ -27,6 +27,8 @@ export interface AgentActivity {
 	detail?: string;
 	toolName?: string;
 	durationMs?: number;
+	/** Ties a `*_started` activity to its `*_completed`/`*_failed` counterpart. */
+	correlationId?: string;
 }
 export interface AgentRunInput {
 	incident: unknown;
@@ -165,31 +167,39 @@ export async function runDiagnosisAgent(
 			(call): call is typeof call & { tool: InspectionOperation } => call.tool.name !== "run_check",
 		);
 		const check = calls.find(({ tool }) => tool.name === "run_check");
+		const batchCorrelationId = crypto.randomUUID();
 		await activity({
 			kind: "tool_batch_started",
 			summary: `Running ${inspections.length} independent repository inspection${inspections.length === 1 ? "" : "s"}${check ? " and 1 repository check" : ""}`,
+			correlationId: batchCorrelationId,
 		});
-		for (const { tool } of calls)
+		for (const { tool, callId } of calls)
 			await activity({
 				kind: "tool_started",
 				summary: describeTool(tool),
 				detail: JSON.stringify(tool, null, 2),
 				toolName: tool.name,
+				correlationId: callId,
 			});
 		const batchStarted = performance.now();
 		const results = Array.from<ToolResult>({ length: calls.length });
-		await mapWithConcurrency(inspections, MAX_PARALLEL_INSPECTIONS, async ({ tool, index }) => {
-			const result = await input.sandboxProvider.inspect(input.sandbox, tool);
-			results[index] = result;
-			await activity({
-				kind: "tool_completed",
-				summary: describeToolResult(tool, result),
-				detail: JSON.stringify(result, null, 2),
-				toolName: tool.name,
-				durationMs: result.durationMs,
-			});
-			return result;
-		});
+		await mapWithConcurrency(
+			inspections,
+			MAX_PARALLEL_INSPECTIONS,
+			async ({ tool, index, callId }) => {
+				const result = await input.sandboxProvider.inspect(input.sandbox, tool);
+				results[index] = result;
+				await activity({
+					kind: "tool_completed",
+					summary: describeToolResult(tool, result),
+					detail: JSON.stringify(result, null, 2),
+					toolName: tool.name,
+					durationMs: result.durationMs,
+					correlationId: callId,
+				});
+				return result;
+			},
+		);
 		if (check && check.tool.name === "run_check") {
 			const result = await input.sandboxProvider.runCheck(input.sandbox, check.tool);
 			results[check.index] = result;
@@ -199,6 +209,7 @@ export async function runDiagnosisAgent(
 				detail: JSON.stringify(result, null, 2),
 				toolName: check.tool.name,
 				durationMs: result.durationMs,
+				correlationId: check.callId,
 			});
 		}
 		const batchDurationMs = Math.round(performance.now() - batchStarted);
@@ -206,6 +217,7 @@ export async function runDiagnosisAgent(
 			kind: "tool_batch_completed",
 			summary: `Completed ${calls.length} tool${calls.length === 1 ? "" : "s"} in ${(batchDurationMs / 1_000).toFixed(1)}s`,
 			durationMs: batchDurationMs,
+			correlationId: batchCorrelationId,
 		});
 		messages.push(
 			...calls.map(({ callId, index }) => ({

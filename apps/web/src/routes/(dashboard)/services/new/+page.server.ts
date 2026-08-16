@@ -7,8 +7,8 @@ import {
 	serviceApiKeys,
 	serviceRepositories,
 	services
-} from '@oncall-ai/db';
-import { encryptSecret, generateApiKey, resolveSafeCallbackUrl } from '@oncall-ai/security';
+} from '@legwork/db';
+import { encryptSecret, generateApiKey, resolveSafeCallbackUrl } from '@legwork/security';
 import { requireEncryptionKey } from '$lib/server/config';
 import { HttpProblem, problemFail } from '$lib/server/http';
 import { requireTenant } from '$lib/server/tenant';
