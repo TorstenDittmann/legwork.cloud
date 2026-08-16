@@ -81,7 +81,7 @@
 		<Field label="Name" forId="service-name">
 			<Input id="service-name" name="name" autocomplete="off" required value={name} />
 		</Field>
-		<Field label="Primary Repository" forId="primary-repository">
+		<Field label="Primary repository" forId="primary-repository">
 			<Select id="primary-repository" name="primaryRepositoryId" required value={primary}>
 				{#each repositories as repository (repository.id)}
 					<option value={repository.id}>{repository.fullName}</option>
@@ -89,12 +89,12 @@
 			</Select>
 		</Field>
 		<fieldset>
-			<legend class="text-xs font-medium">
-				Related Repositories <span class="text-ink-faint">(up to 2)</span>
+			<legend class="text-sm font-medium">
+				Related repositories <span class="font-normal text-ink-faint">(up to 2)</span>
 			</legend>
-			<div class="mt-2 grid gap-px border border-rule bg-rule">
+			<div class="mt-2 grid gap-px overflow-hidden rounded-lg border border-rule bg-rule/70">
 				{#each repositories as repository (repository.id)}
-					<label class="flex min-h-10 items-center gap-3 bg-canvas px-3 text-sm">
+					<label class="flex min-h-10 items-center gap-3 bg-surface px-3.5 text-sm">
 						<input
 							type="checkbox"
 							name="relatedRepositoryIds"
@@ -129,7 +129,7 @@
 			<InlineAlert tone="danger">{error}</InlineAlert>
 		{/if}
 		<Button type="submit" disabled={pending !== null}>
-			{pending === 'save' ? 'Saving Service…' : 'Save Service'}
+			{pending === 'save' ? 'Saving service…' : 'Save service'}
 		</Button>
 	</form>
 	<div class="border-t border-rule pt-6">
@@ -166,12 +166,14 @@
 			}}
 		>
 			<Button type="submit" variant="outline" class="mt-3" disabled={pending !== null}>
-				{pending === 'rotate' ? 'Rotating Key…' : 'Rotate Ingestion Key'}
+				{pending === 'rotate' ? 'Rotating key…' : 'Rotate ingestion key'}
 			</Button>
 		</form>
 		{#if revealedKey}
-			<div class="mt-4 border-l-2 border-warning bg-surface-raised p-4">
-				<p class="text-sm text-warning">Copy this key now. It will not be shown again.</p>
+			<div class="mt-4 rounded-lg bg-warning/10 p-4">
+				<p class="text-sm font-medium text-warning">
+					Copy this key now. It will not be shown again.
+				</p>
 				<code translate="no" class="mt-2 block overflow-x-auto text-xs text-ink">
 					{revealedKey}
 				</code>

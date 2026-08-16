@@ -30,7 +30,7 @@ export default defineRailway((ctx) => {
 			GITHUB_APP_SLUG: preserve(),
 			GITHUB_INSTALLATION_STATE_SECRET: preserve(),
 			LOG_LEVEL: preserve(),
-			NEXT_PUBLIC_WORKOS_REDIRECT_URI: preserve(),
+			WORKOS_REDIRECT_URI: preserve(),
 			WORKOS_API_KEY: preserve(),
 			WORKOS_CLIENT_ID: preserve(),
 			WORKOS_COOKIE_PASSWORD: preserve(),

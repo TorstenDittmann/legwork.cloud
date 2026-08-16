@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import type { SubmitFunction } from '@sveltejs/kit';
+	import { Check } from '@lucide/svelte';
 	import Badge from '$lib/components/ui/badge.svelte';
 	import Button from '$lib/components/ui/button.svelte';
 	import Card from '$lib/components/ui/card.svelte';
@@ -160,28 +161,26 @@
 				)
 			: null}
 	<header class="border-b border-rule pb-7">
-		<a
-			href="/incidents"
-			class="font-mono text-[10px] tracking-[0.08em] text-ink-faint uppercase hover:text-accent"
-		>
-			← Incident Ledger
+		<a href="/incidents" class="text-sm font-medium text-ink-faint hover:text-accent">
+			← Incident ledger
 		</a>
 		<div class="mt-5 flex flex-wrap items-start justify-between gap-5">
 			<div class="max-w-4xl min-w-0">
-				<div class="mb-3 flex flex-wrap items-center gap-3">
+				<div class="mb-3 flex flex-wrap items-center gap-2.5">
 					<SeverityMark severity={data.incident.severity} />
 					<StatusMark status={data.currentRun?.status ?? 'queued'} />
 					<span
 						aria-live="polite"
-						class="font-mono text-[10px] tracking-[0.08em] uppercase {connected
-							? 'text-live'
-							: 'text-warning'}"
+						class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium {connected
+							? 'bg-live/10 text-live'
+							: 'bg-warning/10 text-warning'}"
 					>
-						{connected ? '● Live' : '○ Reconnecting'}
+						<span aria-hidden="true" class="size-1.5 rounded-full bg-current"></span>
+						{connected ? 'Live' : 'Reconnecting'}
 					</span>
 				</div>
 				<h1
-					class="font-display text-3xl leading-[1.05] font-semibold tracking-[-0.02em] text-pretty md:text-5xl"
+					class="font-display text-3xl leading-[1.08] font-semibold tracking-[-0.01em] text-pretty md:text-[44px]"
 				>
 					{data.incident.title}
 				</h1>
@@ -190,7 +189,7 @@
 				<form method="POST" action="?/retry" use:enhance={retryEnhance}>
 					<input type="hidden" name="runId" value={data.currentRun?.id} />
 					<Button type="submit" variant="outline" disabled={retrying}>
-						{retrying ? 'Queuing Retry…' : 'Retry Analysis'}
+						{retrying ? 'Queuing retry…' : 'Retry analysis'}
 					</Button>
 				</form>
 			{/if}
@@ -226,23 +225,36 @@
 	{#if !diagnosis}
 		<section class="mt-9">
 			<SectionHeader>
-				{#snippet meta()}Stage {activeStage + 1} / {stages.length}{/snippet}
-				Run Progress
+				{#snippet meta()}Stage {activeStage + 1} of {stages.length}{/snippet}
+				Run progress
 			</SectionHeader>
-			<ol
-				class="grid grid-cols-2 gap-px overflow-hidden rounded-[4px] border border-rule bg-rule sm:grid-cols-3 lg:grid-cols-6"
-			>
+			<ol class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6" aria-label="Analysis stages">
 				{#each stages as stage, index (stage)}
-					<li class="bg-surface px-3 py-3.5 {index <= activeStage ? 'text-ink' : 'text-ink-faint'}">
-						<span
-							aria-hidden="true"
-							class="mb-2 block h-0.5 {index < activeStage
-								? 'bg-accent'
-								: index === activeStage
-									? 'bg-live'
-									: 'bg-rule'}"
-						></span>
-						<span class="font-mono text-[9px] tracking-[0.08em] uppercase">{stage}</span>
+					<li
+						class="flex items-center gap-2.5 rounded-lg border px-3.5 py-3 {index === activeStage
+							? 'border-accent/30 bg-accent-soft text-accent-hover'
+							: index < activeStage
+								? 'border-rule bg-surface text-ink'
+								: 'border-rule bg-surface/60 text-ink-faint'}"
+					>
+						{#if index < activeStage}
+							<span
+								aria-hidden="true"
+								class="grid size-5 shrink-0 place-items-center rounded-full bg-accent text-white"
+							>
+								<Check class="size-3" stroke-width={3} />
+							</span>
+						{:else if index === activeStage}
+							<span aria-hidden="true" class="relative flex size-2.5 shrink-0">
+								<span
+									class="absolute inline-flex h-full w-full animate-ping rounded-full bg-live opacity-60"
+								></span>
+								<span class="relative inline-flex size-2.5 rounded-full bg-live"></span>
+							</span>
+						{:else}
+							<span aria-hidden="true" class="size-2.5 shrink-0 rounded-full bg-rule-strong"></span>
+						{/if}
+						<span class="truncate text-xs font-medium">{stage}</span>
 					</li>
 				{/each}
 			</ol>
@@ -260,23 +272,21 @@
 					<CardContent>
 						<p class="text-base leading-7 text-ink-muted">{diagnosis.summary}</p>
 						{#if diagnosis.rootCause}
-							<div class="mt-6 rounded-[3px] border-l-2 border-accent bg-surface-raised px-5 py-4">
+							<div class="mt-6 rounded-lg border border-accent/20 bg-accent-soft px-5 py-4">
 								<p class="text-base leading-7 text-ink">
 									{diagnosis.rootCause.statement}
 								</p>
 								<div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-									<span class="font-mono text-[10px] text-ink-faint">
+									<span class="text-xs font-medium text-ink-muted">
 										Confidence {Math.round(diagnosis.rootCause.confidence * 100)}%
 									</span>
 									{#if diagnosis.evidence.length > 0}
-										<span
-											class="flex flex-wrap items-center gap-1.5 font-mono text-[10px] text-ink-faint"
-										>
+										<span class="flex flex-wrap items-center gap-1.5 text-xs text-ink-muted">
 											Exhibits
 											{#each diagnosis.evidence, index}
 												<a
 													href={`#exhibit-${index + 1}`}
-													class="rounded-[2px] border border-accent/35 bg-accent/5 px-1 py-px text-accent hover:bg-accent/10"
+													class="rounded-full bg-accent/10 px-2 py-0.5 font-mono text-[11px] font-medium text-accent hover:bg-accent/15"
 												>
 													{exhibitId(index)}
 												</a>
@@ -296,18 +306,17 @@
 						{#each diagnosis.evidence as evidence, index (index)}
 							<article
 								id={`exhibit-${index + 1}`}
-								class="scroll-mt-24 overflow-hidden rounded-[3px] border border-rule"
+								class="scroll-mt-24 overflow-hidden rounded-lg border border-rule"
 							>
 								<div
 									class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-rule px-4 py-2.5"
 								>
-									<span class="font-mono text-[10px] font-medium text-accent">
+									<span
+										class="rounded-full bg-accent/10 px-2 py-0.5 font-mono text-[11px] font-medium text-accent"
+									>
 										{exhibitId(index)}
 									</span>
-									<span
-										translate="no"
-										class="min-w-0 truncate font-mono text-[10px] text-ink-muted"
-									>
+									<span translate="no" class="min-w-0 truncate font-mono text-xs text-ink-muted">
 										{'path' in evidence
 											? `${evidence.path}:${evidence.lineStart}-${evidence.lineEnd}`
 											: 'command' in evidence
@@ -343,7 +352,7 @@
 							{#if diagnosis.suggestedFix.patch}
 								<pre
 									translate="no"
-									class="mt-4 overflow-x-auto rounded-[3px] border border-rule bg-surface-raised p-4 text-xs leading-5">{diagnosis
+									class="mt-4 overflow-x-auto rounded-lg border border-rule bg-surface-raised p-4 text-xs leading-5">{diagnosis
 										.suggestedFix.patch}</pre>
 							{/if}
 							<p class="mt-4 text-xs text-warning">
@@ -381,15 +390,15 @@
 		</aside>
 	</div>
 	<section class="mt-10" aria-labelledby="agent-activity-heading">
-		<div class="mb-3 flex flex-wrap items-end justify-between gap-2">
+		<div class="mb-4 flex flex-wrap items-end justify-between gap-2">
 			<div>
 				<h2
 					id="agent-activity-heading"
-					class="font-display text-lg font-semibold tracking-[-0.01em]"
+					class="font-display text-xl font-semibold tracking-[-0.005em]"
 				>
-					Investigation Record
+					Investigation record
 				</h2>
-				<p class="mt-0.5 text-xs text-ink-faint">
+				<p class="mt-1 text-sm text-ink-faint">
 					Sandbox lifecycle, prompts, model responses, tool calls, and tool output · chronological
 				</p>
 			</div>
@@ -405,15 +414,16 @@
 							showJump = false;
 						}}
 					>
-						Jump to Latest
+						Jump to latest
 					</Button>
 				{/if}
 				<span
 					aria-live="polite"
-					class={connected
-						? 'font-mono text-[10px] text-live'
-						: 'font-mono text-[10px] text-warning'}
+					class="inline-flex items-center gap-1.5 text-xs font-medium {connected
+						? 'text-live'
+						: 'text-warning'}"
 				>
+					<span aria-hidden="true" class="size-1.5 rounded-full bg-current"></span>
 					{data.steps.length} events · {connected ? 'live' : 'reconnecting'}
 				</span>
 			</div>
@@ -425,39 +435,41 @@
 				followTranscript = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
 				showJump = !followTranscript;
 			}}
-			class="h-[38rem] overflow-y-auto overscroll-contain scroll-smooth rounded-[4px] border border-rule bg-surface px-3 shadow-[0_1px_2px_rgba(23,26,32,0.04)]"
+			class="h-[38rem] overflow-y-auto overscroll-contain scroll-smooth rounded-xl border border-rule bg-surface px-4 shadow-card"
 		>
 			{#each data.steps as step (step.id)}
 				<div
-					class="agent-log-entry grid grid-cols-[2rem_minmax(0,1fr)] items-start gap-2 border-b border-rule py-3 last:border-0 md:grid-cols-[2rem_8rem_minmax(0,1fr)_auto]"
+					class="agent-log-entry grid grid-cols-[2rem_minmax(0,1fr)] items-start gap-2 border-b border-rule py-3.5 last:border-0 md:grid-cols-[2rem_8rem_minmax(0,1fr)_auto]"
 				>
-					<span class="pt-0.5 text-right font-mono text-[10px] text-ink-faint tabular-nums">
+					<span class="pt-0.5 text-right font-mono text-[11px] text-ink-faint tabular-nums">
 						{step.sequence}
 					</span>
 					<div class="flex min-w-0 items-center gap-1.5 pt-0.5">
-						<span class="truncate font-mono text-[10px] tracking-[0.08em] text-accent uppercase">
+						<span
+							class="truncate rounded-full bg-surface-raised px-2 py-0.5 text-[11px] font-medium text-ink-muted"
+						>
 							{step.kind.replaceAll('_', ' ')}
 						</span>
 					</div>
 					<div class="min-w-0">
 						<p class="text-sm leading-5 text-ink-muted">{step.summary}</p>
 						{#if step.detail}
-							<details class="group mt-1">
+							<details class="group mt-1.5">
 								<summary
-									class="cursor-pointer list-none font-mono text-[10px] text-ink-faint hover:text-ink-muted"
+									class="cursor-pointer list-none text-xs font-medium text-ink-faint hover:text-ink-muted"
 								>
-									<span class="group-open:hidden">▸ show payload</span>
-									<span class="hidden group-open:inline">▾ hide payload</span>
-									<span class="ml-2 opacity-60">{step.detail.length} chars</span>
+									<span class="group-open:hidden">▸ Show payload</span>
+									<span class="hidden group-open:inline">▾ Hide payload</span>
+									<span class="ml-2 font-normal opacity-60">{step.detail.length} chars</span>
 								</summary>
 								<pre
 									translate="no"
-									class="mt-2 border-l border-rule-strong pl-3 font-mono text-xs leading-5 break-words whitespace-pre-wrap text-ink-muted">{step.detail}</pre>
+									class="mt-2 rounded-lg bg-surface-raised p-3 font-mono text-xs leading-5 break-words whitespace-pre-wrap text-ink-muted">{step.detail}</pre>
 							</details>
 						{/if}
 					</div>
 					<div
-						class="col-start-2 flex items-center gap-2 pt-0.5 font-mono text-[10px] text-ink-faint md:col-start-auto"
+						class="col-start-2 flex items-center gap-2 pt-0.5 font-mono text-[11px] text-ink-faint md:col-start-auto"
 					>
 						{#if step.toolName}<span>{step.toolName}</span>{/if}
 						{#if step.durationMs != null}<span>{step.durationMs}ms</span>{/if}

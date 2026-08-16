@@ -36,7 +36,7 @@
 	<section>
 		<SectionHeader>
 			{#snippet meta()}Required{/snippet}
-			Incident Identity
+			Incident identity
 		</SectionHeader>
 		<div class="grid gap-5 sm:grid-cols-2">
 			<Field label="Service" forId="serviceId">
@@ -98,7 +98,7 @@
 	<section>
 		<SectionHeader>
 			{#snippet meta()}Diagnostic context{/snippet}
-			Failure Signal
+			Failure signal
 		</SectionHeader>
 		<div class="space-y-5">
 			<Field
@@ -127,6 +127,6 @@
 		<InlineAlert tone="danger">{error}</InlineAlert>
 	{/if}
 	<Button type="submit" disabled={pending}>
-		{pending ? 'Queuing Analysis…' : 'Queue Analysis'}
+		{pending ? 'Queuing analysis…' : 'Queue analysis'}
 	</Button>
 </form>

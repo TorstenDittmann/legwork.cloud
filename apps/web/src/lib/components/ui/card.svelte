@@ -5,11 +5,6 @@
 	let { class: className, children }: { class?: string; children: Snippet } = $props();
 </script>
 
-<div
-	class={cn(
-		'rounded-[4px] border border-rule bg-surface shadow-[0_1px_2px_rgba(23,26,32,0.04)]',
-		className
-	)}
->
+<div class={cn('rounded-xl border border-rule bg-surface shadow-card', className)}>
 	{@render children()}
 </div>

@@ -7,6 +7,6 @@
 
 <div
 	aria-hidden="true"
-	class={cn('animate-pulse rounded-[3px] bg-surface-raised', className)}
+	class={cn('animate-pulse rounded-lg bg-surface-raised', className)}
 	{...rest}
 ></div>

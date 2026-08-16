@@ -7,7 +7,7 @@
 
 <PageHeader
 	eyebrow="Manual intake"
-	title="Submit an Incident"
+	title="Submit an incident"
 	description="Provide the failure signal and enough operational context to begin a repository investigation."
 />
 <div class="mt-8">

@@ -46,10 +46,12 @@
 			<p class="text-sm text-danger">{form.error}</p>
 		{/if}
 		{#if form?.webhookUrl}
-			<div class="border border-rule p-3 text-xs">
-				<p class="font-semibold">Copy these now. The secret will not be shown again.</p>
-				<p class="mt-2 font-mono break-all">URL: {form.webhookUrl}</p>
-				<p class="mt-2 font-mono break-all">Secret: {form.secret}</p>
+			<div class="rounded-lg bg-warning/10 p-4 text-xs">
+				<p class="font-semibold text-warning">
+					Copy these now. The secret will not be shown again.
+				</p>
+				<p class="mt-2 font-mono break-all text-ink-muted">URL: {form.webhookUrl}</p>
+				<p class="mt-2 font-mono break-all text-ink-muted">Secret: {form.secret}</p>
 			</div>
 		{/if}
 	</form>

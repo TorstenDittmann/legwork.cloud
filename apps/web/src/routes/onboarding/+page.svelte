@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import Wordmark from '$lib/components/wordmark.svelte';
 	import Button from '$lib/components/ui/button.svelte';
 	import Input from '$lib/components/ui/input.svelte';
 	import type { PageProps } from './$types';
@@ -7,22 +8,13 @@
 	let { data, form }: PageProps = $props();
 </script>
 
-<main class="flex min-h-screen flex-col items-center justify-center journal-grid px-6 py-16">
-	<div class="w-full max-w-lg">
-		<p class="font-display text-lg font-semibold tracking-[-0.01em]">
-			OnCall <span class="text-accent">AI</span>
-		</p>
-		<div
-			class="mt-8 rounded-[4px] border border-rule bg-surface shadow-[0_16px_40px_-16px_rgba(23,26,32,0.16),0_2px_6px_rgba(23,26,32,0.05)]"
-		>
-			<div class="border-b border-rule px-6 py-3">
-				<p class="font-mono text-[10px] tracking-[0.08em] text-ink-faint uppercase">
-					Workspace setup · 01
-				</p>
-			</div>
-			<div class="px-6 py-7">
-				<h1 class="font-display text-3xl font-semibold tracking-[-0.02em]">
-					Create Your Workspace
+<main class="flex min-h-screen flex-col items-center justify-center px-6 py-16">
+	<div class="w-full max-w-md">
+		<a href="/" aria-label="OnCall AI home" class="inline-block"><Wordmark /></a>
+		<div class="mt-8 rounded-2xl border border-rule bg-surface shadow-lift">
+			<div class="px-7 pt-7 pb-6">
+				<h1 class="font-display text-3xl font-semibold tracking-[-0.01em] text-ink">
+					Create your workspace
 				</h1>
 				<p class="mt-3 text-sm leading-6 text-ink-muted">
 					Every repository, service, incident, and run is scoped to the active WorkOS organization.
@@ -30,11 +22,7 @@
 				<form method="POST" action="?/complete" class="mt-7" use:enhance>
 					{#if !data.organizationId}
 						<label class="block">
-							<span
-								class="mb-2 block font-mono text-[10px] tracking-[0.08em] text-ink-muted uppercase"
-							>
-								Organization name
-							</span>
+							<span class="mb-1.5 block text-sm font-medium text-ink">Organization name</span>
 							<Input
 								name="name"
 								autocomplete="organization"

@@ -42,10 +42,10 @@
 				aria-valuemin={0}
 				aria-valuemax={data.monthlyAnalysisQuota}
 				aria-valuenow={data.usage.analyses}
-				class="mt-2 h-1 bg-rule"
+				class="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-raised"
 			>
 				<div
-					class="h-1 bg-accent"
+					class="h-full rounded-full bg-accent"
 					style={`width: ${Math.min(100, (data.usage.analyses / data.monthlyAnalysisQuota) * 100)}%`}
 				></div>
 			</div>
@@ -72,7 +72,7 @@
 </div>
 {#if data.role === 'admin'}
 	<section class="mt-10">
-		<SectionHeader>Members & Invitations</SectionHeader>
+		<SectionHeader>Members & invitations</SectionHeader>
 		{#if form?.message}
 			<p class="mb-4 text-sm text-danger">{form.message}</p>
 		{/if}
@@ -94,7 +94,7 @@
 					<option value="admin">Admin</option>
 				</Select>
 			</Field>
-			<Button type="submit" class="mt-6">Invite Member</Button>
+			<Button type="submit" class="mt-6">Invite member</Button>
 		</form>
 		<Card>
 			<CardContent class="divide-y divide-rule pt-6">
@@ -108,7 +108,7 @@
 								<input type="hidden" name="membershipId" value={membership.id} />
 								<select
 									name="role"
-									class="h-8 rounded-[3px] border border-rule-strong bg-surface px-2 text-xs"
+									class="h-8 rounded-lg border border-rule-strong bg-surface px-2 text-xs"
 								>
 									<option value="member" selected={membership.role === 'member'}>Member</option>
 									<option value="admin" selected={membership.role === 'admin'}>Admin</option>
@@ -121,7 +121,7 @@
 								<ConfirmSubmit
 									message="Remove this member from the organization? They will immediately lose access."
 								>
-									Remove Member
+									Remove member
 								</ConfirmSubmit>
 							</form>
 						</div>
@@ -138,13 +138,13 @@
 	</section>
 {/if}
 <section class="mt-10">
-	<SectionHeader>Audit Events</SectionHeader>
+	<SectionHeader>Audit events</SectionHeader>
 	<Card>
 		<CardContent class="divide-y divide-rule pt-6">
 			{#each data.audits as event (event.id)}
 				<div class="flex justify-between py-3 text-sm">
 					<span class="text-ink-muted">{event.action}</span>
-					<time class="font-mono text-[10px] text-ink-faint">
+					<time class="font-mono text-xs text-ink-faint">
 						{formatDateTime(event.createdAt)}
 					</time>
 				</div>
@@ -152,7 +152,7 @@
 		</CardContent>
 	</Card>
 	{#if data.audits.length === 0}
-		<EmptyState title="No Audit Events">Organization changes will appear here.</EmptyState>
+		<EmptyState title="No audit events">Organization changes will appear here.</EmptyState>
 	{/if}
 </section>
 <p class="mt-10 max-w-3xl border-t border-rule pt-6 text-xs leading-5 text-ink-faint">

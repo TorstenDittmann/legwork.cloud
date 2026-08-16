@@ -69,16 +69,17 @@
 </script>
 
 <section class="mt-7" aria-labelledby="repository-inventory-title">
-	<div
-		class="flex flex-col gap-3 border-b border-rule pb-4 sm:flex-row sm:items-end sm:justify-between"
-	>
+	<div class="flex flex-col gap-3 pb-4 sm:flex-row sm:items-end sm:justify-between">
 		<div>
 			<div class="flex items-center gap-2">
-				<h2 id="repository-inventory-title" class="font-display text-lg font-semibold">
+				<h2
+					id="repository-inventory-title"
+					class="font-display text-xl font-semibold tracking-[-0.005em]"
+				>
 					Repository inventory
 				</h2>
 			</div>
-			<p class="mt-1 text-xs text-ink-faint">
+			<p class="mt-1 text-sm text-ink-faint">
 				{included} included · {repositories.length} synchronized
 			</p>
 		</div>
@@ -108,11 +109,9 @@
 		</p>
 	{/if}
 
-	<div
-		class="mt-3 overflow-hidden rounded-[4px] border border-rule bg-surface shadow-[0_1px_2px_rgba(23,26,32,0.04)]"
-	>
+	<div class="mt-3 overflow-hidden rounded-xl border border-rule bg-surface shadow-card">
 		<div
-			class="hidden grid-cols-[minmax(0,1fr)_180px_110px_104px] gap-4 border-b border-rule bg-surface-raised/60 px-4 py-2 font-mono text-[9px] tracking-[0.1em] text-ink-faint uppercase md:grid"
+			class="hidden grid-cols-[minmax(0,1fr)_180px_110px_104px] gap-4 border-b border-rule bg-surface-raised/60 px-5 py-2.5 text-xs font-medium text-ink-faint md:grid"
 		>
 			<span>Repository</span>
 			<span>Default branch</span>
@@ -124,26 +123,26 @@
 				{@const unavailable = Boolean(repository.removedAt)}
 				{@const pending = pendingId === repository.id}
 				<div
-					class="grid min-h-12 items-center gap-2 border-b border-rule px-4 py-2.5 last:border-0 md:grid-cols-[minmax(0,1fr)_180px_110px_104px] md:gap-4"
+					class="grid min-h-12 items-center gap-2 border-b border-rule px-5 py-3 last:border-0 md:grid-cols-[minmax(0,1fr)_180px_110px_104px] md:gap-4"
 				>
 					<div class="min-w-0">
 						<p translate="no" class="truncate text-sm font-medium text-ink">
 							{repository.fullName}
 						</p>
 					</div>
-					<div class="flex min-w-0 items-center gap-1.5 font-mono text-[10px] text-ink-faint">
+					<div class="flex min-w-0 items-center gap-1.5 font-mono text-xs text-ink-faint">
 						<GitBranch class="size-3 shrink-0" aria-hidden="true" />
 						<span class="truncate">{repository.defaultBranch}</span>
 					</div>
 					<div>
 						{#if unavailable}
 							<Badge tone="danger">
-								<Unplug class="size-2.5" />
+								<Unplug class="size-3" />
 								Removed
 							</Badge>
 						{:else if repository.archived}
 							<Badge tone="warning">
-								<Archive class="size-2.5" />
+								<Archive class="size-3" />
 								Archived
 							</Badge>
 						{:else}

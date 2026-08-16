@@ -5,11 +5,10 @@
 	let { class: className, children }: { class?: string; children: Snippet } = $props();
 </script>
 
-<!-- Hairline-separated metadata cells, the document-header field grid of the
-     record motif. Override the column count via class when needed. -->
+<!-- Soft-separated metadata cells. Override the column count via class when needed. -->
 <dl
 	class={cn(
-		'grid grid-cols-2 gap-px overflow-hidden rounded-[3px] border border-rule bg-rule sm:grid-cols-3',
+		'grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-rule bg-rule/70 shadow-card sm:grid-cols-3',
 		className
 	)}
 >

@@ -34,17 +34,15 @@
 		['Ingestion Key', revealed.ingestionKey],
 		['Callback Secret', revealed.callbackSigningSecret]
 	] as Array<[string, string]>}
-	<div
-		class="max-w-2xl rounded-[4px] border border-l-2 border-rule border-l-warning bg-surface p-6 shadow-[0_1px_2px_rgba(23,26,32,0.04)]"
-	>
+	<div class="max-w-2xl rounded-xl border border-rule bg-surface p-6 shadow-card sm:p-8">
 		<h2 class="font-display text-2xl font-semibold tracking-[-0.01em] text-ink">
-			Copy These Secrets Now
+			Copy these secrets now
 		</h2>
 		<p class="mt-2 text-sm text-warning">They will not be shown again.</p>
 		<div class="mt-5 space-y-3">
 			{#each secrets as [label, value] (label)}
-				<div class="rounded-[3px] border border-rule bg-surface-raised p-4">
-					<p class="font-mono text-[9px] tracking-[0.08em] text-ink-faint uppercase">
+				<div class="rounded-lg border border-rule bg-surface-raised p-4">
+					<p class="text-xs font-medium text-ink-faint">
 						{label}
 					</p>
 					<code translate="no" class="mt-2 block overflow-x-auto text-xs text-ink-muted">
@@ -65,7 +63,7 @@
 		<p aria-live="polite" class="sr-only">
 			{copied ? `${copied} copied` : ''}
 		</p>
-		<Button class="mt-5" onclick={() => goto('/services')}>Open Services</Button>
+		<Button class="mt-5" onclick={() => goto('/services')}>Open services</Button>
 	</div>
 {:else}
 	<form
@@ -97,7 +95,7 @@
 				pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
 			/>
 		</Field>
-		<Field label="Primary Repository" forId="primaryRepositoryId">
+		<Field label="Primary repository" forId="primaryRepositoryId">
 			<Select id="primaryRepositoryId" name="primaryRepositoryId" required>
 				{#each repositories as repository (repository.id)}
 					<option value={repository.id}>{repository.fullName}</option>
@@ -105,12 +103,12 @@
 			</Select>
 		</Field>
 		<fieldset>
-			<legend class="text-xs font-medium">
-				Related Repositories <span class="text-ink-faint">(up to 2)</span>
+			<legend class="text-sm font-medium">
+				Related repositories <span class="font-normal text-ink-faint">(up to 2)</span>
 			</legend>
-			<div class="mt-2 grid gap-px overflow-hidden rounded-[3px] border border-rule bg-rule">
+			<div class="mt-2 grid gap-px overflow-hidden rounded-lg border border-rule bg-rule/70">
 				{#each repositories as repository (repository.id)}
-					<label class="flex min-h-10 items-center gap-3 bg-surface px-3 text-sm">
+					<label class="flex min-h-10 items-center gap-3 bg-surface px-3.5 text-sm">
 						<input
 							type="checkbox"
 							name="relatedRepositoryIds"
@@ -141,7 +139,7 @@
 			<InlineAlert tone="danger">{error}</InlineAlert>
 		{/if}
 		<Button type="submit" disabled={pending}>
-			{pending ? 'Creating Service…' : 'Create Service & Reveal Keys'}
+			{pending ? 'Creating service…' : 'Create service & reveal keys'}
 		</Button>
 	</form>
 {/if}

@@ -8,7 +8,7 @@
 
 <PageHeader
 	eyebrow="Configuration"
-	title="New Service"
+	title="New service"
 	description="Create a stable incident endpoint and bind it to the repositories the agent may inspect."
 />
 <div class="mt-8">

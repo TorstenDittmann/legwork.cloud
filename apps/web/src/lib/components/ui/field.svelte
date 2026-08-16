@@ -18,10 +18,7 @@
 </script>
 
 <div class={cn('min-w-0', className)}>
-	<label
-		for={forId}
-		class="mb-2 block font-mono text-[10px] tracking-[0.08em] text-ink-muted uppercase"
-	>
+	<label for={forId} class="mb-1.5 block text-sm font-medium text-ink">
 		{label}
 	</label>
 	{@render children()}

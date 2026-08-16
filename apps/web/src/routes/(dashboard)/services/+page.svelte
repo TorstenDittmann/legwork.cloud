@@ -9,7 +9,7 @@
 </script>
 
 {#snippet actions()}
-	<Button href="/services/new">New Service</Button>
+	<Button href="/services/new">New service</Button>
 {/snippet}
 
 <PageHeader
@@ -20,19 +20,19 @@
 />
 <div class="mt-8">
 	{#if data.services.length}
-		<div class="rounded-[4px] border border-rule bg-surface shadow-[0_1px_2px_rgba(23,26,32,0.04)]">
+		<div class="rounded-xl border border-rule bg-surface shadow-card">
 			{#each data.services as service (service.id)}
 				<div
-					class="grid gap-3 border-b border-rule px-4 py-5 last:border-0 sm:grid-cols-[minmax(0,1fr)_140px] sm:items-center"
+					class="grid gap-3 border-b border-rule px-5 py-5 last:border-0 sm:grid-cols-[minmax(0,1fr)_140px] sm:items-center"
 				>
 					<div>
 						<a
 							href={`/services/${service.id}`}
-							class="font-display text-lg font-semibold tracking-[-0.01em] text-ink hover:text-accent"
+							class="font-display text-lg font-semibold tracking-[-0.005em] text-ink hover:text-accent"
 						>
 							{service.name}
 						</a>
-						<p class="mt-1 font-mono text-[10px] break-all text-ink-faint">
+						<p class="mt-1 font-mono text-xs break-all text-ink-faint">
 							/api/v1/services/{service.slug}/incidents
 						</p>
 					</div>
@@ -44,7 +44,7 @@
 			{/each}
 		</div>
 	{:else}
-		<EmptyState title="No Services Yet">
+		<EmptyState title="No services yet">
 			Connect GitHub, select a repository, and create the first intake endpoint.
 		</EmptyState>
 	{/if}

@@ -5,18 +5,18 @@
 	import { cn } from '$lib/utils';
 
 	const variants = cva(
-		'inline-flex min-h-10 items-center justify-center gap-2 rounded-[3px] border border-transparent px-4 text-sm font-medium transition-[color,background-color,border-color,transform] duration-150 active:translate-y-px disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas',
+		'inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-transparent px-4 text-sm font-medium transition-[color,background-color,border-color,transform] duration-150 active:translate-y-px disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas',
 		{
 			variants: {
 				variant: {
-					default: 'bg-accent text-white hover:bg-accent-hover',
+					default: 'bg-accent text-white shadow-sm hover:bg-accent-hover',
 					outline:
-						'border-rule-strong bg-surface text-ink hover:border-ink-muted hover:bg-surface-raised',
+						'border-rule-strong bg-surface text-ink shadow-xs hover:border-ink-faint hover:bg-surface-raised',
 					ghost: 'text-ink-muted hover:bg-surface-raised hover:text-ink',
-					destructive: 'bg-danger text-white hover:brightness-90',
+					destructive: 'bg-danger text-white shadow-sm hover:brightness-95',
 					link: 'min-h-0 px-0 text-accent underline-offset-4 hover:underline'
 				},
-				size: { default: 'h-10', sm: 'min-h-8 h-8 px-3 text-xs', lg: 'h-12 px-6' }
+				size: { default: 'h-10', sm: 'min-h-8 h-8 px-3 text-xs', lg: 'h-12 px-6 text-base' }
 			},
 			defaultVariants: { variant: 'default', size: 'default' }
 		}

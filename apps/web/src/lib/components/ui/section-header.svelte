@@ -4,12 +4,12 @@
 	let { meta, children }: { meta?: Snippet; children: Snippet } = $props();
 </script>
 
-<div class="mb-3 flex items-baseline justify-between gap-4 border-b border-rule pb-2">
-	<h2 class="font-display text-lg font-semibold tracking-[-0.01em] text-ink">
+<div class="mb-4 flex items-baseline justify-between gap-4">
+	<h2 class="font-display text-xl font-semibold tracking-[-0.005em] text-ink">
 		{@render children()}
 	</h2>
 	{#if meta}
-		<div class="font-mono text-[10px] tracking-[0.08em] text-ink-faint uppercase">
+		<div class="text-sm text-ink-faint">
 			{@render meta()}
 		</div>
 	{/if}

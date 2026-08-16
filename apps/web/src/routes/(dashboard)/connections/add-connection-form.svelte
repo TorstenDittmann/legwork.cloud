@@ -156,15 +156,15 @@
 	<button
 		type="button"
 		onclick={() => (open = true)}
-		class="mt-8 flex w-full items-center justify-between rounded-[4px] border border-dashed border-rule-strong bg-surface/60 px-5 py-4 text-left transition hover:border-accent hover:bg-surface focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+		class="mt-8 flex w-full items-center justify-between rounded-xl border border-dashed border-rule-strong bg-surface/60 px-5 py-4 text-left transition hover:border-accent hover:bg-surface focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
 	>
 		<span>
-			<span class="block font-display font-semibold">Add a provider connection</span>
+			<span class="block font-display text-lg font-semibold">Add a provider connection</span>
 			<span class="mt-0.5 block text-sm text-ink-muted">
 				Guided setup takes about two minutes.
 			</span>
 		</span>
-		<span class="flex size-9 items-center justify-center rounded-[3px] bg-accent text-white">
+		<span class="flex size-9 items-center justify-center rounded-lg bg-accent text-white">
 			<Plus class="size-4" aria-hidden="true" />
 		</span>
 	</button>
@@ -173,8 +173,8 @@
 		<div class="border-b border-rule bg-surface-raised/60 px-6 py-5 md:px-8">
 			<div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
 				<div>
-					<p class="font-mono text-[10px] tracking-[0.12em] text-accent uppercase">Setup wizard</p>
-					<h2 class="mt-1 font-display text-xl font-semibold tracking-[-0.02em]">
+					<p class="text-sm font-medium text-accent">Setup wizard</p>
+					<h2 class="mt-1 font-display text-2xl font-semibold tracking-[-0.01em]">
 						Add a context connection
 					</h2>
 					<p class="mt-1 text-sm text-ink-muted">
@@ -212,7 +212,7 @@
 						{@const done = step > number || complete}
 						<li class="flex min-w-0 items-start gap-3">
 							<span
-								class={`flex size-7 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] ${done ? 'border-success bg-success text-white' : active ? 'border-accent bg-accent text-white' : 'border-rule-strong bg-surface text-ink-faint'}`}
+								class={`flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-medium ${done ? 'border-success bg-success text-white' : active ? 'border-accent bg-accent text-white' : 'border-rule-strong bg-surface text-ink-faint'}`}
 							>
 								{#if done}
 									<Check class="size-3.5" aria-hidden="true" />
@@ -270,10 +270,10 @@
 								<button
 									type="button"
 									onclick={() => chooseProvider(item)}
-									class="group rounded-[4px] border border-rule-strong bg-surface p-5 text-left transition hover:-translate-y-0.5 hover:border-accent hover:shadow-[0_8px_24px_rgba(23,26,32,0.08)] focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+									class="group rounded-xl border border-rule-strong bg-surface p-5 text-left transition hover:-translate-y-0.5 hover:border-accent hover:shadow-lift focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
 								>
 									<span
-										class="flex size-10 items-center justify-center rounded-[3px] bg-surface-raised text-accent group-hover:bg-accent group-hover:text-white"
+										class="flex size-10 items-center justify-center rounded-lg bg-accent-soft text-accent transition group-hover:bg-accent group-hover:text-white"
 									>
 										<option.Icon class="size-5" aria-hidden="true" />
 									</span>
@@ -322,7 +322,7 @@
 						<input type="hidden" name="provider" value={provider} />
 						<div class="flex items-start gap-4">
 							<span
-								class="flex size-10 shrink-0 items-center justify-center rounded-[3px] bg-surface-raised text-accent"
+								class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent"
 							>
 								<ProviderIcon class="size-5" aria-hidden="true" />
 							</span>
@@ -398,7 +398,7 @@
 										/>
 									</div>
 									<p
-										class="mt-2 rounded-[3px] bg-canvas px-3 py-2 text-xs leading-5 text-ink-muted"
+										class="mt-2 rounded-lg bg-surface-raised px-3 py-2 text-xs leading-5 text-ink-muted"
 									>
 										{providers[provider].credentialHint} The token is encrypted and never shown again.
 									</p>
@@ -409,10 +409,8 @@
 								<input type="hidden" name="name" value={name} />
 								<input type="hidden" name="baseUrl" value={baseUrl} />
 								<input type="hidden" name="token" value={token} />
-								<div class="rounded-[4px] border border-rule bg-canvas/50 p-4">
-									<p class="font-mono text-[10px] tracking-[0.12em] text-ink-faint uppercase">
-										Connection summary
-									</p>
+								<div class="rounded-lg border border-rule bg-surface-raised/60 p-4">
+									<p class="text-xs font-medium text-ink-faint">Connection summary</p>
 									<p class="mt-1 text-sm font-medium">{name}</p>
 									<p class="mt-0.5 text-xs break-all text-ink-muted">{baseUrl}</p>
 								</div>
@@ -420,10 +418,10 @@
 									{#each datasourceFields as [field, type, label, technology, Icon] (field)}
 										{@const options = discovered.datasources.filter((item) => item.type === type)}
 										<div
-											class="grid items-center gap-3 rounded-[4px] border border-rule bg-canvas/50 p-4 sm:grid-cols-[36px_1fr_minmax(180px,1fr)]"
+											class="grid items-center gap-3 rounded-lg border border-rule bg-surface-raised/60 p-4 sm:grid-cols-[36px_1fr_minmax(180px,1fr)]"
 										>
 											<span
-												class="flex size-9 items-center justify-center rounded-[3px] bg-surface text-accent"
+												class="flex size-9 items-center justify-center rounded-lg bg-accent-soft text-accent"
 											>
 												<Icon class="size-4" aria-hidden="true" />
 											</span>
@@ -493,7 +491,7 @@
 									</div>
 								{/if}
 								<div
-									class="flex items-start gap-3 rounded-[4px] border border-success/25 bg-success/5 p-4 text-sm text-ink-muted"
+									class="flex items-start gap-3 rounded-lg bg-success/10 p-4 text-sm text-ink-muted"
 								>
 									<Database class="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />
 									<p>

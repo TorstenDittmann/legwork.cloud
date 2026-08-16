@@ -15,12 +15,12 @@
 	} = $props();
 </script>
 
-<div class="min-h-screen lg:grid lg:grid-cols-[224px_minmax(0,1fr)]">
+<div class="min-h-screen lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
 	<a
 		href="#main-content"
-		class="fixed top-3 left-3 z-[100] -translate-y-20 rounded-[3px] bg-ink px-3 py-2 text-sm text-canvas transition-transform focus:translate-y-0"
+		class="fixed top-3 left-3 z-[100] -translate-y-20 rounded-lg bg-ink px-3 py-2 text-sm text-canvas transition-transform focus:translate-y-0"
 	>
-		Skip to Main Content
+		Skip to main content
 	</a>
 	<AppNavigation {organizations} {organizationId} {email} />
 	<main id="main-content" class="min-w-0 px-4 pt-24 pb-16 sm:px-7 lg:px-10 lg:py-10 xl:px-14">

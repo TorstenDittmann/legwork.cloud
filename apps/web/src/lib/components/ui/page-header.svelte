@@ -14,16 +14,14 @@
 	} = $props();
 </script>
 
-<header class="border-b border-rule pb-6">
+<header>
 	<div class="flex flex-wrap items-end justify-between gap-5">
 		<div class="max-w-3xl min-w-0">
 			{#if eyebrow}
-				<p class="mb-2 font-mono text-[10px] tracking-[0.08em] text-ink-faint uppercase">
-					{eyebrow}
-				</p>
+				<p class="mb-2 text-sm font-medium text-accent">{eyebrow}</p>
 			{/if}
 			<h1
-				class="font-display text-3xl leading-[1.1] font-semibold tracking-[-0.02em] text-pretty text-ink md:text-4xl"
+				class="font-display text-3xl leading-[1.1] font-semibold tracking-[-0.01em] text-pretty text-ink md:text-4xl"
 			>
 				{title}
 			</h1>

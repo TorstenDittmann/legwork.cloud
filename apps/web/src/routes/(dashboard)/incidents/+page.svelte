@@ -15,14 +15,16 @@
 
 <PageHeader
 	eyebrow="30-day retention"
-	title="Incident Ledger"
+	title="Incident ledger"
 	description="Every report, run, and verified conclusion in chronological order."
 >
 	{#snippet actions()}
-		<Button href="/incidents/new">Submit Incident</Button>
+		<Button href="/incidents/new">Submit incident</Button>
 	{/snippet}
 </PageHeader>
-<form class="mt-7 grid gap-3 rounded-[4px] border border-rule bg-surface p-4 md:grid-cols-6">
+<form
+	class="mt-7 grid gap-3 rounded-xl border border-rule bg-surface p-4 shadow-card md:grid-cols-6"
+>
 	<Field label="Status" forId="status">
 		<Select id="status" name="status" value={data.filters.status ?? ''}>
 			<option value="">All statuses</option>
@@ -68,9 +70,9 @@
 </form>
 <div class="mt-6">
 	{#if data.displayed.length}
-		<div class="rounded-[4px] border border-rule bg-surface shadow-[0_1px_2px_rgba(23,26,32,0.04)]">
+		<div class="rounded-xl border border-rule bg-surface shadow-card">
 			<div
-				class="hidden grid-cols-[100px_minmax(0,1fr)_160px_160px_130px_100px] gap-3 border-b border-rule-strong px-4 py-2.5 font-mono text-[9px] tracking-[0.08em] text-ink-faint uppercase md:grid"
+				class="hidden grid-cols-[100px_minmax(0,1fr)_160px_160px_130px_100px] gap-3 border-b border-rule px-5 py-3 text-xs font-medium text-ink-faint md:grid"
 			>
 				<span>Severity</span>
 				<span>Incident</span>
@@ -81,7 +83,7 @@
 			</div>
 			{#each data.displayed as { incident, serviceName, run } (incident.id)}
 				<div
-					class="content-auto grid gap-3 border-b border-rule px-4 py-4 last:border-0 md:grid-cols-[100px_minmax(0,1fr)_160px_160px_130px_100px] md:items-center"
+					class="content-auto grid gap-3 border-b border-rule px-5 py-4 last:border-0 md:grid-cols-[100px_minmax(0,1fr)_160px_160px_130px_100px] md:items-center"
 				>
 					<SeverityMark severity={incident.severity} />
 					<div class="min-w-0">
@@ -93,11 +95,11 @@
 						</a>
 					</div>
 					<span class="text-xs text-ink-muted">{serviceName}</span>
-					<time class="font-mono text-[10px] text-ink-faint tabular-nums">
+					<time class="font-mono text-xs text-ink-faint tabular-nums">
 						{formatDateTime(incident.occurredAt)}
 					</time>
 					<StatusMark status={run?.status ?? 'queued'} class="justify-self-start" />
-					<span class="font-mono text-[10px] text-ink-faint tabular-nums">
+					<span class="font-mono text-xs text-ink-faint tabular-nums">
 						{run?.startedAt && run.completedAt
 							? formatDuration(run.completedAt.getTime() - run.startedAt.getTime())
 							: '—'}
@@ -106,7 +108,7 @@
 			{/each}
 		</div>
 	{:else}
-		<EmptyState title="No Matching Incidents">
+		<EmptyState title="No matching incidents">
 			Adjust the current filters or submit a new incident.
 		</EmptyState>
 	{/if}

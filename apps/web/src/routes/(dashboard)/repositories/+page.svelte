@@ -25,7 +25,7 @@
 		<RepositoryList canManage={data.role === 'admin'} repositories={data.repositories} />
 	{:else}
 		<div class="mt-8">
-			<EmptyState title="No Synchronized Repositories">
+			<EmptyState title="No synchronized repositories">
 				Connect or refresh the GitHub App installation to discover repositories.
 			</EmptyState>
 		</div>
