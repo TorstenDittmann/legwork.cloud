@@ -1,6 +1,15 @@
 <script lang="ts">
-	import { ArrowRight } from '@lucide/svelte';
+	import type { Component } from 'svelte';
+	import {
+		ArrowRight,
+		Mail,
+		MessageSquareText,
+		ScanSearch,
+		TriangleAlert,
+		Webhook
+	} from '@lucide/svelte';
 	import Wordmark from '$lib/components/wordmark.svelte';
+	import BrandLogo, { type Brand } from '$lib/components/brand-logo.svelte';
 	import Badge from '$lib/components/ui/badge.svelte';
 	import Button from '$lib/components/ui/button.svelte';
 	import type { PageProps } from './$types';
@@ -17,6 +26,8 @@
 		body: string;
 		kind: StepKind;
 		tag?: string;
+		/** Pays off the jargon in `body` — what the reader gets from it. */
+		detail?: string;
 		cite?: string;
 	};
 
@@ -30,305 +41,453 @@
 			cite: '0fab160216e8'
 		},
 		{
-			at: '00:11',
+			at: '00:02',
 			kind: 'step',
-			body: 'Sandbox created. No DNS, no HTTP, no private network, no metadata endpoint.'
+			body: 'Sandbox created.'
 		},
 		{
-			at: '00:26',
+			at: '00:04',
+			kind: 'step',
+			body: 'Queried Grafana across the incident window. Error rate steps at 14:02; p99 latency unchanged.'
+		},
+		{
+			at: '00:07',
 			kind: 'step',
 			body: 'Read 14 files across internal/cache and internal/archive.'
 		},
 		{
-			at: '01:38',
+			at: '00:11',
 			kind: 'ruled-out',
 			tag: 'Ruled out',
-			body: 'Hypothesis: the archive reader leaks file handles under load. Handle count is flat across the incident window.',
+			body: 'Hypothesis: the archive reader leaks file handles under load.',
+			detail: 'Handle count is flat across the incident window.',
 			cite: 'internal/archive/reader.go:210–244'
 		},
 		{
-			at: '02:52',
+			at: '00:16',
 			kind: 'step',
 			body: 'Hypothesis: cache eviction removes the store while readers still hold open paths.'
 		},
 		{
-			at: '03:47',
+			at: '00:20',
 			kind: 'confirmed',
 			tag: 'Confirmed',
 			body: 'The evict path calls os.RemoveAll without coordinating with active readers.',
 			cite: 'internal/cache/layers.go:94–107'
 		},
 		{
-			at: '04:12',
+			at: '00:23',
 			kind: 'step',
 			body: 'Sandbox destroyed. Working copy gone.'
 		}
 	];
 
-	const guardrails = [
-		'Read-only GitHub App',
-		'No network egress',
-		'Sandbox destroyed after every run',
-		'Content purged at 30 days'
-	];
+	type Tag = { label: string; brand?: Brand; Icon?: Component };
+	type FlowStep = { kicker: string; title: string; body: string; Icon: Component; tags?: Tag[] };
 
-	const setup = [
+	// The lifecycle end to end. Grafana and Sentry appear twice on purpose: the
+	// same connection that opens a case is the one queried for evidence during it.
+	const flow: FlowStep[] = [
 		{
-			title: 'Approve the repositories',
-			body: 'Install the read-only GitHub App and pick what Legwork may read. It never gets write access, and it never mints a token outside the worker.'
+			kicker: 'Connect',
+			title: 'Point your alerting at Legwork',
+			body: 'Grafana and Sentry post their alerts straight in. Anything else opens a case over the API.',
+			Icon: Webhook,
+			tags: [
+				{ label: 'Grafana', brand: 'grafana' },
+				{ label: 'Sentry', brand: 'sentry' },
+				{ label: 'HTTP', Icon: Webhook }
+			]
 		},
 		{
-			title: 'Post the incident',
-			body: 'Send it when your alerting fires. One endpoint, idempotent, per-service.'
+			kicker: 'Incident',
+			title: 'A case opens',
+			body: 'Idempotent on your incident key, so a retrying alert cannot open the same case twice.',
+			Icon: TriangleAlert
 		},
 		{
-			title: 'Take the callback',
-			body: 'A signed callback arrives when the case closes — root cause, evidence, and the limits of what was checked.'
+			kicker: 'Investigate',
+			title: 'It reads the code and the telemetry',
+			body: 'Your repository at the exact commit that broke, through a read-only GitHub App. Then logs, metrics, traces, and linked issues from the connections above.',
+			Icon: ScanSearch
+		},
+		{
+			kicker: 'Answer',
+			title: 'The finding lands where you already are',
+			body: 'Root cause, cited evidence, and whatever it could not check — delivered to your channel or signed and posted back to your own endpoint.',
+			Icon: MessageSquareText,
+			tags: [
+				{ label: 'Slack', brand: 'slack' },
+				{ label: 'Discord', brand: 'discord' },
+				{ label: 'Email', Icon: Mail },
+				{ label: 'Webhook', Icon: Webhook }
+			]
 		}
 	];
 
 	const snippet = `curl -X POST https://legwork.dev/api/v1/services/payments-api/incidents \\
   -H "Authorization: Bearer $LEGWORK_API_KEY" \\
   -d '{"title":"5xx spike on /checkout","severity":"high"}'`;
+
+	// The trail replays case 0427 in compressed time. Real elapsed time is shown
+	// on the clock; only the wall-clock playback is sped up.
+	const TOTAL_SECONDS = 23;
+	const REPLAY_MS = 8_000;
+
+	function toSeconds(at: string) {
+		const [minutes, seconds] = at.split(':').map(Number);
+		return minutes * 60 + seconds;
+	}
+
+	function formatClock(elapsed: number) {
+		const whole = Math.floor(elapsed);
+		const minutes = String(Math.floor(whole / 60)).padStart(2, '0');
+		const seconds = String(whole % 60).padStart(2, '0');
+		return `${minutes}:${seconds}`;
+	}
+
+	let listEl: HTMLElement | undefined = $state();
+	let clock = $state(0);
+	let finished = $state(false);
+	// False until the client takes over, so no-JS and reduced-motion readers get
+	// the whole trail rather than seven blank rows.
+	let armed = $state(false);
+	let frame = 0;
+
+	function play() {
+		cancelAnimationFrame(frame);
+		finished = false;
+		const start = performance.now();
+		const tick = (now: number) => {
+			const progress = Math.min((now - start) / REPLAY_MS, 1);
+			clock = progress * TOTAL_SECONDS;
+			if (progress < 1) frame = requestAnimationFrame(tick);
+			else finished = true;
+		};
+		frame = requestAnimationFrame(tick);
+	}
+
+	$effect(() => {
+		const list = listEl;
+		if (!list) return;
+
+		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+			clock = TOTAL_SECONDS;
+			finished = true;
+			return;
+		}
+
+		armed = true;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries.some((entry) => entry.isIntersecting)) {
+					observer.disconnect();
+					play();
+				}
+			},
+			{ threshold: 0.2 }
+		);
+		observer.observe(list);
+
+		return () => {
+			observer.disconnect();
+			cancelAnimationFrame(frame);
+		};
+	});
 </script>
 
-<main class="min-h-screen">
-	<nav aria-label="Main">
-		<div class="mx-auto flex max-w-[1200px] items-center justify-between px-5 py-5 sm:px-8">
-			<a href="/" aria-label="Legwork home"><Wordmark /></a>
-			<Button href={dashboardHref} variant="outline" size="sm">
-				{signedIn ? 'Open dashboard' : 'Sign in'}
-			</Button>
-		</div>
-	</nav>
-
-	<section>
-		<div
-			class="mx-auto grid max-w-[1200px] items-center gap-14 px-5 pt-14 pb-20 sm:px-8 sm:pt-20 lg:grid-cols-[1.05fr_.95fr] lg:pb-28"
-		>
-			<div>
-				<Badge tone="accent">
-					<span aria-hidden="true" class="size-1.5 rounded-full bg-current"></span>
-					Automated code investigation
-				</Badge>
-				<h1
-					class="mt-6 max-w-3xl font-display text-5xl leading-[1.02] font-semibold tracking-[-0.02em] text-pretty text-ink sm:text-6xl xl:text-[76px]"
-				>
-					Someone has to read the code at <em class="text-accent">3am</em>.
-				</h1>
-				<p class="mt-6 max-w-xl text-base leading-7 text-ink-muted sm:text-lg">
-					Legwork opens your repository at the exact commit that broke, reads until it finds the
-					cause, and hands you the evidence — every claim cited to a line, every dead end still on
-					the record.
-				</p>
-				<div class="mt-8 flex flex-wrap gap-3">
-					<Button href={startHref} size="lg">
-						{startLabel}
-						<ArrowRight aria-hidden="true" class="size-4" />
-					</Button>
-					<Button href="#trail" size="lg" variant="ghost">See what it found</Button>
-				</div>
+<div class="min-h-screen">
+	<header>
+		<nav aria-label="Main">
+			<div class="mx-auto flex max-w-[1200px] items-center justify-between px-5 py-5 sm:px-8">
+				<a href="/" aria-label="Legwork home"><Wordmark /></a>
+				<Button href={dashboardHref} variant="outline" size="sm">
+					{signedIn ? 'Open dashboard' : 'Sign in'}
+				</Button>
 			</div>
+		</nav>
+	</header>
 
-			<article class="w-full rounded-2xl border border-rule bg-surface shadow-hero">
-				<header class="flex items-center justify-between border-b border-rule px-5 py-3.5">
-					<span class="font-mono text-xs text-ink-faint" translate="no">CASE 0427</span>
-					<Badge tone="success">
+	<main>
+		<section>
+			<div
+				class="mx-auto grid max-w-[1200px] items-center gap-14 px-5 pt-14 pb-20 sm:px-8 sm:pt-20 lg:grid-cols-[1.05fr_.95fr] lg:pb-28"
+			>
+				<div>
+					<Badge tone="accent">
 						<span aria-hidden="true" class="size-1.5 rounded-full bg-current"></span>
-						Closed
+						Automated code investigation
 					</Badge>
-				</header>
-				<div class="p-6 sm:p-8">
-					<p class="flex items-center gap-2 text-xs font-medium text-high">
-						<span aria-hidden="true" class="size-2 rounded-full bg-high"></span>
-						High · Payment API
-					</p>
-					<h2
-						class="mt-3 font-display text-2xl leading-snug font-semibold tracking-[-0.01em] text-ink"
+					<h1
+						class="mt-6 max-w-3xl font-display text-5xl leading-[1.02] font-semibold tracking-[-0.02em] text-pretty text-ink sm:text-6xl xl:text-[76px]"
 					>
-						Concurrent cache eviction interrupts active archive reads
-					</h2>
-					<p class="mt-4 border-l-2 border-accent pl-4 text-sm leading-6 text-ink-muted">
-						The clear path removes the content-addressed store without coordinating with active
-						readers.
+						Someone has to read the code at <em class="text-accent">3am</em>.
+					</h1>
+					<p class="mt-6 max-w-xl text-base leading-7 text-ink-muted sm:text-lg">
+						Legwork checks out the exact commit that broke and reads the code until it finds the
+						cause. Every claim comes back cited to a line, including the hypotheses it ruled out.
 					</p>
-					<dl class="mt-6 grid grid-cols-3 gap-3 border-t border-rule pt-5">
-						<div>
-							<dt class="text-xs text-ink-faint">Time to answer</dt>
-							<dd class="mt-1 font-mono text-sm text-ink" translate="no">4m 12s</dd>
-						</div>
-						<div>
-							<dt class="text-xs text-ink-faint">Files read</dt>
-							<dd class="mt-1 font-mono text-sm text-ink" translate="no">14</dd>
-						</div>
-						<div>
-							<dt class="text-xs text-ink-faint">Hypotheses</dt>
-							<dd class="mt-1 font-mono text-sm text-ink" translate="no">2</dd>
-						</div>
-					</dl>
+					<div class="mt-8 flex flex-wrap gap-3">
+						<Button href={startHref} size="lg">
+							{startLabel}
+							<ArrowRight aria-hidden="true" class="size-4" />
+						</Button>
+						<Button href="#trail" size="lg" variant="ghost">Watch a 23-second investigation</Button>
+					</div>
 				</div>
-			</article>
-		</div>
-	</section>
 
-	<section id="trail" class="scroll-mt-8 border-y border-rule bg-surface">
-		<div class="mx-auto max-w-[1200px] px-5 py-16 sm:px-8 sm:py-24">
-			<div class="max-w-2xl">
-				<h2 class="font-display text-3xl font-semibold tracking-[-0.01em] text-ink sm:text-4xl">
-					The part nobody wants to do at 3am
-				</h2>
-				<p class="mt-3 text-base leading-7 text-ink-muted">
-					Every investigation is recorded as it happens, including the paths that went nowhere. This
-					is the whole of case 0427.
-				</p>
-			</div>
-
-			<ol class="trail mt-10 max-w-3xl">
-				{#each trail as step, i (step.at)}
-					<li
-						class="grid grid-cols-[3rem_1.25rem_1fr] gap-x-3 sm:grid-cols-[4.5rem_1.25rem_1fr] sm:gap-x-4"
-					>
-						<span class="pt-px text-right font-mono text-xs text-ink-faint" translate="no">
-							{step.at}
-						</span>
-						<span aria-hidden="true" class="relative flex justify-center">
-							{#if i < trail.length - 1}
-								<span class="absolute inset-y-0 top-2 w-px bg-rule"></span>
-							{/if}
-							<span
-								class="relative mt-1 size-2.5 rounded-full border-2 {step.kind === 'confirmed'
-									? 'border-accent bg-accent'
-									: step.kind === 'ruled-out'
-										? 'border-rule-strong bg-surface'
-										: 'border-rule-strong bg-rule-strong'}"
-							></span>
-						</span>
-						<div class="pb-8 last:pb-0">
-							{#if step.tag}
-								<Badge tone={step.kind === 'confirmed' ? 'accent' : 'neutral'} class="mb-2">
-									{step.tag}
-								</Badge>
-							{/if}
-							<p
-								class="text-sm leading-6 {step.kind === 'ruled-out'
-									? 'text-ink-faint'
-									: 'text-ink-muted'}"
-							>
-								{step.body}
-							</p>
-							{#if step.cite}
-								<p
-									class="mt-1.5 font-mono text-[11px] {step.kind === 'confirmed'
-										? 'text-accent'
-										: 'text-ink-faint'}"
-									translate="no"
-								>
-									{step.cite}
-								</p>
-							{/if}
-						</div>
-					</li>
-				{/each}
-			</ol>
-		</div>
-	</section>
-
-	<section class="mx-auto max-w-[1200px] px-5 py-16 sm:px-8 sm:py-24">
-		<div class="grid items-start gap-12 lg:grid-cols-2">
-			<article class="overflow-hidden rounded-2xl border border-rule bg-surface shadow-card">
-				<header class="border-b border-rule px-6 py-3.5">
-					<span class="font-mono text-xs text-ink-faint" translate="no">CASE 0427 · FINDING</span>
-				</header>
-				<div class="p-6 sm:p-8">
-					<h3 class="font-display text-xl leading-snug font-semibold text-ink">
-						Concurrent cache eviction interrupts active archive reads
-					</h3>
-					<div class="mt-5 overflow-hidden rounded-lg border border-rule">
+				<article class="w-full rounded-2xl border border-rule bg-surface shadow-hero">
+					<header class="flex items-center justify-between border-b border-rule px-5 py-3.5">
+						<span class="font-mono text-xs text-ink-faint" translate="no">CASE 0427</span>
+						<Badge tone="success">
+							<span aria-hidden="true" class="size-1.5 rounded-full bg-current"></span>
+							Closed
+						</Badge>
+					</header>
+					<div class="p-6 sm:p-8">
+						<p class="flex items-center gap-2 text-xs font-medium text-high">
+							<span aria-hidden="true" class="size-2 rounded-full bg-high"></span>
+							High · Payment API
+						</p>
+						<!-- A sample artifact, not a section of this page: styled as a title
+						     but deliberately not a heading, so the document outline stays clean. -->
 						<p
-							class="border-b border-rule bg-surface px-3.5 py-2 font-mono text-[11px] text-accent"
+							class="mt-3 font-display text-2xl leading-snug font-semibold tracking-[-0.01em] text-ink"
 						>
-							E-01 · internal/cache/layers.go:94–107
+							Concurrent cache eviction interrupts active archive reads
 						</p>
-						<pre
-							translate="no"
-							class="overflow-x-auto bg-surface-raised px-3.5 py-3 font-mono text-[11px] leading-5 text-ink-muted">if err := os.RemoveAll(dir); err != nil &#123;</pre>
+						<p class="mt-4 border-l-2 border-accent pl-4 text-sm leading-6 text-ink-muted">
+							The clear path removes the content-addressed store without coordinating with active
+							readers.
+						</p>
+						<dl class="mt-6 grid grid-cols-3 gap-3 border-t border-rule pt-5">
+							<div>
+								<dt class="text-xs text-ink-faint">Time to answer</dt>
+								<dd class="mt-1 font-mono text-sm text-ink" translate="no">23s</dd>
+							</div>
+							<div>
+								<dt class="text-xs text-ink-faint">Files read</dt>
+								<dd class="mt-1 font-mono text-sm text-ink" translate="no">14</dd>
+							</div>
+							<div>
+								<dt class="text-xs text-ink-faint">Hypotheses</dt>
+								<dd class="mt-1 font-mono text-sm text-ink" translate="no">2</dd>
+							</div>
+						</dl>
 					</div>
-					<div class="mt-5 rounded-lg border border-dashed border-rule-strong px-4 py-3.5">
-						<p class="font-mono text-[11px] tracking-wide text-ink-faint uppercase">Not verified</p>
-						<p class="mt-1.5 text-sm leading-6 text-ink-muted">
-							Production eviction rate was out of scope. The frequency of this collision is inferred
-							from the code path, not measured.
-						</p>
+				</article>
+			</div>
+		</section>
+
+		<section id="trail" class="scroll-mt-8 border-y border-rule bg-surface">
+			<div class="mx-auto max-w-[1200px] px-5 py-16 sm:px-8 sm:py-24">
+				<div class="max-w-2xl">
+					<h2 class="font-display text-3xl font-semibold tracking-[-0.01em] text-ink sm:text-4xl">
+						Case 0427, as it happened
+					</h2>
+					<p class="mt-3 text-base leading-7 text-ink-muted">
+						Twenty-three seconds, replayed at speed. Every step, including the one that went
+						nowhere.
+					</p>
+					<div class="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3">
+						<span
+							class="font-mono text-2xl font-medium text-ink tabular-nums"
+							aria-hidden="true"
+							translate="no"
+						>
+							{formatClock(armed ? clock : TOTAL_SECONDS)}
+						</span>
+						<span class="text-xs text-ink-faint">elapsed in the investigation</span>
+						{#if armed && finished}
+							<button
+								type="button"
+								onclick={play}
+								class="rounded-lg border border-rule-strong px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-surface-raised"
+							>
+								Replay
+							</button>
+						{/if}
 					</div>
 				</div>
-			</article>
 
-			<div class="lg:pt-6">
-				<h2 class="font-display text-3xl font-semibold tracking-[-0.01em] text-ink sm:text-4xl">
-					The answer arrives as a record
-				</h2>
-				<p class="mt-4 max-w-lg text-base leading-7 text-ink-muted">
-					A diagnosis you cannot check is a guess with better grammar. Every claim Legwork makes
-					points at source it actually read, at a commit that cannot move underneath you.
-				</p>
-				<p class="mt-4 max-w-lg text-base leading-7 text-ink-muted">
-					And when it could not check something, it says so in the finding rather than rounding up
-					to confidence. The limits are part of the answer.
-				</p>
-			</div>
-		</div>
-	</section>
-
-	<section class="border-y border-rule bg-surface">
-		<div class="mx-auto max-w-[1200px] px-5 py-16 sm:px-8 sm:py-24">
-			<div class="max-w-2xl">
-				<h2 class="font-display text-3xl font-semibold tracking-[-0.01em] text-ink sm:text-4xl">
-					Three things to wire up
-				</h2>
-			</div>
-			<div class="mt-10 grid gap-10 lg:grid-cols-[.9fr_1.1fr]">
-				<ol class="space-y-6">
-					{#each setup as item, i (item.title)}
-						<li class="grid grid-cols-[1.5rem_1fr] gap-x-3">
-							<span class="pt-0.5 font-mono text-xs text-ink-faint" translate="no">
-								{i + 1}
+				<ol bind:this={listEl} class="mt-10 max-w-3xl">
+					{#each trail as step, i (step.at)}
+						{@const shown = !armed || toSeconds(step.at) <= clock}
+						<li
+							class="trail-step grid grid-cols-[3rem_1.25rem_1fr] gap-x-3 sm:grid-cols-[4.5rem_1.25rem_1fr] sm:gap-x-4"
+							class:is-shown={shown}
+						>
+							<span class="pt-px text-right font-mono text-xs text-ink-faint" translate="no">
+								{step.at}
 							</span>
-							<div>
-								<h3 class="text-base font-semibold text-ink">{item.title}</h3>
-								<p class="mt-1.5 text-sm leading-6 text-ink-muted">{item.body}</p>
+							<span aria-hidden="true" class="relative flex justify-center">
+								{#if i < trail.length - 1}
+									<span class="absolute top-3 bottom-0 w-px bg-rule"></span>
+								{/if}
+								<span
+									class="relative mt-1 size-2.5 rounded-full border-2 {step.kind === 'confirmed'
+										? 'border-accent bg-accent'
+										: step.kind === 'ruled-out'
+											? 'border-rule-strong bg-surface'
+											: 'border-rule-strong bg-rule-strong'}"
+								></span>
+							</span>
+							<div class="pb-8">
+								{#if step.tag}
+									<Badge tone={step.kind === 'confirmed' ? 'accent' : 'neutral'} class="mb-2">
+										{step.tag}
+									</Badge>
+								{/if}
+								<p
+									class="text-sm leading-6 {step.kind === 'ruled-out'
+										? 'text-ink-faint'
+										: 'text-ink-muted'}"
+								>
+									{step.body}
+								</p>
+								{#if step.detail}
+									<p class="mt-1.5 text-sm leading-6 text-ink-faint">{step.detail}</p>
+								{/if}
+								{#if step.cite}
+									<p
+										class="mt-1.5 font-mono text-[11px] {step.kind === 'confirmed'
+											? 'text-accent'
+											: 'text-ink-faint'}"
+										translate="no"
+									>
+										{step.cite}
+									</p>
+								{/if}
 							</div>
 						</li>
 					{/each}
 				</ol>
-				<div class="overflow-hidden rounded-xl border border-rule bg-surface shadow-card">
-					<p class="border-b border-rule px-4 py-2.5 font-mono text-[11px] text-ink-faint">
-						POST an incident
+			</div>
+		</section>
+
+		<section>
+			<div class="mx-auto max-w-[1200px] px-5 py-16 sm:px-8 sm:py-24">
+				<div class="max-w-2xl">
+					<h2 class="font-display text-3xl font-semibold tracking-[-0.01em] text-ink sm:text-4xl">
+						From alert to answer
+					</h2>
+					<p class="mt-3 text-base leading-7 text-ink-muted">
+						Legwork sits between the alert that wakes you and the channel you would have posted in
+						anyway.
 					</p>
-					<pre
-						translate="no"
-						class="overflow-x-auto bg-surface-raised px-4 py-4 font-mono text-[11px] leading-5 text-ink-muted">{snippet}</pre>
+				</div>
+
+				<!-- The rule above each step joins into one continuous line across the
+				     row: the trail's timeline, turned on its side. -->
+				<ol class="mt-12 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+					{#each flow as step, i (step.kicker)}
+						{@const last = i === flow.length - 1}
+						<li class="relative border-t border-rule pt-8">
+							<!-- The badge sits on the rule and shares the section background,
+							     so the line reads as passing behind it. -->
+							<span
+								aria-hidden="true"
+								class="absolute -top-[15px] left-0 flex size-[30px] items-center justify-center rounded-lg border bg-canvas {last
+									? 'border-accent text-accent'
+									: 'border-rule text-ink-faint'}"
+							>
+								<step.Icon class="size-4" />
+							</span>
+							<p
+								class="font-mono text-[11px] tracking-wide text-ink-faint uppercase"
+								translate="no"
+							>
+								{step.kicker}
+							</p>
+							<h3 class="mt-2 text-base leading-snug font-semibold text-ink">{step.title}</h3>
+							<p class="mt-2 text-sm leading-6 text-ink-muted">{step.body}</p>
+							{#if step.tags}
+								<ul class="mt-4 flex flex-wrap gap-1.5">
+									{#each step.tags as tag (tag.label)}
+										<li
+											class="flex items-center gap-1.5 rounded-md border border-rule bg-surface px-2 py-1 text-[11px] font-medium text-ink-muted"
+											translate="no"
+										>
+											{#if tag.brand}
+												<BrandLogo name={tag.brand} class="size-3 shrink-0" />
+											{:else if tag.Icon}
+												<tag.Icon class="size-3 shrink-0" />
+											{/if}
+											{tag.label}
+										</li>
+									{/each}
+								</ul>
+							{/if}
+						</li>
+					{/each}
+				</ol>
+
+				<!-- The two ends of the flow, side by side: what you send, what arrives.
+				     The finding shown is case 0427, the same one the trail replays. -->
+				<div class="mt-14 grid items-start gap-6 lg:grid-cols-2">
+					<div class="overflow-hidden rounded-xl border border-rule bg-surface shadow-card">
+						<p class="border-b border-rule px-4 py-2.5 font-mono text-[11px] text-ink-faint">
+							POST an incident
+						</p>
+						<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+						<pre
+							translate="no"
+							tabindex="0"
+							role="region"
+							aria-label="Example request that opens an incident"
+							class="overflow-x-auto bg-surface-raised px-4 py-4 font-mono text-[11px] leading-5 text-ink-muted">{snippet}</pre>
+					</div>
+
+					<figure class="overflow-hidden rounded-xl border border-rule bg-surface shadow-card">
+						<figcaption
+							class="flex items-center gap-2 border-b border-rule px-4 py-2.5 font-mono text-[11px] text-ink-faint"
+						>
+							<BrandLogo name="slack" class="size-3.5" />
+							<span translate="no">#incidents</span>
+						</figcaption>
+						<div class="flex items-start gap-3 px-4 py-4">
+							<span
+								aria-hidden="true"
+								class="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent font-display text-sm font-semibold text-white"
+							>
+								L
+							</span>
+							<div class="min-w-0">
+								<p class="flex flex-wrap items-baseline gap-x-2">
+									<span class="text-sm font-semibold text-ink">Legwork</span>
+									<span
+										class="rounded bg-surface-raised px-1 py-px font-mono text-[10px] tracking-wide text-ink-faint uppercase"
+									>
+										App
+									</span>
+									<span class="font-mono text-[11px] text-ink-faint" translate="no">2:14</span>
+								</p>
+								<p class="mt-1.5 flex items-center gap-2 text-xs font-medium text-high">
+									<span aria-hidden="true" class="size-1.5 rounded-full bg-high"></span>
+									High · payments-api · closed in 23s
+								</p>
+								<p class="mt-1.5 text-sm leading-6 font-medium text-ink">
+									Concurrent cache eviction interrupts active archive reads
+								</p>
+								<p class="mt-1 font-mono text-[11px] text-accent" translate="no">
+									internal/cache/layers.go:94–107
+								</p>
+								<!-- The limits ship with the finding rather than in prose elsewhere:
+								     showing it in the artifact is the whole point. -->
+								<p
+									class="mt-2.5 border-l-2 border-rule-strong pl-2.5 text-[11px] leading-5 text-ink-faint"
+								>
+									Not verified: production eviction rate was out of scope.
+								</p>
+							</div>
+						</div>
+					</figure>
 				</div>
 			</div>
-		</div>
-	</section>
+		</section>
+	</main>
 
-	<section class="mx-auto max-w-[1200px] px-5 py-16 sm:px-8 sm:py-20">
-		<div class="flex flex-wrap items-baseline gap-x-8 gap-y-4">
-			<h2 class="font-display text-2xl font-semibold tracking-[-0.01em] text-ink">
-				Evidence in. Nothing out.
-			</h2>
-			<ul class="flex flex-wrap gap-x-6 gap-y-2">
-				{#each guardrails as item (item)}
-					<li class="flex items-center gap-2 text-sm text-ink-muted">
-						<span aria-hidden="true" class="size-1.5 rounded-full bg-accent"></span>
-						{item}
-					</li>
-				{/each}
-			</ul>
-		</div>
-	</section>
-
-	<footer class="mx-auto max-w-[1200px] px-5 pb-16 sm:px-8 sm:pb-20">
+	<footer class="mx-auto max-w-[1200px] px-5 pt-16 pb-16 sm:pt-20 sm:pb-20">
 		<div
 			class="flex flex-wrap items-center justify-between gap-6 rounded-2xl bg-accent px-8 py-10 sm:px-12 sm:py-14"
 		>
@@ -347,29 +506,34 @@
 			</Button>
 		</div>
 	</footer>
-</main>
+</div>
 
 <style>
-	/* An investigation unfolds in time; the trail reveals the same way.
-	   Scroll-driven, so it costs no JS and degrades to plain visible steps. */
-	@media (prefers-reduced-motion: no-preference) {
-		@supports (animation-timeline: view()) {
-			.trail li {
-				animation: step-in linear both;
-				animation-timeline: view();
-				animation-range: entry 10% entry 55%;
-			}
+	/* Spacing belongs to the row, not its last child: a `last:` utility on the
+	   body div matched every step, because that div is always the li's last
+	   child. Scoping to the li gets the rhythm the layout intended. */
+	.trail-step:last-child > div {
+		padding-bottom: 0;
+	}
 
-			@keyframes step-in {
-				from {
-					opacity: 0;
-					transform: translateY(6px);
-				}
-				to {
-					opacity: 1;
-					transform: none;
-				}
-			}
+	/* An investigation unfolds in time; the trail replays the same way. Steps
+	   fade in place rather than growing the list, so nothing below shifts. */
+	.trail-step {
+		opacity: 0;
+		transform: translateY(4px);
+		transition:
+			opacity 420ms ease,
+			transform 420ms ease;
+	}
+
+	.trail-step.is-shown {
+		opacity: 1;
+		transform: none;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.trail-step {
+			transition: none;
 		}
 	}
 </style>
