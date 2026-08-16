@@ -17,7 +17,7 @@
 					Create your workspace
 				</h1>
 				<p class="mt-3 text-sm leading-6 text-ink-muted">
-					Every repository, service, incident, and run is scoped to the active WorkOS organization.
+					Every repository, service, incident, and run is scoped to the active workspace.
 				</p>
 				<form method="POST" action="?/complete" class="mt-7" use:enhance>
 					<input type="hidden" name="returnTo" value={data.returnTo} />

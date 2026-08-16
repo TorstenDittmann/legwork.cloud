@@ -1,7 +1,18 @@
 <script lang="ts">
 	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
-	import { Bell, GitBranch, LogOut, Menu, Radio, Settings, Siren, Unplug, X } from '@lucide/svelte';
+	import {
+		Bell,
+		GitBranch,
+		LogOut,
+		Menu,
+		Radio,
+		Settings,
+		Siren,
+		Unplug,
+		UserRound,
+		X
+	} from '@lucide/svelte';
 	import Wordmark from '$lib/components/wordmark.svelte';
 	import Button from '$lib/components/ui/button.svelte';
 	import Select from '$lib/components/ui/select.svelte';
@@ -27,10 +38,14 @@
 	} = $props();
 
 	let open = $state(false);
-	let trigger = $state<HTMLButtonElement>();
+	const navigationTriggerId = 'mobile-navigation-trigger';
 
 	const pathname = $derived(page.url.pathname);
-	const current = $derived(links.find(([href]) => pathname.startsWith(href))?.[2] ?? 'Overview');
+	const current = $derived(
+		pathname.startsWith('/account')
+			? 'Account'
+			: (links.find(([href]) => pathname.startsWith(href))?.[2] ?? 'Overview')
+	);
 
 	afterNavigate(() => {
 		open = false;
@@ -38,22 +53,26 @@
 
 	function close() {
 		open = false;
-		trigger?.focus();
+		requestAnimationFrame(() => {
+			const trigger = document.getElementById(navigationTriggerId);
+			if (trigger instanceof HTMLButtonElement) trigger.focus();
+		});
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (open && event.key === 'Escape') close();
 	}
 
 	$effect(() => {
 		if (!open) return;
-		const onKeydown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') close();
-		};
 		document.body.style.overflow = 'hidden';
-		window.addEventListener('keydown', onKeydown);
 		return () => {
 			document.body.style.overflow = '';
-			window.removeEventListener('keydown', onKeydown);
 		};
 	});
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 {#snippet nav()}
 	<div class="px-5 pt-5 pb-4">
@@ -92,7 +111,22 @@
 		{/each}
 	</nav>
 	<div class="border-t border-rule px-4 py-4">
-		<p class="truncate text-xs text-ink-faint">{email}</p>
+		<a
+			href="/account"
+			aria-current={pathname.startsWith('/account') ? 'page' : undefined}
+			class={cn(
+				'flex min-h-10 items-center gap-2.5 rounded-lg px-3 py-1.5 transition-[color,background-color]',
+				pathname.startsWith('/account')
+					? 'bg-accent-soft text-accent-hover'
+					: 'text-ink-muted hover:bg-surface-raised hover:text-ink'
+			)}
+		>
+			<UserRound aria-hidden="true" class="size-4 shrink-0" />
+			<span class="min-w-0">
+				<span class="block text-xs font-medium">Account</span>
+				<span class="block truncate text-[11px] text-ink-faint">{email}</span>
+			</span>
+		</a>
 		<form action="/sign-out" method="POST">
 			<Button type="submit" variant="ghost" size="sm" class="mt-1.5 w-full justify-start">
 				<LogOut aria-hidden="true" class="size-3.5" />
@@ -109,7 +143,7 @@
 	<div class="flex items-center gap-3">
 		<span class="text-xs text-ink-muted">{current}</span>
 		<button
-			bind:this={trigger}
+			id={navigationTriggerId}
 			type="button"
 			aria-label="Open navigation"
 			aria-expanded={open}
