@@ -69,7 +69,6 @@ If either value is absent or false, `run_check` returns a structured limitation 
 bun run typecheck
 bun run test
 bun run build
-bun run test:e2e
 bun audit
 ```
 
