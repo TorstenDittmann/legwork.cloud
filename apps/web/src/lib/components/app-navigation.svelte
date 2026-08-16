@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
-	import { Github, LogOut, Menu, Radio, Settings, Siren, Unplug, X } from '@lucide/svelte';
+	import { GitBranch, LogOut, Menu, Radio, Settings, Siren, Unplug, X } from '@lucide/svelte';
 	import Wordmark from '$lib/components/wordmark.svelte';
 	import Button from '$lib/components/ui/button.svelte';
 	import Select from '$lib/components/ui/select.svelte';
@@ -10,7 +10,7 @@
 	const links = [
 		['/incidents', Siren, 'Incidents'],
 		['/services', Radio, 'Services'],
-		['/repositories', Github, 'Repositories'],
+		['/repositories', GitBranch, 'Repositories'],
 		['/connections', Unplug, 'Connections'],
 		['/settings', Settings, 'Settings']
 	] as const;
