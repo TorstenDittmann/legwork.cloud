@@ -85,7 +85,7 @@ export default defineRailway((ctx) => {
 		},
 	});
 
-	return project("legwork", {
+	return project("legwork.dev", {
 		resources: [web, libsql, worker, libsqlVolume],
 	});
 });
