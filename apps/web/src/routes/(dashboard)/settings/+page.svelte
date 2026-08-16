@@ -137,9 +137,7 @@
 			<CardContent class="divide-y divide-rule pt-6">
 				{#each data.memberships as membership (membership.id)}
 					<div class="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
-						<span translate="no" class="font-mono text-xs text-ink-muted">
-							{membership.userId}
-						</span>
+						<span translate="no" class="text-ink-muted">{membership.email}</span>
 						<div class="flex gap-2">
 							<form method="POST" action="?/changeMemberRole" use:enhance>
 								<input type="hidden" name="membershipId" value={membership.id} />

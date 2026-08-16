@@ -22,7 +22,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	month.setUTCDate(1);
 	month.setUTCHours(0, 0, 0, 0);
 	const workos = tenant.role === 'admin' && env.WORKOS_API_KEY ? createWorkOS() : null;
-	const [[organization], [billing], [usage], keys, audits, memberships, invitations] =
+	const [[organization], [billing], [usage], keys, audits, memberships, users, invitations] =
 		await Promise.all([
 			db.select().from(organizations).where(eq(organizations.id, tenant.organizationId)).limit(1),
 			db
@@ -82,10 +82,16 @@ export const load: PageServerLoad = async ({ locals }) => {
 				: [],
 			workos
 				? workos.userManagement
+						.listUsers({ organizationId: tenant.workosOrganizationId })
+						.then((result) => result.autoPagination())
+				: [],
+			workos
+				? workos.userManagement
 						.listInvitations({ organizationId: tenant.workosOrganizationId })
 						.then((result) => result.data)
 				: []
 		]);
+	const emailByUserId = new Map(users.map((user) => [user.id, user.email]));
 	return {
 		title: 'Settings',
 		role: tenant.role,
@@ -103,6 +109,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		memberships: memberships.map((membership) => ({
 			id: membership.id,
 			userId: membership.userId,
+			email: emailByUserId.get(membership.userId) ?? 'Email unavailable',
 			role: membership.role.slug
 		})),
 		invitations: invitations.map((invitation) => ({
