@@ -41,7 +41,6 @@ The following passed after the final dependency update:
 ```sh
 pnpm check
 pnpm build
-pnpm test:e2e
 pnpm audit
 pnpm --filter @legwork/db generate
 ```
@@ -51,7 +50,6 @@ Results at handoff:
 - Lint and strict TypeScript passed in all 10 workspaces.
 - 25 Vitest tests passed across 8 test files.
 - The production build passed for all workspaces and Next.js routes.
-- The Playwright landing-page test passed in Chromium.
 - `pnpm audit` reported no known vulnerabilities.
 - Drizzle reported no schema changes beyond the checked-in initial migration.
 
