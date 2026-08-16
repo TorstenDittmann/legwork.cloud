@@ -28,6 +28,7 @@
         "@legwork/db": "workspace:*",
         "@legwork/github": "workspace:*",
         "@legwork/integrations": "workspace:*",
+        "@legwork/notifications": "workspace:*",
         "@legwork/observability": "workspace:*",
         "@legwork/security": "workspace:*",
         "@libsql/client": "^0.17.4",
@@ -77,6 +78,7 @@
         "@legwork/db": "workspace:*",
         "@legwork/github": "workspace:*",
         "@legwork/integrations": "workspace:*",
+        "@legwork/notifications": "workspace:*",
         "@legwork/observability": "workspace:*",
         "@legwork/sandbox": "workspace:*",
         "@legwork/security": "workspace:*",
@@ -159,6 +161,18 @@
         "@legwork/contracts": "workspace:*",
         "@legwork/security": "workspace:*",
         "undici": "7.29.0",
+        "zod": "4.1.5",
+      },
+      "devDependencies": {
+        "typescript": "5.9.2",
+      },
+    },
+    "packages/notifications": {
+      "name": "@legwork/notifications",
+      "version": "0.0.0",
+      "dependencies": {
+        "@legwork/contracts": "workspace:*",
+        "@legwork/security": "workspace:*",
         "zod": "4.1.5",
       },
       "devDependencies": {
@@ -334,6 +348,8 @@
     "@legwork/github": ["@legwork/github@workspace:packages/github"],
 
     "@legwork/integrations": ["@legwork/integrations@workspace:packages/integrations"],
+
+    "@legwork/notifications": ["@legwork/notifications@workspace:packages/notifications"],
 
     "@legwork/observability": ["@legwork/observability@workspace:packages/observability"],
 

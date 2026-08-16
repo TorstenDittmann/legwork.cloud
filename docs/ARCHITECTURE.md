@@ -158,9 +158,31 @@ Final diagnoses are strict structured data. Cited repository IDs, paths, line sp
 - The body omits logs, source excerpts, and patch suggestions.
 - Retry delays are 1 minute, 5 minutes, 30 minutes, 2 hours, and 24 hours.
 
+## Outbound notifications
+
+Slack, Discord, and email channels are configured per organization and routed to services through
+`notification_channel_services`; a channel with no rows there matches every service. Destinations
+are stored encrypted, because a Slack or Discord webhook URL is an unscoped bearer credential.
+
+Notification bodies carry the summary, root-cause statement with confidence, and cited file paths
+with line ranges. They never carry evidence excerpts, suggested fixes, or patches: the payload type
+has no excerpt field, and a test asserts no excerpt renders into any channel body. Anything richer
+stays behind the dashboard link.
+
+Webhook hosts are allowlisted exactly — `hooks.slack.com/services/…` and
+`discord.com`/`discordapp.com` `/api/webhooks/…` — which is stricter than the callback path, where
+any public host must be permitted. Email recipients are validated as addresses and always sent
+through the fixed Resend endpoint. Address pinning still applies underneath as defense in depth.
+
+Delivery retries at 30 seconds, 2 minutes, and 10 minutes, then stops. A 429 honors `Retry-After`
+clamped to 15 minutes; any other 4xx fails permanently on the first attempt, because a deleted
+webhook stays deleted. Each channel has its own delivery row and job, so one broken destination
+cannot affect another channel or the HTTP callback.
+
 ## Retention
 
-Incident payloads, runs, agent steps, diagnoses, and callback deliveries expire after 30 days. Daily purge metrics record deletions. Source exists only in the active sandbox. Aggregate usage events contain no prompt, source, logs, or diagnosis content.
+Incident payloads, runs, agent steps, diagnoses, and callback and notification deliveries expire
+after 30 days. Daily purge metrics record deletions. Source exists only in the active sandbox. Aggregate usage events contain no prompt, source, logs, or diagnosis content.
 
 No public claim about backup deletion timing is permitted until Turso's actual production backup/restore policy is tested and documented.
 
@@ -182,6 +204,8 @@ Worker only:
 - GitHub App ID/private key.
 - OpenRouter API key.
 - Railway API token and sandbox template configuration.
+- Resend API key and sending address, because the worker sends notification email. The web app only
+  enqueues test deliveries, so no mail credential reaches the internet-facing service.
 - Data encryption key, because callback delivery decrypts signing secrets.
 
 Never inject these secrets into a sandbox template or sandbox environment.

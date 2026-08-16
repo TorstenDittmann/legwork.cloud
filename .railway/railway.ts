@@ -12,7 +12,7 @@ export default defineRailway((ctx) => {
 	const web = service("web", {
 		source: legworkRepo,
 		build: "bun run --filter @legwork/web build",
-		start: "bun run db:migrate && bun run --filter @legwork/web start",
+		start: "bun run --filter @legwork/web start",
 		preDeploy: "bun run db:migrate",
 		healthcheck: "/api/health",
 		healthcheckTimeout: 30,

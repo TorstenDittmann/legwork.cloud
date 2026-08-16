@@ -9,9 +9,12 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 import type {
+	CallbackEvent,
 	CreateIncidentRequest,
 	Diagnosis,
 	NormalizedAlertEvent,
+	NotificationChannelKind,
+	NotificationChannelMode,
 	ProviderCapability,
 	ProviderConnectionConfig,
 	ProviderKind,
@@ -520,6 +523,83 @@ export const callbackDeliveries = sqliteTable(
 		updatedAt: updatedAt(),
 	},
 	(table) => [index("callback_deliveries_pending_idx").on(table.status, table.nextAttemptAt)],
+);
+
+export const notificationChannels = sqliteTable(
+	"notification_channels",
+	{
+		id: id(),
+		organizationId: tenantId(),
+		kind: text("kind", { enum: ["slack", "discord", "email"] })
+			.$type<NotificationChannelKind>()
+			.notNull(),
+		mode: text("mode", { enum: ["webhook", "resend"] })
+			.$type<NotificationChannelMode>()
+			.notNull(),
+		name: text("name").notNull(),
+		/** A Slack or Discord webhook URL is an unscoped bearer credential, so it is never plaintext. */
+		destinationCiphertext: text("destination_ciphertext").notNull(),
+		destinationHint: text("destination_hint").notNull(),
+		events: text("events", { mode: "json" }).$type<CallbackEvent[]>().notNull(),
+		enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+		lastVerifiedAt: integer("last_verified_at", { mode: "timestamp" }),
+		lastVerificationError: text("last_verification_error"),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+	},
+	(table) => [index("notification_channels_org_idx").on(table.organizationId, table.enabled)],
+);
+
+/** Zero rows for a channel means every service in the organization; rows narrow it. */
+export const notificationChannelServices = sqliteTable(
+	"notification_channel_services",
+	{
+		organizationId: tenantId(),
+		channelId: text("channel_id")
+			.notNull()
+			.references(() => notificationChannels.id, { onDelete: "cascade" }),
+		serviceId: text("service_id")
+			.notNull()
+			.references(() => services.id, { onDelete: "cascade" }),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.channelId, table.serviceId] }),
+		index("notification_channel_services_service_idx").on(table.organizationId, table.serviceId),
+	],
+);
+
+export const notificationDeliveries = sqliteTable(
+	"notification_deliveries",
+	{
+		id: id(),
+		organizationId: tenantId(),
+		channelId: text("channel_id")
+			.notNull()
+			.references(() => notificationChannels.id, { onDelete: "cascade" }),
+		/** Null for operator-triggered test deliveries, which belong to no analysis run. */
+		runId: text("run_id").references(() => analysisRuns.id, { onDelete: "cascade" }),
+		event: text("event").notNull(),
+		status: text("status", { enum: ["pending", "delivered", "retrying", "permanently_failed"] })
+			.notNull()
+			.default("pending"),
+		attempt: integer("attempt").notNull().default(0),
+		responseStatus: integer("response_status"),
+		error: text("error"),
+		nextAttemptAt: integer("next_attempt_at", { mode: "timestamp" }),
+		deliveredAt: integer("delivered_at", { mode: "timestamp" }),
+		expiresAt: expiresAt(),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+	},
+	(table) => [
+		index("notification_deliveries_pending_idx").on(table.status, table.nextAttemptAt),
+		index("notification_deliveries_expiry_idx").on(table.expiresAt),
+		// Partial, so real runs stay idempotent while repeated test sends are allowed.
+		uniqueIndex("notification_deliveries_run_idx")
+			.on(table.channelId, table.runId)
+			.where(sql`${table.runId} is not null`),
+	],
 );
 
 export const auditEvents = sqliteTable(

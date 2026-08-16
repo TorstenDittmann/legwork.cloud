@@ -20,6 +20,7 @@
 		"@legwork/db": "workspace:*",
 		"@legwork/github": "workspace:*",
 		"@legwork/integrations": "workspace:*",
+		"@legwork/notifications": "workspace:*",
 		"@legwork/observability": "workspace:*",
 		"@legwork/sandbox": "workspace:*",
 		"@legwork/security": "workspace:*",

@@ -16,6 +16,7 @@ For project continuation and implementation status, start with [`docs/HANDOFF.md
 
 LangGraph checkpoints and pending writes live in the same Bun SQLite database as incidents and expire with their analysis run. LangSmith tracing is explicitly disabled; no LangSmith key or external checkpoint service is used.
 
+- `packages/notifications`: Slack, Discord, and email channel adapters, destination allowlisting, and delivery retry rules.
 - `packages/security`: redaction, API keys, authenticated encryption, archive/path limits, callback HMAC, and SSRF controls.
 
 Bun 1.3.14 is the project runtime and package manager through `mise.toml`.
@@ -34,6 +35,13 @@ bun run --filter @legwork/worker dev
 ```
 
 Organizations can reserve analysis usage immediately after onboarding, subject to their configured monthly quotas.
+
+## Notification channels
+
+Add Slack, Discord, or email destinations at `/notifications`. Slack and Discord take an incoming
+webhook URL and work immediately; email requires `RESEND_API_KEY` and `RESEND_FROM_ADDRESS` on the
+worker plus a sending domain verified in Resend. Each channel routes to every service unless you
+narrow it, and **Send test** posts a real message through the same path a diagnosis takes.
 
 ## Railway deployment
 

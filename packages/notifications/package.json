@@ -1,0 +1,22 @@
+{
+	"name": "@legwork/notifications",
+	"files": ["dist"],
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"lint": "oxlint src"
+	},
+	"dependencies": {
+		"@legwork/contracts": "workspace:*",
+		"@legwork/security": "workspace:*",
+		"zod": "4.1.5"
+	},
+	"devDependencies": {
+		"typescript": "5.9.2"
+	}
+}

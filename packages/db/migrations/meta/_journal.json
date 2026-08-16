@@ -1,41 +1,48 @@
 {
-	"version": "7",
-	"dialect": "sqlite",
-	"entries": [
-		{
-			"idx": 0,
-			"version": "6",
-			"when": 1786049319980,
-			"tag": "0000_past_jimmy_woo",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "6",
-			"when": 1786056227893,
-			"tag": "0001_clumsy_mindworm",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "6",
-			"when": 1786065175379,
-			"tag": "0002_conscious_runaways",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "6",
-			"when": 1786082187959,
-			"tag": "0003_tidy_captain_britain",
-			"breakpoints": true
-		},
-		{
-			"idx": 4,
-			"version": "6",
-			"when": 1786895687908,
-			"tag": "0004_mysterious_eddie_brock",
-			"breakpoints": true
-		}
-	]
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1786049319980,
+      "tag": "0000_past_jimmy_woo",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1786056227893,
+      "tag": "0001_clumsy_mindworm",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786065175379,
+      "tag": "0002_conscious_runaways",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1786082187959,
+      "tag": "0003_tidy_captain_britain",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1786895687908,
+      "tag": "0004_mysterious_eddie_brock",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1786904452019,
+      "tag": "0005_open_ultimatum",
+      "breakpoints": true
+    }
+  ]
 }
