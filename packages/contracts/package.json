@@ -1,5 +1,5 @@
 {
-	"name": "@oncall-ai/contracts",
+	"name": "@legwork/contracts",
 	"files": ["dist"],
 	"version": "0.0.0",
 	"private": true,

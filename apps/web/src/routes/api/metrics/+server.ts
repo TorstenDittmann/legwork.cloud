@@ -1,4 +1,4 @@
-import { metrics } from '@oncall-ai/observability';
+import { metrics } from '@legwork/observability';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {

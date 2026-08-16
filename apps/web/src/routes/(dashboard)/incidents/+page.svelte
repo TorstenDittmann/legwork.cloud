@@ -8,7 +8,7 @@
 	import SeverityMark from '$lib/components/ui/severity-mark.svelte';
 	import StatusMark from '$lib/components/ui/status-mark.svelte';
 	import { formatDateTime, formatDuration } from '$lib/utils';
-	import { runStatusSchema } from '@oncall-ai/contracts';
+	import { runStatusSchema } from '@legwork/contracts';
 
 	let { data } = $props();
 </script>

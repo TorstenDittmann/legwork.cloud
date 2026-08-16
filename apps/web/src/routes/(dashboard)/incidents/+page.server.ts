@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, inArray, lte } from 'drizzle-orm';
-import { analysisRuns, createDatabase, incidents, services } from '@oncall-ai/db';
+import { analysisRuns, createDatabase, incidents, services } from '@legwork/db';
 import { requireTenant } from '$lib/server/tenant';
 import type { PageServerLoad } from './$types';
 

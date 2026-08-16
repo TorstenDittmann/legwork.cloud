@@ -1,5 +1,5 @@
-import type { Diagnosis } from "@oncall-ai/contracts";
-import { assertRelativeRepositoryPath } from "@oncall-ai/security";
+import type { Diagnosis } from "@legwork/contracts";
+import { assertRelativeRepositoryPath } from "@legwork/security";
 
 export interface SnapshotIndex {
 	hasRepository(repositoryId: string): boolean;

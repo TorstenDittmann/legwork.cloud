@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { createDatabase, services } from '@oncall-ai/db';
+import { createDatabase, services } from '@legwork/db';
 import { requireTenant } from '$lib/server/tenant';
 import type { PageServerLoad } from './$types';
 

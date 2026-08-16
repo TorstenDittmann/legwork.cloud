@@ -1,5 +1,5 @@
 import { and, eq, gte, sql, sum } from "drizzle-orm";
-import type { CreateIncidentRequest } from "@oncall-ai/contracts";
+import type { CreateIncidentRequest } from "@legwork/contracts";
 import type { Database } from "./client";
 import {
 	analysisRuns,

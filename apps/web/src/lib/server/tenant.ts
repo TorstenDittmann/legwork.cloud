@@ -1,9 +1,9 @@
-import { AuthenticationError, type OrganizationRole } from '@oncall-ai/auth/roles';
+import { AuthenticationError, type OrganizationRole } from '@legwork/auth/roles';
 import {
 	assertTenantRole,
 	resolveTenantFromSession,
 	type TenantContext
-} from '@oncall-ai/auth/tenant';
+} from '@legwork/auth/tenant';
 
 // Memoize per request so multiple load functions and endpoints hitting
 // requireTenant() in the same request share one organization lookup.

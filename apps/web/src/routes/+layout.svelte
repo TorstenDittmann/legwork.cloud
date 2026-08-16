@@ -6,7 +6,7 @@
 	let { children } = $props();
 
 	// Pages contribute a `title` from their load; the suffix lives here only.
-	const title = $derived(page.data.title ? `${page.data.title} — OnCall AI` : 'OnCall AI');
+	const title = $derived(page.data.title ? `${page.data.title} — Legwork` : 'Legwork');
 </script>
 
 <svelte:head>
@@ -14,7 +14,7 @@
 	<title>{title}</title>
 	<meta
 		name="description"
-		content="Evidence-backed incident diagnosis from exact source snapshots."
+		content="Legwork investigates your incident in your own code — reading the exact commit that broke and citing every claim to a line."
 	/>
 </svelte:head>
 

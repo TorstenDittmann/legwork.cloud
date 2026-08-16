@@ -1,5 +1,5 @@
 {
-	"name": "@oncall-ai/auth",
+	"name": "@legwork/auth",
 	"files": ["dist"],
 	"version": "0.0.0",
 	"private": true,
@@ -17,7 +17,7 @@
 		"lint": "oxlint src"
 	},
 	"dependencies": {
-		"@oncall-ai/db": "workspace:*",
+		"@legwork/db": "workspace:*",
 		"@workos-inc/authkit-nextjs": "4.3.1",
 		"@workos-inc/node": "10.9.0",
 		"react": "19.2.3"

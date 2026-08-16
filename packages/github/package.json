@@ -1,5 +1,5 @@
 {
-	"name": "@oncall-ai/github",
+	"name": "@legwork/github",
 	"files": ["dist"],
 	"version": "0.0.0",
 	"private": true,
@@ -14,7 +14,7 @@
 	"dependencies": {
 		"@octokit/auth-app": "8.1.0",
 		"@octokit/rest": "22.0.0",
-		"@oncall-ai/contracts": "workspace:*"
+		"@legwork/contracts": "workspace:*"
 	},
 	"devDependencies": {
 		"typescript": "5.9.2"

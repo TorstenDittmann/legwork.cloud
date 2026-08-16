@@ -7,8 +7,8 @@ import type {
 	ProviderIncidentContext,
 	ProviderToolRequest,
 	ResolvedProviderConnection,
-} from "@oncall-ai/contracts";
-import { redactSecrets } from "@oncall-ai/security";
+} from "@legwork/contracts";
+import { redactSecrets } from "@legwork/security";
 
 const MAX_OUTPUT = 64 * 1024;
 function unsafeAddress(address: string) {

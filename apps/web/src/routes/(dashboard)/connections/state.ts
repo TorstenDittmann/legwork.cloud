@@ -1,4 +1,4 @@
-import type { DiscoveredGrafanaDatasource, DiscoveredSentryProject } from '@oncall-ai/integrations';
+import type { DiscoveredGrafanaDatasource, DiscoveredSentryProject } from '@legwork/integrations';
 
 export type DiscoveryState =
 	| { status: 'idle' }

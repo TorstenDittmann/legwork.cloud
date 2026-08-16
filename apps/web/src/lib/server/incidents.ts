@@ -7,7 +7,7 @@ import {
 	diagnoses,
 	incidents,
 	services
-} from '@oncall-ai/db';
+} from '@legwork/db';
 
 export async function loadIncident(organizationId: string, incidentId: string) {
 	const db = createDatabase();

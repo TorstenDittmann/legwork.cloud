@@ -56,7 +56,7 @@
 
 {#snippet nav()}
 	<div class="px-5 pt-5 pb-4">
-		<a href="/dashboard" aria-label="OnCall AI dashboard"><Wordmark /></a>
+		<a href="/dashboard" aria-label="Legwork dashboard"><Wordmark /></a>
 	</div>
 	{#if organizations.length > 0}
 		<form action="/switch-organization" method="POST" class="px-4 pb-4">
@@ -104,7 +104,7 @@
 <header
 	class="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-rule bg-surface/90 px-4 backdrop-blur lg:hidden"
 >
-	<a href="/dashboard" aria-label="OnCall AI dashboard"><Wordmark /></a>
+	<a href="/dashboard" aria-label="Legwork dashboard"><Wordmark /></a>
 	<div class="flex items-center gap-3">
 		<span class="text-xs text-ink-muted">{current}</span>
 		<button

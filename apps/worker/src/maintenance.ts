@@ -9,8 +9,8 @@ import {
 	incidents,
 	integrationDeliveries,
 	externalIncidentLinks,
-} from "@oncall-ai/db";
-import { destroyedSandboxes, logger, purgedRecords } from "@oncall-ai/observability";
+} from "@legwork/db";
+import { destroyedSandboxes, logger, purgedRecords } from "@legwork/observability";
 
 export async function purgeExpired(now = new Date()): Promise<void> {
 	const db = createDatabase();

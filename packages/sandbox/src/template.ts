@@ -82,7 +82,7 @@ def safe_relative(name):
 def download(url, destination, budget):
     validate_url(url)
     opener = urllib.request.build_opener(NoRedirect())
-    request = urllib.request.Request(url, headers={"User-Agent": "on-call-ai-sandbox"})
+    request = urllib.request.Request(url, headers={"User-Agent": "legwork-sandbox"})
     with opener.open(request, timeout=60) as response, open(destination, "xb") as output:
         if response.status != 200:
             raise RuntimeError("Repository download failed")

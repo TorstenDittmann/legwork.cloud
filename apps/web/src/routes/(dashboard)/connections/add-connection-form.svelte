@@ -32,7 +32,7 @@
 		PROVIDER_AUTHENTICATION_FAILED: 'The provider rejected this token. Check it and try again.',
 		PROVIDER_PERMISSION_DENIED: 'This token does not have the required read permissions.',
 		PROVIDER_RATE_LIMITED: 'The provider is rate limiting requests. Try again shortly.',
-		PROVIDER_UNAVAILABLE: 'The provider could not be reached from On-call AI.',
+		PROVIDER_UNAVAILABLE: 'The provider could not be reached from Legwork.',
 		PROVIDER_RESPONSE_INVALID: 'The provider returned a response we could not understand.',
 		PROVIDER_QUERY_INVALID: 'Check the provider URL and token, then try again.'
 	};

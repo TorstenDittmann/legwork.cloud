@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { z } from 'zod';
-import { createDatabase, createRetryRun } from '@oncall-ai/db';
+import { createDatabase, createRetryRun } from '@legwork/db';
 import { loadIncident } from '$lib/server/incidents';
 import { requireTenant } from '$lib/server/tenant';
 import { problemFail } from '$lib/server/http';

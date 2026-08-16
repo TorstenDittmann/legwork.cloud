@@ -9,8 +9,8 @@ import type {
 	SandboxProvider,
 	SandboxRepositoryManifest,
 	ToolResult,
-} from "@oncall-ai/contracts";
-import { assertRelativeRepositoryPath } from "@oncall-ai/security";
+} from "@legwork/contracts";
+import { assertRelativeRepositoryPath } from "@legwork/security";
 import { discoverCheckCommand, shellQuote } from "./commands";
 import { analysisTemplate } from "./template";
 

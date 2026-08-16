@@ -1,5 +1,5 @@
 {
-	"name": "@oncall-ai/security",
+	"name": "@legwork/security",
 	"files": ["dist"],
 	"version": "0.0.0",
 	"private": true,
@@ -12,7 +12,7 @@
 		"lint": "oxlint src"
 	},
 	"dependencies": {
-		"@oncall-ai/contracts": "workspace:*",
+		"@legwork/contracts": "workspace:*",
 		"ipaddr.js": "2.2.0",
 		"tar-stream": "3.1.7",
 		"undici": "7.29.0"

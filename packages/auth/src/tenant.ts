@@ -1,4 +1,4 @@
-import { createDatabase, findOrganizationByWorkosId } from "@oncall-ai/db";
+import { createDatabase, findOrganizationByWorkosId } from "@legwork/db";
 import { AuthenticationError, AuthorizationError, type OrganizationRole } from "./roles";
 
 export interface TenantContext {

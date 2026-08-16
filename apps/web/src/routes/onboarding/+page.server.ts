@@ -1,6 +1,6 @@
 import { fail, redirect, type Cookies } from '@sveltejs/kit';
 import { authKit } from '@workos/authkit-sveltekit';
-import { createDatabase, organizations } from '@oncall-ai/db';
+import { createDatabase, organizations } from '@legwork/db';
 import { createWorkOS } from '$lib/server/config';
 import { isOnboarded } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';

@@ -1,5 +1,5 @@
 {
-	"name": "on-call-ai",
+	"name": "legwork",
 	"private": true,
 	"workspaces": [
 		"apps/*",
@@ -13,8 +13,8 @@
 		"test": "vitest run --exclude packages/db/src/db.test.ts && bun x --bun vitest run packages/db/src/db.test.ts",
 		"test:watch": "vitest",
 		"test:e2e": "playwright test",
-		"db:generate": "bun run --filter @oncall-ai/db generate",
-		"db:migrate": "bun run --filter @oncall-ai/db migrate",
+		"db:generate": "bun run --filter @legwork/db generate",
+		"db:migrate": "bun run --filter @legwork/db migrate",
 		"db:tokens": "bun scripts/libsql-tokens.ts",
 		"format": "oxfmt --write .",
 		"format:check": "oxfmt --check .",

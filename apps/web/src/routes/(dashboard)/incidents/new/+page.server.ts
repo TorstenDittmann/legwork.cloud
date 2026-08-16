@@ -1,8 +1,8 @@
 import { redirect } from '@sveltejs/kit';
 import { and, eq } from 'drizzle-orm';
-import { createIncidentRequestSchema } from '@oncall-ai/contracts';
-import { createDatabase, createIncidentIdempotently, services } from '@oncall-ai/db';
-import { redactSecrets } from '@oncall-ai/security';
+import { createIncidentRequestSchema } from '@legwork/contracts';
+import { createDatabase, createIncidentIdempotently, services } from '@legwork/db';
+import { redactSecrets } from '@legwork/security';
 import { HttpProblem, problemFail } from '$lib/server/http';
 import { requireTenant } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';

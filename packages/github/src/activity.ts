@@ -1,6 +1,6 @@
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "@octokit/rest";
-import type { ToolResult } from "@oncall-ai/contracts";
+import type { ToolResult } from "@legwork/contracts";
 import type { GitHubAppConfig, RepositoryDescriptor } from "./provider";
 
 const MAX_ITEMS = 20;

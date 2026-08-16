@@ -10,7 +10,7 @@
 
 <main class="flex min-h-screen flex-col items-center justify-center px-6 py-16">
 	<div class="w-full max-w-md">
-		<a href="/" aria-label="OnCall AI home" class="inline-block"><Wordmark /></a>
+		<a href="/" aria-label="Legwork home" class="inline-block"><Wordmark /></a>
 		<div class="mt-8 rounded-2xl border border-rule bg-surface shadow-lift">
 			<div class="px-7 pt-7 pb-6">
 				<h1 class="font-display text-3xl font-semibold tracking-[-0.01em] text-ink">

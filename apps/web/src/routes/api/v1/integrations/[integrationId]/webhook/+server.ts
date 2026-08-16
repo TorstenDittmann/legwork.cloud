@@ -1,20 +1,16 @@
 import { createHash } from 'node:crypto';
 import { json } from '@sveltejs/kit';
 import { and, desc, eq } from 'drizzle-orm';
-import { createIncidentRequestSchema } from '@oncall-ai/contracts';
+import { createIncidentRequestSchema } from '@legwork/contracts';
 import {
 	alertIntegrations,
 	createDatabase,
 	createIncidentIdempotently,
 	externalIncidentLinks,
 	integrationDeliveries
-} from '@oncall-ai/db';
-import {
-	alertProviderAdapters,
-	IntegrationError,
-	MAX_WEBHOOK_BYTES
-} from '@oncall-ai/integrations';
-import { decryptSecret } from '@oncall-ai/security';
+} from '@legwork/db';
+import { alertProviderAdapters, IntegrationError, MAX_WEBHOOK_BYTES } from '@legwork/integrations';
+import { decryptSecret } from '@legwork/security';
 import { requireEncryptionKey } from '$lib/server/config';
 import { HttpProblem, problemResponse, readLimitedBytes } from '$lib/server/http';
 import type { RequestHandler } from './$types';
