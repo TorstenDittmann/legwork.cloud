@@ -1,0 +1,113 @@
+<script lang="ts">
+	import Button from '$lib/components/ui/button.svelte';
+	import Input from '$lib/components/ui/input.svelte';
+	import Field from '$lib/components/ui/field.svelte';
+	import Select from '$lib/components/ui/select.svelte';
+	import EmptyState from '$lib/components/ui/empty-state.svelte';
+	import PageHeader from '$lib/components/ui/page-header.svelte';
+	import SeverityMark from '$lib/components/ui/severity-mark.svelte';
+	import StatusMark from '$lib/components/ui/status-mark.svelte';
+	import { formatDateTime, formatDuration } from '$lib/utils';
+	import { runStatusSchema } from '@oncall-ai/contracts';
+
+	let { data } = $props();
+</script>
+
+<PageHeader
+	eyebrow="30-day retention"
+	title="Incident Ledger"
+	description="Every report, run, and verified conclusion in chronological order."
+>
+	{#snippet actions()}
+		<Button href="/incidents/new">Submit Incident</Button>
+	{/snippet}
+</PageHeader>
+<form class="mt-7 grid gap-3 rounded-[4px] border border-rule bg-surface p-4 md:grid-cols-6">
+	<Field label="Status" forId="status">
+		<Select id="status" name="status" value={data.filters.status ?? ''}>
+			<option value="">All statuses</option>
+			{#each runStatusSchema.options as value (value)}
+				<option>{value}</option>
+			{/each}
+		</Select>
+	</Field>
+	<Field label="Severity" forId="severity">
+		<Select id="severity" name="severity" value={data.filters.severity ?? ''}>
+			<option value="">All severities</option>
+			{#each ['critical', 'high', 'medium', 'low', 'unknown'] as value (value)}
+				<option>{value}</option>
+			{/each}
+		</Select>
+	</Field>
+	<Field label="Service" forId="service">
+		<Select id="service" name="service" value={data.filters.service ?? ''}>
+			<option value="">All services</option>
+			{#each data.serviceRows as service (service.id)}
+				<option value={service.id}>{service.name}</option>
+			{/each}
+		</Select>
+	</Field>
+	<Field label="From" forId="from">
+		<Input
+			id="from"
+			name="from"
+			aria-label="From date"
+			type="date"
+			value={data.filters.from ?? ''}
+		/>
+	</Field>
+	<Field label="To" forId="to">
+		<Input id="to" name="to" aria-label="To date" type="date" value={data.filters.to ?? ''} />
+	</Field>
+	<div class="flex items-end gap-2">
+		<Button type="submit" variant="outline">Filter</Button>
+		{#if data.hasFilters}
+			<Button href="/incidents" variant="link">Clear</Button>
+		{/if}
+	</div>
+</form>
+<div class="mt-6">
+	{#if data.displayed.length}
+		<div class="rounded-[4px] border border-rule bg-surface shadow-[0_1px_2px_rgba(23,26,32,0.04)]">
+			<div
+				class="hidden grid-cols-[100px_minmax(0,1fr)_160px_160px_130px_100px] gap-3 border-b border-rule-strong px-4 py-2.5 font-mono text-[9px] tracking-[0.08em] text-ink-faint uppercase md:grid"
+			>
+				<span>Severity</span>
+				<span>Incident</span>
+				<span>Service</span>
+				<span>Occurred</span>
+				<span>Status</span>
+				<span>Duration</span>
+			</div>
+			{#each data.displayed as { incident, serviceName, run } (incident.id)}
+				<div
+					class="content-auto grid gap-3 border-b border-rule px-4 py-4 last:border-0 md:grid-cols-[100px_minmax(0,1fr)_160px_160px_130px_100px] md:items-center"
+				>
+					<SeverityMark severity={incident.severity} />
+					<div class="min-w-0">
+						<a
+							href={`/incidents/${incident.id}`}
+							class="block truncate font-medium text-ink hover:text-accent"
+						>
+							{incident.title}
+						</a>
+					</div>
+					<span class="text-xs text-ink-muted">{serviceName}</span>
+					<time class="font-mono text-[10px] text-ink-faint tabular-nums">
+						{formatDateTime(incident.occurredAt)}
+					</time>
+					<StatusMark status={run?.status ?? 'queued'} class="justify-self-start" />
+					<span class="font-mono text-[10px] text-ink-faint tabular-nums">
+						{run?.startedAt && run.completedAt
+							? formatDuration(run.completedAt.getTime() - run.startedAt.getTime())
+							: '—'}
+					</span>
+				</div>
+			{/each}
+		</div>
+	{:else}
+		<EmptyState title="No Matching Incidents">
+			Adjust the current filters or submit a new incident.
+		</EmptyState>
+	{/if}
+</div>
