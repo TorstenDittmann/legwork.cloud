@@ -6,6 +6,9 @@ import { emptyCheckpoint } from "@langchain/langgraph-checkpoint";
 import {
 	claimJobs,
 	analysisRuns,
+	beginBillingWebhook,
+	billingSubscriptions,
+	billingWebhookEvents,
 	LibSqlCheckpointSaver,
 	closeDatabase,
 	completeJob,
@@ -21,6 +24,7 @@ import {
 	notificationChannelServices,
 	organizations,
 	services,
+	syncBillingSubscription,
 	tenantQueries,
 	TenantNotFoundError,
 } from "./index";
@@ -156,6 +160,96 @@ describe("tenant queries", () => {
 		await expect(tenantQueries(db, a.id).serviceBySlug("private")).rejects.toBeInstanceOf(
 			TenantNotFoundError,
 		);
+	});
+});
+
+describe("billing synchronization", () => {
+	it("applies active plan entitlements and ignores older subscription state", async () => {
+		const [organization] = await db
+			.insert(organizations)
+			.values({ workosOrganizationId: "org_billing", name: "Billing", slug: "billing" })
+			.returning();
+		if (!organization) throw new Error("fixture setup failed");
+		const activeAt = new Date("2026-08-17T10:00:00.000Z");
+		const state = {
+			organizationId: organization.id,
+			plan: "team" as const,
+			billingInterval: "month" as const,
+			status: "active" as const,
+			customerId: "cus_team",
+			subscriptionId: "sub_team",
+			productId: "pdt_team_month",
+			cancelAtPeriodEnd: false,
+			currentPeriodEnd: new Date("2026-09-17T10:00:00.000Z"),
+			eventAt: activeAt,
+			paidEntitlements: {
+				monthlyAnalysisQuota: 1_500,
+				monthlyTokenQuota: 150_000_000,
+				maxConcurrentRuns: 2,
+			},
+			freeEntitlements: {
+				monthlyAnalysisQuota: 50,
+				monthlyTokenQuota: 5_000_000,
+				maxConcurrentRuns: 1,
+			},
+		};
+		expect(await syncBillingSubscription(db, state)).toBe("applied");
+		const [paid] = await db
+			.select()
+			.from(organizations)
+			.where(eq(organizations.id, organization.id))
+			.limit(1);
+		expect(paid).toMatchObject({
+			monthlyAnalysisQuota: 1_500,
+			monthlyTokenQuota: 150_000_000,
+			maxConcurrentRuns: 2,
+		});
+
+		expect(
+			await syncBillingSubscription(db, {
+				...state,
+				status: "cancelled",
+				eventAt: new Date("2026-08-17T09:59:59.000Z"),
+			}),
+		).toBe("stale");
+		const [stillActive] = await db
+			.select()
+			.from(billingSubscriptions)
+			.where(eq(billingSubscriptions.organizationId, organization.id))
+			.limit(1);
+		expect(stillActive?.status).toBe("active");
+
+		expect(
+			await syncBillingSubscription(db, {
+				...state,
+				status: "cancelled",
+				eventAt: new Date("2026-08-17T10:01:00.000Z"),
+			}),
+		).toBe("applied");
+		const [free] = await db
+			.select()
+			.from(organizations)
+			.where(eq(organizations.id, organization.id))
+			.limit(1);
+		expect(free).toMatchObject({
+			monthlyAnalysisQuota: 50,
+			monthlyTokenQuota: 5_000_000,
+			maxConcurrentRuns: 1,
+		});
+	});
+
+	it("deduplicates completed webhook deliveries", async () => {
+		const input = {
+			id: "wh_billing_once",
+			eventType: "subscription.active",
+			eventTimestamp: new Date("2026-08-17T10:00:00.000Z"),
+		};
+		expect(await beginBillingWebhook(db, input)).toBe("process");
+		await db
+			.update(billingWebhookEvents)
+			.set({ status: "processed", processedAt: new Date() })
+			.where(eq(billingWebhookEvents.id, input.id));
+		expect(await beginBillingWebhook(db, input)).toBe("duplicate");
 	});
 });
 

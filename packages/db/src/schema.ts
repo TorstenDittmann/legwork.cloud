@@ -52,7 +52,7 @@ export const organizations = sqliteTable("organizations", {
 	betaAllowlisted: integer("beta_allowlisted", { mode: "boolean" }).notNull().default(false),
 	monthlyAnalysisQuota: integer("monthly_analysis_quota").notNull().default(50),
 	monthlyTokenQuota: integer("monthly_token_quota").notNull().default(5_000_000),
-	maxConcurrentRuns: integer("max_concurrent_runs").notNull().default(2),
+	maxConcurrentRuns: integer("max_concurrent_runs").notNull().default(1),
 	createdAt: createdAt(),
 	updatedAt: updatedAt(),
 });
@@ -61,6 +61,55 @@ const tenantId = () =>
 	text("organization_id")
 		.notNull()
 		.references(() => organizations.id, { onDelete: "cascade" });
+
+export const billingSubscriptions = sqliteTable(
+	"billing_subscriptions",
+	{
+		organizationId: tenantId().primaryKey(),
+		provider: text("provider", { enum: ["dodo"] })
+			.notNull()
+			.default("dodo"),
+		plan: text("plan", { enum: ["team", "scale"] }).notNull(),
+		billingInterval: text("billing_interval", { enum: ["month", "year"] }).notNull(),
+		status: text("status", {
+			enum: ["pending", "active", "on_hold", "paused", "cancelled", "failed", "expired"],
+		}).notNull(),
+		customerId: text("customer_id").notNull(),
+		subscriptionId: text("subscription_id").notNull().unique(),
+		productId: text("product_id").notNull(),
+		cancelAtPeriodEnd: integer("cancel_at_period_end", { mode: "boolean" })
+			.notNull()
+			.default(false),
+		currentPeriodEnd: integer("current_period_end", { mode: "timestamp" }),
+		lastEventAt: integer("last_event_at", { mode: "timestamp" }).notNull(),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+	},
+	(table) => [
+		index("billing_subscriptions_customer_idx").on(table.customerId),
+		index("billing_subscriptions_status_idx").on(table.status),
+	],
+);
+
+export const billingWebhookEvents = sqliteTable(
+	"billing_webhook_events",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id").references(() => organizations.id, {
+			onDelete: "set null",
+		}),
+		eventType: text("event_type").notNull(),
+		status: text("status", { enum: ["processing", "processed", "ignored", "failed"] })
+			.notNull()
+			.default("processing"),
+		eventTimestamp: integer("event_timestamp", { mode: "timestamp" }).notNull(),
+		error: text("error"),
+		processedAt: integer("processed_at", { mode: "timestamp" }),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+	},
+	(table) => [index("billing_webhook_events_status_idx").on(table.status, table.createdAt)],
+);
 
 export const githubInstallations = sqliteTable(
 	"github_installations",

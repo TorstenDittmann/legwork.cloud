@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Component } from 'svelte';
+	import type { Attachment } from 'svelte/attachments';
 	import {
 		ArrowRight,
 		Mail,
@@ -146,7 +147,6 @@
 		return `${minutes}:${seconds}`;
 	}
 
-	let listEl: HTMLElement | undefined = $state();
 	let clock = $state(0);
 	let finished = $state(false);
 	// False until the client takes over, so no-JS and reduced-motion readers get
@@ -167,10 +167,7 @@
 		frame = requestAnimationFrame(tick);
 	}
 
-	$effect(() => {
-		const list = listEl;
-		if (!list) return;
-
+	const replayTrail: Attachment<HTMLOListElement> = (list) => {
 		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
 			clock = TOTAL_SECONDS;
 			finished = true;
@@ -193,7 +190,7 @@
 			observer.disconnect();
 			cancelAnimationFrame(frame);
 		};
-	});
+	};
 </script>
 
 <div class="min-h-screen">
@@ -201,9 +198,17 @@
 		<nav aria-label="Main">
 			<div class="mx-auto flex max-w-[1200px] items-center justify-between px-5 py-5 sm:px-8">
 				<a href="/" aria-label="Legwork home"><Wordmark /></a>
-				<Button href={dashboardHref} variant="outline" size="sm">
-					{signedIn ? 'Open dashboard' : 'Sign in'}
-				</Button>
+				<div class="flex items-center gap-2 sm:gap-5">
+					<a
+						href="/pricing"
+						class="hidden text-sm font-medium text-ink-muted hover:text-ink sm:block"
+					>
+						Pricing
+					</a>
+					<Button href={dashboardHref} variant="outline" size="sm">
+						{signedIn ? 'Open dashboard' : 'Sign in'}
+					</Button>
+				</div>
 			</div>
 		</nav>
 	</header>
@@ -310,7 +315,7 @@
 					</div>
 				</div>
 
-				<ol bind:this={listEl} class="mt-10 max-w-3xl">
+				<ol {@attach replayTrail} class="mt-10 max-w-3xl">
 					{#each trail as step, i (step.at)}
 						{@const shown = !armed || toSeconds(step.at) <= clock}
 						<li

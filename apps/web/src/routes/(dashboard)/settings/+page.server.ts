@@ -2,6 +2,7 @@ import { fail } from '@sveltejs/kit';
 import { and, desc, eq, gte, sql, sum } from 'drizzle-orm';
 import {
 	auditEvents,
+	billingSubscriptions,
 	createDatabase,
 	organizations,
 	serviceApiKeys,
@@ -9,6 +10,7 @@ import {
 	usageEvents
 } from '@legwork/db';
 import { env } from '$env/dynamic/private';
+import { FREE_ENTITLEMENTS } from '$lib/pricing';
 import { createWorkOS } from '$lib/server/config';
 import { requireTenant } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
@@ -20,64 +22,78 @@ export const load: PageServerLoad = async ({ locals }) => {
 	month.setUTCDate(1);
 	month.setUTCHours(0, 0, 0, 0);
 	const workos = tenant.role === 'admin' && env.WORKOS_API_KEY ? createWorkOS() : null;
-	const [[organization], [usage], keys, audits, memberships, invitations] = await Promise.all([
-		db.select().from(organizations).where(eq(organizations.id, tenant.organizationId)).limit(1),
-		db
-			.select({
-				analyses: sum(usageEvents.analyses).mapWith(Number),
-				tokens: sum(
-					sql<number>`${usageEvents.actualInputTokens}+${usageEvents.actualOutputTokens}+${usageEvents.reservedTokens}`
-				).mapWith(Number)
-			})
-			.from(usageEvents)
-			.where(
-				and(
-					eq(usageEvents.organizationId, tenant.organizationId),
-					gte(usageEvents.createdAt, month)
+	const [[organization], [billing], [usage], keys, audits, memberships, invitations] =
+		await Promise.all([
+			db.select().from(organizations).where(eq(organizations.id, tenant.organizationId)).limit(1),
+			db
+				.select({
+					plan: billingSubscriptions.plan,
+					status: billingSubscriptions.status,
+					billingInterval: billingSubscriptions.billingInterval,
+					cancelAtPeriodEnd: billingSubscriptions.cancelAtPeriodEnd,
+					currentPeriodEnd: billingSubscriptions.currentPeriodEnd
+				})
+				.from(billingSubscriptions)
+				.where(eq(billingSubscriptions.organizationId, tenant.organizationId))
+				.limit(1),
+			db
+				.select({
+					analyses: sum(usageEvents.analyses).mapWith(Number),
+					tokens: sum(
+						sql<number>`${usageEvents.actualInputTokens}+${usageEvents.actualOutputTokens}+${usageEvents.reservedTokens}`
+					).mapWith(Number)
+				})
+				.from(usageEvents)
+				.where(
+					and(
+						eq(usageEvents.organizationId, tenant.organizationId),
+						gte(usageEvents.createdAt, month)
+					)
+				),
+			db
+				.select({
+					serviceName: services.name,
+					prefix: serviceApiKeys.prefix,
+					lastUsedAt: serviceApiKeys.lastUsedAt
+				})
+				.from(serviceApiKeys)
+				.innerJoin(services, eq(services.id, serviceApiKeys.serviceId))
+				.where(
+					and(
+						eq(serviceApiKeys.organizationId, tenant.organizationId),
+						eq(serviceApiKeys.active, true)
+					)
+				),
+			db
+				.select()
+				.from(auditEvents)
+				.where(
+					and(
+						eq(auditEvents.organizationId, tenant.organizationId),
+						gte(auditEvents.createdAt, month)
+					)
 				)
-			),
-		db
-			.select({
-				serviceName: services.name,
-				prefix: serviceApiKeys.prefix,
-				lastUsedAt: serviceApiKeys.lastUsedAt
-			})
-			.from(serviceApiKeys)
-			.innerJoin(services, eq(services.id, serviceApiKeys.serviceId))
-			.where(
-				and(
-					eq(serviceApiKeys.organizationId, tenant.organizationId),
-					eq(serviceApiKeys.active, true)
-				)
-			),
-		db
-			.select()
-			.from(auditEvents)
-			.where(
-				and(
-					eq(auditEvents.organizationId, tenant.organizationId),
-					gte(auditEvents.createdAt, month)
-				)
-			)
-			.orderBy(desc(auditEvents.createdAt))
-			.limit(50),
-		workos
-			? workos.userManagement
-					.listOrganizationMemberships({ organizationId: tenant.workosOrganizationId })
-					.then((result) => result.data)
-			: [],
-		workos
-			? workos.userManagement
-					.listInvitations({ organizationId: tenant.workosOrganizationId })
-					.then((result) => result.data)
-			: []
-	]);
+				.orderBy(desc(auditEvents.createdAt))
+				.limit(50),
+			workos
+				? workos.userManagement
+						.listOrganizationMemberships({ organizationId: tenant.workosOrganizationId })
+						.then((result) => result.data)
+				: [],
+			workos
+				? workos.userManagement
+						.listInvitations({ organizationId: tenant.workosOrganizationId })
+						.then((result) => result.data)
+				: []
+		]);
 	return {
 		title: 'Settings',
 		role: tenant.role,
-		monthlyAnalysisQuota: organization?.monthlyAnalysisQuota ?? 50,
-		monthlyTokenQuota: organization?.monthlyTokenQuota ?? 5_000_000,
+		monthlyAnalysisQuota:
+			organization?.monthlyAnalysisQuota ?? FREE_ENTITLEMENTS.monthlyAnalysisQuota,
+		monthlyTokenQuota: organization?.monthlyTokenQuota ?? FREE_ENTITLEMENTS.monthlyTokenQuota,
 		usage: { analyses: usage?.analyses ?? 0, tokens: usage?.tokens ?? 0 },
+		billing: billing ?? null,
 		keys,
 		audits: audits.map((event) => ({
 			id: event.id,

@@ -108,6 +108,9 @@ Run all seeded incidents through the configured staging model and record results
 - [ ] Retry a failed/inconclusive run without overwriting history.
 - [ ] Resend a callback as an admin.
 - [ ] Confirm incident content disappears after retention expiry.
+- [ ] Complete Team and Scale checkouts with Dodo Payments test products.
+- [ ] Verify signed Dodo subscription webhooks update plan quotas once and reject invalid signatures.
+- [ ] Open the authenticated Dodo customer portal and exercise cancellation and payment-method updates.
 
 ## Private-beta launch decision
 

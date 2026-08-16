@@ -12,6 +12,7 @@
 	import PageHeader from '$lib/components/ui/page-header.svelte';
 	import SectionHeader from '$lib/components/ui/section-header.svelte';
 	import Select from '$lib/components/ui/select.svelte';
+	import { planName } from '$lib/pricing';
 	import { formatDateTime } from '$lib/utils';
 	import type { PageProps } from './$types';
 
@@ -25,9 +26,9 @@
 <PageHeader
 	eyebrow="Organization"
 	title="Settings"
-	description="Manage usage, access, credentials, and the organization audit record."
+	description="Manage usage, billing, access, credentials, and the organization audit record."
 />
-<div class="mt-8 grid gap-5 lg:grid-cols-2">
+<div class="mt-8 grid gap-5 lg:grid-cols-3">
 	<Card>
 		<CardHeader>
 			<CardTitle>Monthly usage</CardTitle>
@@ -54,6 +55,42 @@
 				{new Intl.NumberFormat('en').format(data.monthlyTokenQuota)}
 				model tokens
 			</p>
+		</CardContent>
+	</Card>
+	<Card>
+		<CardHeader>
+			<CardTitle>Plan & billing</CardTitle>
+		</CardHeader>
+		<CardContent>
+			<div class="flex items-center justify-between gap-3">
+				<div>
+					<p class="text-sm font-medium text-ink">
+						{data.billing ? planName(data.billing.plan) : 'Developer'}
+					</p>
+					<p class="mt-1 text-xs text-ink-faint capitalize">
+						{data.billing
+							? `${data.billing.status.replace('_', ' ')} · ${data.billing.billingInterval}ly`
+							: 'Free plan'}
+					</p>
+				</div>
+				{#if data.billing?.cancelAtPeriodEnd}
+					<span class="bg-amber-50 rounded-full px-2.5 py-1 text-[10px] font-medium text-warning">
+						Cancels at period end
+					</span>
+				{/if}
+			</div>
+			{#if data.billing?.currentPeriodEnd}
+				<p class="mt-4 text-xs text-ink-faint">
+					Current period ends {formatDateTime(data.billing.currentPeriodEnd)}
+				</p>
+			{/if}
+			{#if data.role === 'admin' && data.billing}
+				<Button href="/billing/portal" variant="outline" size="sm" class="mt-5">
+					Manage billing
+				</Button>
+			{:else if !data.billing}
+				<Button href="/pricing" variant="outline" size="sm" class="mt-5">Compare plans</Button>
+			{/if}
 		</CardContent>
 	</Card>
 	<Card>

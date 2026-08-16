@@ -43,6 +43,34 @@
       "when": 1786904452019,
       "tag": "0005_open_ultimatum",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1786911455349,
+      "tag": "0006_familiar_supernaut",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1786912374755,
+      "tag": "0007_low_titania",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1786912966946,
+      "tag": "0008_spicy_gravity",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1786913648910,
+      "tag": "0009_generous_paid_limits",
+      "breakpoints": true
     }
   ]
 }
