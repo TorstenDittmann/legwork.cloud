@@ -24,13 +24,13 @@ detail page, digests or batching, and any change to the existing HTTP callback p
 
 ## Decisions
 
-| Decision | Choice | Reason |
-| --- | --- | --- |
-| Slack depth | Incoming webhook URLs now, OAuth later | Webhooks need no app review or token refresh, and make all three kinds structurally identical. A `mode` column leaves the OAuth door open. |
-| Channel scope | Org-level channel, optional per-service routing | Mirrors `provider_connections` + `service_provider_bindings`. One webhook serves twelve services without pasting it twelve times. |
-| Message content | Summary, root cause, cited file paths — no excerpts | Actionable without leaving Slack, while no customer source code reaches a third party. |
-| Email transport | Resend over plain HTTPS | No new dependency; the worker's `undici` client already does authenticated POSTs. |
-| Subsystem shape | Parallel to callbacks, not merged | Independent failure domains: a dead Discord webhook must not consume a customer callback's retry budget. |
+| Decision        | Choice                                              | Reason                                                                                                                                     |
+| --------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Slack depth     | Incoming webhook URLs now, OAuth later              | Webhooks need no app review or token refresh, and make all three kinds structurally identical. A `mode` column leaves the OAuth door open. |
+| Channel scope   | Org-level channel, optional per-service routing     | Mirrors `provider_connections` + `service_provider_bindings`. One webhook serves twelve services without pasting it twelve times.          |
+| Message content | Summary, root cause, cited file paths — no excerpts | Actionable without leaving Slack, while no customer source code reaches a third party.                                                     |
+| Email transport | Resend over plain HTTPS                             | No new dependency; the worker's `undici` client already does authenticated POSTs.                                                          |
+| Subsystem shape | Parallel to callbacks, not merged                   | Independent failure domains: a dead Discord webhook must not consume a customer callback's retry budget.                                   |
 
 ## Design
 
@@ -76,8 +76,7 @@ narrow it. `notification.test` is never part of that subscription set and is onl
 an explicit test action.
 
 `destinationCiphertext` uses `encryptSecret(value, key, \`channel:${id}:destination\`)`,
-matching `provider_connections.credentialsCiphertext` and
-`services.callbackSecretCiphertext`. A Slack or Discord webhook URL is an unscoped bearer
+matching `provider_connections.credentialsCiphertext`and`services.callbackSecretCiphertext`. A Slack or Discord webhook URL is an unscoped bearer
 credential — anyone holding it can post to that channel indefinitely — so it is never stored
 in plaintext. Email addresses are not credentials but are handled identically so there is one
 code path.
@@ -97,14 +96,17 @@ idempotent, mirroring the `existing` guard in `enqueueAutomaticCallback`.
 
 ```ts
 notificationPayloadSchema = {
-  schemaVersion: "1",
-  event, status,
-  serviceName, incidentTitle,
-  summary: string | null,
-  rootCause: { statement: string, confidence: number } | null,
-  citations: Array<{ repository: string, path: string, lineStart: number, lineEnd: number }>,
-  dashboardUrl, completedAt,
-}
+	schemaVersion: "1",
+	event,
+	status,
+	serviceName,
+	incidentTitle,
+	summary: string | null,
+	rootCause: { statement: string, confidence: number } | null,
+	citations: Array<{ repository: string; path: string; lineStart: number; lineEnd: number }>,
+	dashboardUrl,
+	completedAt,
+};
 ```
 
 `citations` carries file coordinates only. There is no `excerpt` field on the type, so an
@@ -123,15 +125,17 @@ test** with no incident data in it.
 
 ### Adapters (`packages/notifications`, new)
 
-New package, sibling to `@legwork/integrations` — which stays scoped to *inbound* alerts and
+New package, sibling to `@legwork/integrations` — which stays scoped to _inbound_ alerts and
 investigation-context queries. All three kinds reduce to an authenticated HTTPS POST:
 
 ```ts
 interface NotificationAdapter {
-  kind: NotificationChannelKind;
-  parseDestination(raw: string): { destination: string; hint: string };
-  buildRequest(destination: string, payload: NotificationPayload):
-    { url: URL; headers: Record<string, string>; body: string };
+	kind: NotificationChannelKind;
+	parseDestination(raw: string): { destination: string; hint: string };
+	buildRequest(
+		destination: string,
+		payload: NotificationPayload,
+	): { url: URL; headers: Record<string, string>; body: string };
 }
 ```
 

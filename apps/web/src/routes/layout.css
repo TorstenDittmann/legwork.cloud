@@ -36,6 +36,10 @@
 	--color-danger: #b91c1c;
 	--color-live: #059669;
 
+	/* Tailwind default tints backing warning/danger surfaces (bg-amber-50, bg-red-50) */
+	--color-amber-50: oklch(98.7% 0.022 95.277);
+	--color-red-50: oklch(97.1% 0.013 17.38);
+
 	--font-display: 'Fraunces Variable', ui-serif, Georgia, serif;
 	--font-sans: 'IBM Plex Sans Variable', ui-sans-serif, system-ui, sans-serif;
 	--font-mono: 'IBM Plex Mono', ui-monospace, monospace;

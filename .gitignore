@@ -1,7 +1,8 @@
 node_modules
-.next
 dist
 coverage
+test-results/
+playwright-report/
 .turbo
 .env
 .env.local

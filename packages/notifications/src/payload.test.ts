@@ -48,6 +48,22 @@ describe("notification payload", () => {
 		expect(payload.serviceName).toBe("payments-api");
 	});
 
+	it("redacts secrets the model quoted into outbound summary and root cause", () => {
+		const payload = buildNotificationPayload({
+			...base,
+			diagnosis: diagnosis({
+				summary: "Rotate sk_live_4eC39HqLyjWDarjtT1zdp7dc and redeploy.",
+				rootCause: {
+					statement: "The key AKIAIOSFODNN7EXAMPLE is hardcoded in the client",
+					confidence: 0.9,
+				},
+			}),
+		});
+		const serialized = JSON.stringify(payload);
+		expect(serialized).not.toContain("sk_live_4eC39HqLyjWDarjtT1zdp7dc");
+		expect(serialized).not.toContain("AKIAIOSFODNN7EXAMPLE");
+	});
+
 	it("turns file evidence into citations without carrying the excerpt", () => {
 		const payload = buildNotificationPayload({ ...base, diagnosis: diagnosis() });
 		expect(payload.citations).toEqual([

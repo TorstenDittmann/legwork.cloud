@@ -1,4 +1,4 @@
-import { loadIncident } from '$lib/server/incidents';
+import { loadIncidentStream } from '$lib/server/incidents';
 import { requireTenant } from '$lib/server/tenant';
 import type { RequestHandler } from './$types';
 
@@ -18,7 +18,7 @@ export const GET: RequestHandler = async (event) => {
 				if (closed) return;
 				let delay = 500;
 				try {
-					const incident = await loadIncident(tenant.organizationId, incidentId);
+					const incident = await loadIncidentStream(tenant.organizationId, incidentId);
 					if (closed) return;
 					if (!incident) {
 						controller.enqueue(
@@ -30,15 +30,10 @@ export const GET: RequestHandler = async (event) => {
 						closed = true;
 						return;
 					}
-					// The client only consumes these fields; dropping runs/callbacks keeps
-					// the change-dedup below from firing on data the client never reads.
-					const serialized = JSON.stringify({
-						incident: incident.incident,
-						serviceName: incident.serviceName,
-						currentRun: incident.currentRun,
-						steps: incident.steps,
-						diagnosis: incident.diagnosis
-					});
+					// loadIncidentStream returns exactly the fields the client
+					// consumes, so serializing it whole keeps the change-dedup
+					// below from firing on data the client never reads.
+					const serialized = JSON.stringify(incident);
 					const status = incident.currentRun?.status;
 					if (status === 'completed' || status === 'failed' || status === 'inconclusive')
 						delay = 5000;

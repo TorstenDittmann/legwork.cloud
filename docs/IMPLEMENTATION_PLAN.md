@@ -17,28 +17,30 @@ The MVP supports this lifecycle:
 
 ## Approved technology decisions
 
-- Node.js 24 by default, with Node.js 22 compatibility.
-- TypeScript strict mode and pnpm workspace managed by mise.
-- Next.js App Router, Tailwind CSS, and local shadcn-style components.
-- Turso/libSQL with Drizzle ORM.
-- Custom Turso-backed jobs with singleton keys, leases, lease recovery, deferral, and bounded attempts.
+- Bun 1.3.14 as the runtime and package manager.
+- TypeScript strict mode in a Bun workspace; Bun is pinned through mise.
+- SvelteKit (Svelte 5), Tailwind CSS, and local shadcn-style components.
+- libSQL with Drizzle ORM.
+- Custom libSQL-backed jobs with singleton keys, leases, lease recovery, deferral, and bounded attempts.
 - WorkOS AuthKit Organizations and `admin`/`member` roles.
 - Read-only GitHub App; no OAuth token or personal access token storage.
 - Railway Sandbox SDK `3.6.0` behind a provider interface.
 - OpenRouter model from `OPENROUTER_MODEL`, defaulting to `deepseek/deepseek-v4-flash-0731`.
-- Vitest and Playwright.
+- Vitest; the Playwright end-to-end suite was removed in commit `e8141d1`.
 
 ## Repository layout
 
 ```text
 apps/
-  web/                    Next.js UI, authenticated routes, public API
+  web/                    SvelteKit UI, authenticated routes, public API
   worker/                 Durable jobs, analysis, callbacks, cleanup
 packages/
   contracts/              Zod API, callback, tool, result, provider contracts
-  db/                     Turso/Drizzle schema, migration, tenant queries, jobs
+  db/                     libSQL/Drizzle schema, migrations, tenant queries, jobs
   auth/                   WorkOS session and role helpers
   github/                 GitHub App auth, state, webhooks, source provider
+  integrations/           Grafana and Sentry alert intake, provider connections
+  notifications/          Slack, Discord, and email delivery channels
   sandbox/                Railway provider, commands, template, capability probe
   agent/                  OpenRouter provider, prompts, orchestration, evidence
   security/               Redaction, encryption, archives, paths, SSRF, HMAC
@@ -116,8 +118,8 @@ Defaults:
 
 ### Phase 1: foundation — implemented
 
-- Monorepo, CI, Railway configs, mise, Node/pnpm pins.
-- Turso schema and initial migration.
+- Monorepo, CI, Railway configs, mise, Bun pin.
+- libSQL schema and initial migration.
 - WorkOS tenant and role helpers.
 - Tenant-scoped query patterns.
 
@@ -165,7 +167,7 @@ Defaults:
 - Encrypted callback secrets.
 - HMAC headers and restricted callback body.
 - DNS re-resolution, public-address checks, and pinned delivery address.
-- Retry schedule and manual resend.
+- Retry schedule; the manual resend UI is not yet implemented.
 - Retention purge and orphan-sandbox janitor.
 
 ### Phase 8: staging security and evaluation — pending
@@ -175,7 +177,7 @@ Defaults:
 - Adversarial repositories.
 - Live 20-case agent evaluation and scoring.
 - Full authenticated E2E suite.
-- Turso backup-retention verification.
+- libSQL backup-retention verification.
 
 ### Phase 9: private beta — pending
 
@@ -185,7 +187,7 @@ Defaults:
 
 ## Out of scope
 
-- Native PagerDuty, Sentry, Datadog, Slack, or Opsgenie adapters.
+- Native PagerDuty, Datadog, or Opsgenie adapters.
 - Observability-provider credentials or direct production-system access.
 - GitHub writes, branches, commits, pull requests, or comments.
 - Arbitrary shell access, online installs, or persistent runners.

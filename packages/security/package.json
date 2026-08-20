@@ -1,8 +1,10 @@
 {
 	"name": "@legwork/security",
-	"files": ["dist"],
 	"version": "0.0.0",
 	"private": true,
+	"files": [
+		"dist"
+	],
 	"type": "module",
 	"main": "./src/index.ts",
 	"types": "./src/index.ts",

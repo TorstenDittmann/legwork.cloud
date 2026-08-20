@@ -39,6 +39,8 @@ export function classifyResponse(
 			? ladder(attempt, status, "Rate limited")
 			: { kind: "retry", delaySeconds: requested, status, error: "Rate limited" };
 	}
+	// A request timeout is transient infrastructure trouble, not a revoked webhook.
+	if (status === 408) return ladder(attempt, status, "Destination timed out");
 	// A deleted or revoked webhook answers 4xx forever; retrying only delays telling the operator.
 	if (status >= 400 && status < 500)
 		return { kind: "permanent", status, error: `Destination rejected the message (${status})` };

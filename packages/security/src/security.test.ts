@@ -118,4 +118,39 @@ describe("redaction", () => {
 		expect(JSON.stringify(value)).not.toContain("hunter2");
 		expect(JSON.stringify(value)).not.toContain("abc.def.ghi");
 	});
+	it("redacts the key formats this system actually stores and handles", () => {
+		const secrets = [
+			// OpenRouter / OpenAI-style dashes
+			"sk-or-v1-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+			"sk-proj-Tj8mK2lQ9wXyZ01234abcd",
+			// Stripe-style underscores
+			"sk_live_4eC39HqLyjWDarjtT1zdp7dc",
+			// Resend
+			"re_AbCdEfGh123456789012",
+			// Legwork's own service API keys
+			"ocai_live_3q28fT0kJ9YxWvUuTtSsRrQqPpOoNnMmLlKkJjIiHh",
+			// Slack tokens
+			"xoxb-1234567890-abcdefghijklmnop",
+			// AWS access key ids
+			"AKIAIOSFODNN7EXAMPLE",
+			// Bare JWTs (libSQL DATABASE_AUTH_TOKEN style, no Bearer prefix)
+			"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJsZWd3b3JrIn0.abc123DEF456ghi789JKL",
+		];
+		for (const secret of secrets) {
+			const output = JSON.stringify(
+				redactSecrets({ text: `deploy log mentions ${secret} in passing` }),
+			);
+			expect(output, `should redact ${secret}`).not.toContain(secret);
+		}
+	});
+	it("redacts incoming webhook URLs, which are unscoped bearer credentials", () => {
+		const output = JSON.stringify(
+			redactSecrets({
+				slack: "posted to https://hooks.slack.com/services/T0001/B0001/XXXXXXXXXXXXXXXXXXXXXXXX",
+				discord: "https://discord.com/api/webhooks/1234567890/AbCdEf-GhIjKl_MnOpQr today",
+			}),
+		);
+		expect(output).not.toContain("XXXXXXXXXXXXXXXXXXXXXXXX");
+		expect(output).not.toContain("AbCdEf-GhIjKl_MnOpQr");
+	});
 });

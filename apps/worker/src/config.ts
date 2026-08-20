@@ -13,12 +13,12 @@ export function workerConfig() {
 		githubPrivateKey: required("GITHUB_APP_PRIVATE_KEY").replaceAll("\\n", "\n"),
 		openRouterApiKey: required("OPENROUTER_API_KEY"),
 		encryptionKey: required("DATA_ENCRYPTION_KEY"),
-		railwayEnvironmentId: required("RAILWAY_ENVIRONMENT_ID"),
 		model: process.env.OPENROUTER_MODEL ?? "deepseek/deepseek-v4-flash-0731",
 		// Optional: Slack and Discord work without it; only email channels need Resend.
 		resendApiKey: process.env.RESEND_API_KEY ?? "",
 		resendFromAddress: process.env.RESEND_FROM_ADDRESS ?? "",
 		workerConcurrency: Number(process.env.WORKER_CONCURRENCY ?? "5"),
+		shutdownGraceMs: Number(process.env.SHUTDOWN_GRACE_MS ?? "25000"),
 		commandExecutionEnabled: process.env.SANDBOX_COMMAND_EXECUTION === "true",
 		capabilityProbePassed: process.env.SANDBOX_CAPABILITY_PROBE_PASSED === "true",
 	};

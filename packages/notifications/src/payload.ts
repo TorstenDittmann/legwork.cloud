@@ -5,6 +5,7 @@ import {
 	type NotificationCitation,
 	type NotificationPayload,
 } from "@legwork/contracts";
+import { redactSecrets } from "@legwork/security";
 
 export interface NotificationPayloadInput {
 	event: CallbackEvent;
@@ -39,7 +40,10 @@ function citations(diagnosis: Diagnosis | null): NotificationCitation[] {
 }
 
 export function buildNotificationPayload(input: NotificationPayloadInput): NotificationPayload {
-	return {
+	// The summary and root cause are model output derived from customer source
+	// code; redact on the way out so a quoted secret never reaches a
+	// third-party webhook or inbox.
+	return redactSecrets({
 		schemaVersion: "1",
 		event: input.event,
 		status: input.status,
@@ -55,7 +59,7 @@ export function buildNotificationPayload(input: NotificationPayloadInput): Notif
 		citations: citations(input.diagnosis),
 		dashboardUrl: input.dashboardUrl,
 		completedAt: input.completedAt.toISOString(),
-	};
+	});
 }
 
 export function buildTestPayload(appUrl: string): NotificationPayload {

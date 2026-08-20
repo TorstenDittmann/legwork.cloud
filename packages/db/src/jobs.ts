@@ -83,28 +83,68 @@ export async function claimJobs(
 	);
 }
 
-export async function completeJob(db: Database, id: string, leaseOwner: string): Promise<void> {
-	await db
+/**
+ * Extend the lease on a job this worker still owns. Returns false when the
+ * lease has been taken over (or the job left the active state), which tells
+ * the caller its in-flight work may now be running elsewhere.
+ */
+export async function renewJobLease(
+	db: Database,
+	id: string,
+	leaseOwner: string,
+	leaseMs: number,
+): Promise<boolean> {
+	const renewed = await db
 		.update(durableJobs)
-		.set({ status: "completed", leaseOwner: null, leaseExpiresAt: null, updatedAt: new Date() })
-		.where(and(eq(durableJobs.id, id), eq(durableJobs.leaseOwner, leaseOwner)));
+		.set({ leaseExpiresAt: new Date(Date.now() + leaseMs), updatedAt: new Date() })
+		.where(
+			and(
+				eq(durableJobs.id, id),
+				eq(durableJobs.leaseOwner, leaseOwner),
+				eq(durableJobs.status, "active"),
+			),
+		)
+		.returning({ id: durableJobs.id });
+	return renewed.length > 0;
 }
 
+/** Returns false when the lease was lost, so callers can flag possible duplicate work. */
+export async function completeJob(db: Database, id: string, leaseOwner: string): Promise<boolean> {
+	const completed = await db
+		.update(durableJobs)
+		.set({ status: "completed", leaseOwner: null, leaseExpiresAt: null, updatedAt: new Date() })
+		.where(
+			and(
+				eq(durableJobs.id, id),
+				eq(durableJobs.leaseOwner, leaseOwner),
+				eq(durableJobs.status, "active"),
+			),
+		)
+		.returning({ id: durableJobs.id });
+	return completed.length > 0;
+}
+
+export type FailJobOutcome = "retry" | "exhausted" | "lost";
+
+/**
+ * Record a job failure. "lost" means another worker took the lease over; the
+ * job row is left untouched so the new owner's attempt proceeds undisturbed.
+ */
 export async function failJob(
 	db: Database,
 	id: string,
 	leaseOwner: string,
 	error: unknown,
 	retryDelaySeconds: number,
-): Promise<boolean> {
+): Promise<FailJobOutcome> {
 	const [job] = await db
 		.select()
 		.from(durableJobs)
 		.where(and(eq(durableJobs.id, id), eq(durableJobs.leaseOwner, leaseOwner)))
 		.limit(1);
-	if (!job) return false;
+	if (!job) return "lost";
 	const retry = job.attempts < job.maxAttempts;
-	await db
+	const failed = await db
 		.update(durableJobs)
 		.set({
 			status: retry ? "queued" : "failed",
@@ -114,8 +154,10 @@ export async function failJob(
 			lastError: error instanceof Error ? error.message.slice(0, 2_000) : "Job failed",
 			updatedAt: new Date(),
 		})
-		.where(and(eq(durableJobs.id, id), eq(durableJobs.leaseOwner, leaseOwner)));
-	return retry;
+		.where(and(eq(durableJobs.id, id), eq(durableJobs.leaseOwner, leaseOwner)))
+		.returning({ id: durableJobs.id });
+	if (failed.length === 0) return "lost";
+	return retry ? "retry" : "exhausted";
 }
 
 export async function deferJob(

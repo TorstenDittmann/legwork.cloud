@@ -6,18 +6,20 @@ For project continuation and implementation status, start with [`docs/HANDOFF.md
 
 ## Architecture
 
-- `apps/web`: Next.js 16 App Router dashboard and versioned HTTP API.
+- `apps/web`: SvelteKit (Svelte 5) dashboard and versioned HTTP API.
 - `apps/worker`: SQLite-backed leased job worker, durable LangGraph analysis lifecycle, callbacks, and cleanup.
-- `packages/db`: Drizzle schema for Bun SQLite, migrations, tenant queries, quotas, idempotency, and durable jobs.
+- `packages/db`: Drizzle schema for libSQL, migrations, tenant queries, quotas, idempotency, and durable jobs.
 - `packages/auth`: WorkOS AuthKit active-organization and `admin`/`member` enforcement.
 - `packages/github`: signed installation state, webhook verification, short-lived installation tokens, exact-SHA archives.
 - `packages/sandbox`: Railway SDK `3.6.0` provider and mandatory no-egress capability probe.
 - `packages/agent`: OpenRouter model boundary, strict structured output, and evidence validation.
-
-LangGraph checkpoints and pending writes live in the same Bun SQLite database as incidents and expire with their analysis run. LangSmith tracing is explicitly disabled; no LangSmith key or external checkpoint service is used.
-
+- `packages/contracts`: Zod contracts for agents, incidents, providers, callbacks, notifications, and problem responses.
+- `packages/integrations`: Grafana and Sentry alert intake, provider connections, and discovery.
 - `packages/notifications`: Slack, Discord, and email channel adapters, destination allowlisting, and delivery retry rules.
+- `packages/observability`: structured logs and Prometheus-style metrics.
 - `packages/security`: redaction, API keys, authenticated encryption, archive/path limits, callback HMAC, and SSRF controls.
+
+LangGraph checkpoints and pending writes live in the same libSQL database as incidents and expire with their analysis run. LangSmith tracing is explicitly disabled; no LangSmith key or external checkpoint service is used.
 
 Bun 1.3.14 is the project runtime and package manager through `mise.toml`.
 

@@ -106,7 +106,7 @@ describe("durable libSQL queue", () => {
 		).toBe(first);
 		const [claimed] = await claimJobs(db, "analysis", 1, "worker-a", 60_000);
 		expect(claimed?.id).toBe(first);
-		expect(await failJob(db, first, "worker-a", new Error("transient"), 0)).toBe(true);
+		expect(await failJob(db, first, "worker-a", new Error("transient"), 0)).toBe("retry");
 		const [retried] = await claimJobs(
 			db,
 			"analysis",

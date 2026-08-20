@@ -349,7 +349,8 @@ export const actions: Actions = {
 				.where(and(eq(services.id, serviceId), eq(services.organizationId, tenant.organizationId)))
 				.limit(1)
 		]);
-		if (!connection || !service) throw new Error('Connection or service not found');
+		if (!connection || !service)
+			return problemFail(new HttpProblem(404, 'Not Found', 'Connection or service not found'));
 		const existing = await db
 			.select({ binding: serviceProviderBindings, connection: providerConnections })
 			.from(serviceProviderBindings)

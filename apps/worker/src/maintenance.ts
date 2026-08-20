@@ -7,14 +7,46 @@ import {
 	createDatabase,
 	diagnoses,
 	incidents,
+	langgraphCheckpoints,
+	langgraphCheckpointWrites,
 	notificationDeliveries,
 	integrationDeliveries,
 	externalIncidentLinks,
+	purgeFinishedJobs,
+	serviceRateLimits,
 } from "@legwork/db";
 import { destroyedSandboxes, logger, purgedRecords } from "@legwork/observability";
 
+/** How long completed/failed durable job rows are kept for operator inspection. */
+const FINISHED_JOB_HISTORY_MS = 7 * 24 * 60 * 60_000;
+/** Rate-limit windows are minute-sized; anything older than a day is dead weight. */
+const RATE_LIMIT_HISTORY_MS = 24 * 60 * 60_000;
+
 export async function purgeExpired(now = new Date()): Promise<void> {
 	const db = createDatabase();
+	// LangGraph checkpoints serialize the full analysis message history
+	// (redacted incident payload, file excerpts, model output); leaving them
+	// behind would outlive the retention window of everything else on the run.
+	const deletedCheckpointWrites = await db
+		.delete(langgraphCheckpointWrites)
+		.where(lt(langgraphCheckpointWrites.expiresAt, now))
+		.returning({ threadId: langgraphCheckpointWrites.threadId });
+	const deletedCheckpoints = await db
+		.delete(langgraphCheckpoints)
+		.where(lt(langgraphCheckpoints.expiresAt, now))
+		.returning({ threadId: langgraphCheckpoints.threadId });
+	const deletedJobs = await purgeFinishedJobs(
+		db,
+		new Date(now.getTime() - FINISHED_JOB_HISTORY_MS),
+	);
+	const deletedRateLimits = await db
+		.delete(serviceRateLimits)
+		.where(lt(serviceRateLimits.windowStartedAt, new Date(now.getTime() - RATE_LIMIT_HISTORY_MS)))
+		.returning({ serviceId: serviceRateLimits.serviceId });
+	purgedRecords.inc({ table: "langgraph_checkpoint_writes" }, deletedCheckpointWrites.length);
+	purgedRecords.inc({ table: "langgraph_checkpoints" }, deletedCheckpoints.length);
+	purgedRecords.inc({ table: "durable_jobs" }, deletedJobs);
+	purgedRecords.inc({ table: "service_rate_limits" }, deletedRateLimits.length);
 	const deletedCallbacks = await db
 		.delete(callbackDeliveries)
 		.where(lt(callbackDeliveries.expiresAt, now))
