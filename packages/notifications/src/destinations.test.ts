@@ -9,8 +9,9 @@ describe("slack destinations", () => {
 		expect(parsed.hint).not.toContain("abc123xyz");
 	});
 	it("rejects a host that merely ends with the Slack host", () => {
-		expect(() => parseDestination("slack", "https://hooks.slack.com.evil.com/services/T01/B02/c"))
-			.toThrow(/host/i);
+		expect(() =>
+			parseDestination("slack", "https://hooks.slack.com.evil.com/services/T01/B02/c"),
+		).toThrow(/host/i);
 	});
 	it("rejects a Slack URL that is not a webhook path", () => {
 		expect(() => parseDestination("slack", "https://hooks.slack.com/api/chat.postMessage")).toThrow(

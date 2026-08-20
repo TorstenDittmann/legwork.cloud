@@ -4,14 +4,14 @@ This file distinguishes locally verified behavior from staging gates. Do not con
 
 ## Local verification — complete
 
-- [x] pnpm workspace installs under Node.js 24.
-- [x] Node engine range also permits Node.js 22.
+- [x] Bun workspace installs under Bun 1.3.14 (`mise.toml`, `packageManager`).
+- [x] `engines` requires Bun >= 1.3.14; no Node.js engine range is declared.
 - [x] Strict TypeScript passes in all workspaces.
-- [x] ESLint/package lint passes.
+- [x] Lint passes: oxlint in packages and the worker, ESLint plus Prettier in `apps/web`.
 - [x] Production web and worker builds pass.
-- [x] Initial Drizzle migration matches all 15 tables.
-- [x] Vitest suite passes: 25 tests in 8 files at handoff.
-- [x] Playwright public landing test passes in Chromium.
+- [x] Checked-in Drizzle migrations match the schema's 27 tables (`drizzle-kit generate` reports no changes).
+- [x] Vitest suite passes: 111 tests in 17 files.
+- Playwright end-to-end tests were removed in commit `e8141d1`; no browser suite exists.
 - [x] Dependency audit reports no known vulnerabilities.
 - [x] At least 20 seeded incidents exist across TypeScript, Python, and Go fixtures.
 
@@ -23,7 +23,7 @@ This file distinguishes locally verified behavior from staging gates. Do not con
 - [x] Cross-organization service denial.
 - [x] API-key generation, hashing, and verification.
 - [x] Idempotency returns the original retained run.
-- [x] Turso singleton claims and lease retry.
+- [x] libSQL singleton claims and lease retry.
 - [x] Organization-capacity deferral does not consume attempts.
 - [x] Archive traversal/link rejection and shared multi-repository limits.
 - [x] Secret redaction.
@@ -41,12 +41,12 @@ This file distinguishes locally verified behavior from staging gates. Do not con
 - [ ] Installation, repository-change, suspension, unsuspension, and removal webhooks.
 - [ ] Exact requested SHA and default-branch HEAD resolution.
 - [ ] Installation tokens restricted to selected repositories.
-- [ ] Queue duplicate delivery, worker crash, and expired-lease recovery against hosted Turso.
+- [ ] Queue duplicate delivery, worker crash, and expired-lease recovery against the remote libSQL database.
 - [ ] OpenRouter tool-call loop with recorded fixtures.
 - [ ] A route that cannot support required model parameters fails without silently dropping them.
 - [ ] Callback delivery, signature verification, address pinning, and complete retry schedule.
-- [ ] Retention purge against hosted Turso.
-- [ ] Turso backup aging and restore behavior documented.
+- [ ] Retention purge against the remote libSQL database.
+- [ ] libSQL backup aging and restore behavior documented.
 
 ## Mandatory Railway sandbox gate — pending
 

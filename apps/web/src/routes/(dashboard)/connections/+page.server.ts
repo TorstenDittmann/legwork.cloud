@@ -1,7 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { createDatabase, providerConnections } from '@legwork/db';
+import { auditEvents, createDatabase, providerConnections } from '@legwork/db';
 import {
 	assertSafeProviderUrl,
 	discoverGrafanaDatasources,
@@ -17,12 +17,30 @@ import {
 } from '@legwork/contracts';
 import { decryptSecret, encryptSecret } from '@legwork/security';
 import { requireEncryptionKey } from '$lib/server/config';
+import { HttpProblem, problemFail } from '$lib/server/http';
 import { requireTenant } from '$lib/server/tenant';
 import type { ConnectionActionState, DiscoveryState } from './state';
 import type { Actions, PageServerLoad } from './$types';
 
 function errorCode(error: unknown) {
 	return error instanceof IntegrationProviderError ? error.code : 'PROVIDER_UNAVAILABLE';
+}
+
+function connectionAudit(
+	organizationId: string,
+	actorId: string,
+	action: string,
+	connectionId: string,
+	metadata: Record<string, string | number | boolean | null> = {}
+) {
+	return {
+		organizationId,
+		actorId,
+		action,
+		targetType: 'provider_connection',
+		targetId: connectionId,
+		metadata
+	};
 }
 
 const discoverySchema = z.object({
@@ -204,6 +222,15 @@ export const actions: Actions = {
 			credential,
 			capabilities: [...capabilities]
 		});
+		await createDatabase()
+			.insert(auditEvents)
+			.values(
+				connectionAudit(tenant.organizationId, tenant.userId, 'connection.created', id, {
+					provider: data.provider,
+					name: data.name,
+					verified: verification.ok
+				})
+			);
 		return {
 			saved: (verification.ok
 				? { status: 'created' }
@@ -217,7 +244,8 @@ export const actions: Actions = {
 		const tenant = await requireTenant(locals, 'admin');
 		const formData = await request.formData();
 		const id = String(formData.get('id'));
-		const [record] = await createDatabase()
+		const db = createDatabase();
+		const [record] = await db
 			.select()
 			.from(providerConnections)
 			.where(
@@ -227,8 +255,8 @@ export const actions: Actions = {
 				)
 			)
 			.limit(1);
-		if (!record) throw new Error('Connection not found');
-		await verifyRecord({
+		if (!record) return problemFail(new HttpProblem(404, 'Not Found', 'Connection not found'));
+		const verification = await verifyRecord({
 			id: record.id,
 			organizationId: record.organizationId,
 			config: record.config,
@@ -241,13 +269,19 @@ export const actions: Actions = {
 			),
 			capabilities: record.capabilities
 		});
+		await db.insert(auditEvents).values(
+			connectionAudit(tenant.organizationId, tenant.userId, 'connection.tested', record.id, {
+				verified: verification.ok
+			})
+		);
 	},
 	toggleConnection: async ({ locals, request }) => {
 		const tenant = await requireTenant(locals, 'admin');
 		const formData = await request.formData();
 		const id = String(formData.get('id'));
 		const enabled = formData.get('enabled') === 'true';
-		await createDatabase()
+		const db = createDatabase();
+		const toggled = await db
 			.update(providerConnections)
 			.set({ enabled, updatedAt: new Date() })
 			.where(
@@ -255,6 +289,13 @@ export const actions: Actions = {
 					eq(providerConnections.id, id),
 					eq(providerConnections.organizationId, tenant.organizationId)
 				)
+			)
+			.returning({ id: providerConnections.id });
+		if (toggled.length > 0)
+			await db.insert(auditEvents).values(
+				connectionAudit(tenant.organizationId, tenant.userId, 'connection.toggled', id, {
+					enabled
+				})
 			);
 	}
 };

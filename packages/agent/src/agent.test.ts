@@ -72,6 +72,22 @@ describe("evidence validation", () => {
 		});
 		expect(errors).toHaveLength(1);
 	});
+	it("rejects excerpts that pad the real source with fabricated content", async () => {
+		const padded = {
+			...diagnosis,
+			evidence: [
+				{
+					...diagnosis.evidence[0]!,
+					excerpt: "value.name // and this fabricated line proves the bug",
+				},
+			],
+		};
+		const errors = await validateDiagnosisEvidence(padded, {
+			hasRepository: () => true,
+			readLines: async () => "value.name",
+		});
+		expect(errors).toEqual(["evidence[0] excerpt does not match cited lines"]);
+	});
 });
 
 describe("agent activity", () => {

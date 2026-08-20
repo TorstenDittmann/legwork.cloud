@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { page } from '$app/state';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import Button from '$lib/components/ui/button.svelte';
 	import Input from '$lib/components/ui/input.svelte';
 	import Field from '$lib/components/ui/field.svelte';
@@ -11,6 +13,16 @@
 	import { runStatusSchema } from '@legwork/contracts';
 
 	let { data } = $props();
+
+	const pageHref = (target: number) => {
+		const params = new SvelteURLSearchParams(page.url.searchParams);
+		if (target > 1) params.set('page', String(target));
+		else params.delete('page');
+		const query = params.toString();
+		return query ? `?${query}` : page.url.pathname;
+	};
+	const prevHref = $derived(pageHref(data.page - 1));
+	const nextHref = $derived(pageHref(data.page + 1));
 </script>
 
 <PageHeader
@@ -25,6 +37,15 @@
 <form
 	class="mt-7 grid gap-3 rounded-xl border border-rule bg-surface p-4 shadow-card md:grid-cols-6"
 >
+	<Field label="Search" forId="q" class="md:col-span-6">
+		<Input
+			id="q"
+			name="q"
+			placeholder="Search titles…"
+			maxlength={200}
+			value={data.filters.q ?? ''}
+		/>
+	</Field>
 	<Field label="Status" forId="status">
 		<Select id="status" name="status" value={data.filters.status ?? ''}>
 			<option value="">All statuses</option>
@@ -111,5 +132,34 @@
 		<EmptyState title="No matching incidents">
 			Adjust the current filters or submit a new incident.
 		</EmptyState>
+	{/if}
+	{#if data.total > 0}
+		<div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+			<p class="text-sm text-ink-faint">
+				{#if data.pageCount > 1}
+					Page {data.page} of {data.pageCount} ·
+				{/if}
+				{data.total}
+				{data.total === 1 ? 'incident' : 'incidents'}
+			</p>
+			{#if data.pageCount > 1}
+				<nav aria-label="Pagination" class="flex items-center gap-2">
+					<Button
+						variant="outline"
+						href={data.page > 1 ? prevHref : undefined}
+						disabled={data.page <= 1}
+					>
+						Previous
+					</Button>
+					<Button
+						variant="outline"
+						href={data.page < data.pageCount ? nextHref : undefined}
+						disabled={data.page >= data.pageCount}
+					>
+						Next
+					</Button>
+				</nav>
+			{/if}
+		</div>
 	{/if}
 </div>

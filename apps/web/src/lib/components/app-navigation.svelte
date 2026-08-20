@@ -4,6 +4,7 @@
 	import {
 		Bell,
 		GitBranch,
+		LayoutDashboard,
 		LogOut,
 		Menu,
 		Radio,
@@ -19,6 +20,7 @@
 	import { cn } from '$lib/utils';
 
 	const links = [
+		['/dashboard', LayoutDashboard, 'Overview'],
 		['/incidents', Siren, 'Incidents'],
 		['/services', Radio, 'Services'],
 		['/repositories', GitBranch, 'Repositories'],

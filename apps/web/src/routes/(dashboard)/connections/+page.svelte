@@ -5,6 +5,7 @@
 	import CardContent from '$lib/components/ui/card-content.svelte';
 	import CardHeader from '$lib/components/ui/card-header.svelte';
 	import CardTitle from '$lib/components/ui/card-title.svelte';
+	import EmptyState from '$lib/components/ui/empty-state.svelte';
 	import PageHeader from '$lib/components/ui/page-header.svelte';
 	import StatusMark from '$lib/components/ui/status-mark.svelte';
 	import AddConnectionForm from './add-connection-form.svelte';
@@ -66,6 +67,13 @@
 				</CardContent>
 			</Card>
 		{/each}
+	</div>
+{:else}
+	<div class="mt-8">
+		<EmptyState title="No connections yet">
+			No observability connections exist for this organization yet. An admin can connect Grafana or
+			Sentry to get started.
+		</EmptyState>
 	</div>
 {/if}
 {#if data.role === 'admin'}

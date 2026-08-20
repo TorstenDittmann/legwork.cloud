@@ -1,5 +1,5 @@
 import { fail } from '@sveltejs/kit';
-import { and, desc, eq, gte, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, gte, sql, sum } from 'drizzle-orm';
 import {
 	auditEvents,
 	billingSubscriptions,
@@ -15,82 +15,94 @@ import { createWorkOS } from '$lib/server/config';
 import { requireTenant } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+const AUDIT_PAGE_SIZE = 50;
+
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const tenant = await requireTenant(locals);
 	const db = createDatabase();
 	const month = new Date();
 	month.setUTCDate(1);
 	month.setUTCHours(0, 0, 0, 0);
+	const auditPage = Math.max(1, Math.trunc(Number(url.searchParams.get('auditPage'))) || 1);
 	const workos = tenant.role === 'admin' && env.WORKOS_API_KEY ? createWorkOS() : null;
-	const [[organization], [billing], [usage], keys, audits, memberships, users, invitations] =
-		await Promise.all([
-			db.select().from(organizations).where(eq(organizations.id, tenant.organizationId)).limit(1),
-			db
-				.select({
-					plan: billingSubscriptions.plan,
-					status: billingSubscriptions.status,
-					billingInterval: billingSubscriptions.billingInterval,
-					cancelAtPeriodEnd: billingSubscriptions.cancelAtPeriodEnd,
-					currentPeriodEnd: billingSubscriptions.currentPeriodEnd
-				})
-				.from(billingSubscriptions)
-				.where(eq(billingSubscriptions.organizationId, tenant.organizationId))
-				.limit(1),
-			db
-				.select({
-					analyses: sum(usageEvents.analyses).mapWith(Number),
-					tokens: sum(
-						sql<number>`${usageEvents.actualInputTokens}+${usageEvents.actualOutputTokens}+${usageEvents.reservedTokens}`
-					).mapWith(Number)
-				})
-				.from(usageEvents)
-				.where(
-					and(
-						eq(usageEvents.organizationId, tenant.organizationId),
-						gte(usageEvents.createdAt, month)
-					)
-				),
-			db
-				.select({
-					serviceName: services.name,
-					prefix: serviceApiKeys.prefix,
-					lastUsedAt: serviceApiKeys.lastUsedAt
-				})
-				.from(serviceApiKeys)
-				.innerJoin(services, eq(services.id, serviceApiKeys.serviceId))
-				.where(
-					and(
-						eq(serviceApiKeys.organizationId, tenant.organizationId),
-						eq(serviceApiKeys.active, true)
-					)
-				),
-			db
-				.select()
-				.from(auditEvents)
-				.where(
-					and(
-						eq(auditEvents.organizationId, tenant.organizationId),
-						gte(auditEvents.createdAt, month)
-					)
+	const [
+		[organization],
+		[billing],
+		[usage],
+		keys,
+		audits,
+		[auditTotal],
+		memberships,
+		users,
+		invitations
+	] = await Promise.all([
+		db.select().from(organizations).where(eq(organizations.id, tenant.organizationId)).limit(1),
+		db
+			.select({
+				plan: billingSubscriptions.plan,
+				status: billingSubscriptions.status,
+				billingInterval: billingSubscriptions.billingInterval,
+				cancelAtPeriodEnd: billingSubscriptions.cancelAtPeriodEnd,
+				currentPeriodEnd: billingSubscriptions.currentPeriodEnd
+			})
+			.from(billingSubscriptions)
+			.where(eq(billingSubscriptions.organizationId, tenant.organizationId))
+			.limit(1),
+		db
+			.select({
+				analyses: sum(usageEvents.analyses).mapWith(Number),
+				tokens: sum(
+					sql<number>`${usageEvents.actualInputTokens}+${usageEvents.actualOutputTokens}+${usageEvents.reservedTokens}`
+				).mapWith(Number)
+			})
+			.from(usageEvents)
+			.where(
+				and(
+					eq(usageEvents.organizationId, tenant.organizationId),
+					gte(usageEvents.createdAt, month)
 				)
-				.orderBy(desc(auditEvents.createdAt))
-				.limit(50),
-			workos
-				? workos.userManagement
-						.listOrganizationMemberships({ organizationId: tenant.workosOrganizationId })
-						.then((result) => result.data)
-				: [],
-			workos
-				? workos.userManagement
-						.listUsers({ organizationId: tenant.workosOrganizationId })
-						.then((result) => result.autoPagination())
-				: [],
-			workos
-				? workos.userManagement
-						.listInvitations({ organizationId: tenant.workosOrganizationId })
-						.then((result) => result.data)
-				: []
-		]);
+			),
+		db
+			.select({
+				serviceName: services.name,
+				prefix: serviceApiKeys.prefix,
+				lastUsedAt: serviceApiKeys.lastUsedAt
+			})
+			.from(serviceApiKeys)
+			.innerJoin(services, eq(services.id, serviceApiKeys.serviceId))
+			.where(
+				and(
+					eq(serviceApiKeys.organizationId, tenant.organizationId),
+					eq(serviceApiKeys.active, true)
+				)
+			),
+		db
+			.select()
+			.from(auditEvents)
+			.where(eq(auditEvents.organizationId, tenant.organizationId))
+			.orderBy(desc(auditEvents.createdAt), desc(auditEvents.id))
+			.limit(AUDIT_PAGE_SIZE)
+			.offset((auditPage - 1) * AUDIT_PAGE_SIZE),
+		db
+			.select({ value: count() })
+			.from(auditEvents)
+			.where(eq(auditEvents.organizationId, tenant.organizationId)),
+		workos
+			? workos.userManagement
+					.listOrganizationMemberships({ organizationId: tenant.workosOrganizationId })
+					.then((result) => result.data)
+			: [],
+		workos
+			? workos.userManagement
+					.listUsers({ organizationId: tenant.workosOrganizationId })
+					.then((result) => result.autoPagination())
+			: [],
+		workos
+			? workos.userManagement
+					.listInvitations({ organizationId: tenant.workosOrganizationId })
+					.then((result) => result.data)
+			: []
+	]);
 	const emailByUserId = new Map(users.map((user) => [user.id, user.email]));
 	return {
 		title: 'Settings',
@@ -101,11 +113,21 @@ export const load: PageServerLoad = async ({ locals }) => {
 		usage: { analyses: usage?.analyses ?? 0, tokens: usage?.tokens ?? 0 },
 		billing: billing ?? null,
 		keys,
-		audits: audits.map((event) => ({
-			id: event.id,
-			action: event.action,
-			createdAt: event.createdAt
-		})),
+		audits: {
+			rows: audits.map((event) => ({
+				id: event.id,
+				action: event.action,
+				actorId: event.actorId,
+				actorEmail: event.actorId ? (emailByUserId.get(event.actorId) ?? null) : null,
+				targetType: event.targetType,
+				targetId: event.targetId,
+				metadata: event.metadata,
+				createdAt: event.createdAt
+			})),
+			total: auditTotal?.value ?? 0,
+			page: auditPage,
+			pageCount: Math.max(1, Math.ceil((auditTotal?.value ?? 0) / AUDIT_PAGE_SIZE))
+		},
 		memberships: memberships.map((membership) => ({
 			id: membership.id,
 			userId: membership.userId,

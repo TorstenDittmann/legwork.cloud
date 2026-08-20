@@ -90,7 +90,10 @@ export async function validateDiagnosisEvidence(
 		}
 		const claimed = normalize(evidence.excerpt);
 		const source = normalize(stripLineNumbers(actual));
-		if (claimed.length > 0 && !source.includes(claimed) && !claimed.includes(source))
+		// The claimed excerpt must appear inside the cited lines; accepting the
+		// reverse (claimed contains source) would let a fabricated excerpt pass by
+		// padding the real source text.
+		if (claimed.length > 0 && !source.includes(claimed))
 			errors.push(`evidence[${index}] excerpt does not match cited lines`);
 	}
 	return errors;

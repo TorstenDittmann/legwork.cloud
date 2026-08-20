@@ -7,8 +7,9 @@ Start with [`HANDOFF.md`](./HANDOFF.md) when continuing this project in a new ag
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md): system boundaries, data flow, tenancy, security, and operational design.
 - [`ACCEPTANCE.md`](./ACCEPTANCE.md): local results and credential-gated staging acceptance criteria.
 
-The implementation intentionally differs from the original proposal in three user-approved ways:
+The implementation intentionally differs from the original proposal in four ways:
 
-1. Node.js 24 is the default; Node.js 22 remains supported.
-2. Turso/libSQL and a durable leased-job table replace PostgreSQL and `pg-boss`.
-3. WorkOS AuthKit Organizations replace Clerk Organizations.
+1. Bun 1.3.14 is the runtime and package manager.
+2. SvelteKit replaces Next.js for `apps/web`.
+3. libSQL and a durable leased-job table replace PostgreSQL and `pg-boss`.
+4. WorkOS AuthKit Organizations replace Clerk Organizations.

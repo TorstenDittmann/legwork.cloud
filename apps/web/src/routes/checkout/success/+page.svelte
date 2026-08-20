@@ -42,7 +42,7 @@
 					Your organization limits are updated and the extra investigation capacity is ready to use.
 				</p>
 			{:else if failed}
-				<span class="bg-red-50 mx-auto grid size-12 place-items-center rounded-full text-danger">
+				<span class="mx-auto grid size-12 place-items-center rounded-full bg-red-50 text-danger">
 					<TriangleAlert aria-hidden="true" class="size-6" />
 				</span>
 				<p class="mt-5 font-mono text-xs tracking-[0.12em] text-danger uppercase">Not completed</p>
@@ -53,7 +53,7 @@
 					The payment was cancelled or could not be completed. You can safely try checkout again.
 				</p>
 			{:else}
-				<span class="bg-amber-50 mx-auto grid size-12 place-items-center rounded-full text-warning">
+				<span class="mx-auto grid size-12 place-items-center rounded-full bg-amber-50 text-warning">
 					<Clock3 aria-hidden="true" class="size-6" />
 				</span>
 				<p class="mt-5 font-mono text-xs tracking-[0.12em] text-warning uppercase">

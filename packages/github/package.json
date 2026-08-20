@@ -1,8 +1,10 @@
 {
 	"name": "@legwork/github",
-	"files": ["dist"],
 	"version": "0.0.0",
 	"private": true,
+	"files": [
+		"dist"
+	],
 	"type": "module",
 	"main": "./src/index.ts",
 	"types": "./src/index.ts",
@@ -12,9 +14,9 @@
 		"lint": "oxlint src"
 	},
 	"dependencies": {
+		"@legwork/contracts": "workspace:*",
 		"@octokit/auth-app": "8.1.0",
-		"@octokit/rest": "22.0.0",
-		"@legwork/contracts": "workspace:*"
+		"@octokit/rest": "22.0.0"
 	},
 	"devDependencies": {
 		"typescript": "5.9.2"

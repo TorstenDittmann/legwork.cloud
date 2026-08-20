@@ -81,7 +81,10 @@ function slackBody(payload: NotificationPayload): string {
 	if (citations.length > 0)
 		blocks.push({
 			type: "section",
-			text: { type: "mrkdwn", text: `*Evidence*\n${citations.map((c) => `• \`${c}\``).join("\n")}` },
+			text: {
+				type: "mrkdwn",
+				text: `*Evidence*\n${citations.map((c) => `• \`${c}\``).join("\n")}`,
+			},
 		});
 	blocks.push({
 		type: "actions",
@@ -110,10 +113,10 @@ function discordBody(payload: NotificationPayload): string {
 		embeds: [
 			{
 				title: `${headline[payload.status]} — ${payload.serviceName}`.slice(0, 256),
-				description: [payload.incidentTitle, payload.summary].filter(Boolean).join("\n\n").slice(
-					0,
-					4_096,
-				),
+				description: [payload.incidentTitle, payload.summary]
+					.filter(Boolean)
+					.join("\n\n")
+					.slice(0, 4_096),
 				url: payload.dashboardUrl,
 				fields,
 			},
@@ -129,7 +132,11 @@ function escapeHtml(value: string): string {
 		.replaceAll('"', "&quot;");
 }
 
-function emailBody(payload: NotificationPayload, destination: string, config: ResendConfig): string {
+function emailBody(
+	payload: NotificationPayload,
+	destination: string,
+	config: ResendConfig,
+): string {
 	const text = lines(payload).join("\n");
 	const html = lines(payload)
 		.map((line) => (line === "" ? "<br>" : `<p>${escapeHtml(line)}</p>`))

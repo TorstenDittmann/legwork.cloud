@@ -10,6 +10,7 @@
 		Webhook
 	} from '@lucide/svelte';
 	import Wordmark from '$lib/components/wordmark.svelte';
+	import SiteFooter from '$lib/components/site-footer.svelte';
 	import BrandLogo, { type Brand } from '$lib/components/brand-logo.svelte';
 	import Badge from '$lib/components/ui/badge.svelte';
 	import Button from '$lib/components/ui/button.svelte';
@@ -511,6 +512,8 @@
 			</Button>
 		</div>
 	</footer>
+
+	<SiteFooter />
 </div>
 
 <style>

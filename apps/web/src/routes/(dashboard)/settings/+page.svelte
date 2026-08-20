@@ -21,6 +21,22 @@
 	const pendingInvitations = $derived(
 		data.invitations.filter((invitation) => invitation.state === 'pending')
 	);
+
+	function truncateId(value: string): string {
+		return value.length > 10 ? `${value.slice(0, 10)}…` : value;
+	}
+
+	function auditActor(event: { actorEmail: string | null; actorId: string | null }): string {
+		if (event.actorEmail) return event.actorEmail;
+		if (event.actorId) return truncateId(event.actorId);
+		return 'system';
+	}
+
+	function auditMetadata(metadata: Record<string, string | number | boolean | null>): string {
+		return Object.entries(metadata)
+			.map(([key, value]) => `${key}: ${value ?? '—'}`)
+			.join(' · ');
+	}
 </script>
 
 <PageHeader
@@ -74,7 +90,7 @@
 					</p>
 				</div>
 				{#if data.billing?.cancelAtPeriodEnd}
-					<span class="bg-amber-50 rounded-full px-2.5 py-1 text-[10px] font-medium text-warning">
+					<span class="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-medium text-warning">
 						Cancels at period end
 					</span>
 				{/if}
@@ -98,12 +114,18 @@
 			<CardTitle>Active API keys</CardTitle>
 		</CardHeader>
 		<CardContent class="space-y-3">
-			{#each data.keys as key (`${key.serviceName}:${key.prefix}`)}
-				<div class="text-sm">
-					<span class="text-ink-muted">{key.serviceName}</span>
-					<code translate="no" class="ml-3 text-xs text-ink-faint">{key.prefix}…</code>
-				</div>
-			{/each}
+			{#if data.keys.length === 0}
+				<EmptyState title="No active keys">
+					API keys are issued per service. Open a service to create or rotate its key.
+				</EmptyState>
+			{:else}
+				{#each data.keys as key (`${key.serviceName}:${key.prefix}`)}
+					<div class="text-sm">
+						<span class="text-ink-muted">{key.serviceName}</span>
+						<code translate="no" class="ml-3 text-xs text-ink-faint">{key.prefix}…</code>
+					</div>
+				{/each}
+			{/if}
 		</CardContent>
 	</Card>
 </div>
@@ -176,9 +198,21 @@
 	<SectionHeader>Audit events</SectionHeader>
 	<Card>
 		<CardContent class="divide-y divide-rule pt-6">
-			{#each data.audits as event (event.id)}
-				<div class="flex justify-between py-3 text-sm">
-					<span class="text-ink-muted">{event.action}</span>
+			{#each data.audits.rows as event (event.id)}
+				{@const metadata = auditMetadata(event.metadata)}
+				<div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-sm">
+					<div class="min-w-0">
+						<p class="flex flex-wrap items-baseline gap-x-2">
+							<span translate="no" class="text-xs text-ink-faint">{auditActor(event)}</span>
+							<span class="text-ink-muted">{event.action}</span>
+							<span translate="no" class="text-xs text-ink-faint">
+								{event.targetType}{event.targetId ? ` ${truncateId(event.targetId)}` : ''}
+							</span>
+						</p>
+						{#if metadata}
+							<p translate="no" class="mt-0.5 truncate text-xs text-ink-faint">{metadata}</p>
+						{/if}
+					</div>
 					<time class="font-mono text-xs text-ink-faint">
 						{formatDateTime(event.createdAt)}
 					</time>
@@ -186,8 +220,31 @@
 			{/each}
 		</CardContent>
 	</Card>
-	{#if data.audits.length === 0}
+	{#if data.audits.rows.length === 0}
 		<EmptyState title="No audit events">Organization changes will appear here.</EmptyState>
+	{/if}
+	{#if data.audits.pageCount > 1}
+		<div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+			<p class="text-xs text-ink-faint tabular-nums">
+				Page {data.audits.page} of {data.audits.pageCount} · {data.audits.total} events
+			</p>
+			<div class="flex gap-2">
+				{#if data.audits.page > 1}
+					<Button
+						href={data.audits.page === 2 ? '/settings' : `?auditPage=${data.audits.page - 1}`}
+						variant="outline"
+						size="sm"
+					>
+						Previous
+					</Button>
+				{/if}
+				{#if data.audits.page < data.audits.pageCount}
+					<Button href={`?auditPage=${data.audits.page + 1}`} variant="outline" size="sm">
+						Next
+					</Button>
+				{/if}
+			</div>
+		</div>
 	{/if}
 </section>
 <p class="mt-10 max-w-3xl border-t border-rule pt-6 text-xs leading-5 text-ink-faint">

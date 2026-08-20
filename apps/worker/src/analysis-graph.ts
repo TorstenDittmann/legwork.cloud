@@ -1201,55 +1201,61 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 		return { ...withoutSandbox, phase: "completed" };
 	});
 
-	return new StateGraph(GraphState)
-		.addNode("load_context", loadContext)
-		.addNode("resolve_revisions", resolveRevisions)
-		.addNode("investigation_model", investigationModel)
-		.addNode("validate_tool_batch", validateToolBatch)
-		.addNode("ensure_sandbox", ensureSandbox)
-		.addNode("execute_static_tools", executeStaticTools)
-		.addNode("execute_check", executeCheck)
-		.addNode("execute_github_tools", executeGitHubTools)
-		.addNode("execute_provider_tools", executeProviderTools)
-		.addNode("append_tool_results", appendToolResults)
-		.addNode("synthesize_diagnosis", synthesize)
-		.addNode("hydrate_evidence", hydrate)
-		.addNode("validate_diagnosis", validate)
-		.addNode("repair_diagnosis", repair)
-		.addNode("persist_result", persist)
-		.addNode("cleanup_sandbox", cleanup)
-		.addEdge(START, "load_context")
-		.addEdge("load_context", "resolve_revisions")
-		.addEdge("resolve_revisions", "investigation_model")
-		.addConditionalEdges(
-			"investigation_model",
-			({ data }) => (data.pendingToolCalls.length ? "tools" : "synthesis"),
-			{ tools: "validate_tool_batch", synthesis: "synthesize_diagnosis" },
-		)
-		.addConditionalEdges(
-			"validate_tool_batch",
-			({ data }) => (data.validatedToolCalls.length ? "valid" : "invalid"),
-			{ valid: "ensure_sandbox", invalid: "investigation_model" },
-		)
-		.addEdge("ensure_sandbox", "execute_static_tools")
-		.addEdge("execute_static_tools", "execute_check")
-		.addEdge("execute_check", "execute_github_tools")
-		.addEdge("execute_github_tools", "execute_provider_tools")
-		.addEdge("execute_provider_tools", "append_tool_results")
-		.addEdge("append_tool_results", "investigation_model")
-		.addEdge("synthesize_diagnosis", "hydrate_evidence")
-		.addEdge("hydrate_evidence", "validate_diagnosis")
-		.addConditionalEdges(
-			"validate_diagnosis",
-			({ data }) => {
-				if (data.validationErrors.length === 0) return "valid";
-				return data.repairUsed ? "inconclusive" : "repair";
-			},
-			{ valid: "persist_result", repair: "repair_diagnosis", inconclusive: "persist_result" },
-		)
-		.addEdge("repair_diagnosis", "hydrate_evidence")
-		.addEdge("persist_result", "cleanup_sandbox")
-		.addEdge("cleanup_sandbox", END);
+	return (
+		new StateGraph(GraphState)
+			.addNode("load_context", loadContext)
+			.addNode("resolve_revisions", resolveRevisions)
+			.addNode("investigation_model", investigationModel)
+			.addNode("validate_tool_batch", validateToolBatch)
+			.addNode("ensure_sandbox", ensureSandbox)
+			.addNode("execute_static_tools", executeStaticTools)
+			.addNode("execute_check", executeCheck)
+			.addNode("execute_github_tools", executeGitHubTools)
+			.addNode("execute_provider_tools", executeProviderTools)
+			.addNode("append_tool_results", appendToolResults)
+			.addNode("synthesize_diagnosis", synthesize)
+			.addNode("hydrate_evidence", hydrate)
+			.addNode("validate_diagnosis", validate)
+			.addNode("repair_diagnosis", repair)
+			.addNode("persist_result", persist)
+			.addNode("cleanup_sandbox", cleanup)
+			.addEdge(START, "load_context")
+			.addEdge("load_context", "resolve_revisions")
+			.addEdge("resolve_revisions", "investigation_model")
+			.addConditionalEdges(
+				"investigation_model",
+				({ data }) => (data.pendingToolCalls.length ? "tools" : "synthesis"),
+				{ tools: "validate_tool_batch", synthesis: "synthesize_diagnosis" },
+			)
+			.addConditionalEdges(
+				"validate_tool_batch",
+				({ data }) => (data.validatedToolCalls.length ? "valid" : "invalid"),
+				{ valid: "ensure_sandbox", invalid: "investigation_model" },
+			)
+			.addEdge("ensure_sandbox", "execute_static_tools")
+			.addEdge("execute_static_tools", "execute_check")
+			.addEdge("execute_check", "execute_github_tools")
+			.addEdge("execute_github_tools", "execute_provider_tools")
+			.addEdge("execute_provider_tools", "append_tool_results")
+			.addEdge("append_tool_results", "investigation_model")
+			// Validation must run against the model's claimed excerpts BEFORE
+			// hydration replaces them with real snapshot text; the old
+			// hydrate-then-validate order made the excerpt check pass by
+			// construction and could not detect fabricated citations.
+			.addEdge("synthesize_diagnosis", "validate_diagnosis")
+			.addConditionalEdges(
+				"validate_diagnosis",
+				({ data }) => {
+					if (data.validationErrors.length === 0) return "valid";
+					return data.repairUsed ? "inconclusive" : "repair";
+				},
+				{ valid: "hydrate_evidence", repair: "repair_diagnosis", inconclusive: "persist_result" },
+			)
+			.addEdge("hydrate_evidence", "persist_result")
+			.addEdge("repair_diagnosis", "validate_diagnosis")
+			.addEdge("persist_result", "cleanup_sandbox")
+			.addEdge("cleanup_sandbox", END)
+	);
 }
 
 export async function runIncidentAnalysisGraph(

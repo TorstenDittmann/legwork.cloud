@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { ArrowRight, Check, CreditCard, Globe2, LockKeyhole, ShieldCheck } from '@lucide/svelte';
 	import Wordmark from '$lib/components/wordmark.svelte';
+	import SiteFooter from '$lib/components/site-footer.svelte';
 	import Button from '$lib/components/ui/button.svelte';
 	import { formatQuota, formatTokenQuota, pricingPlans, type BillingInterval } from '$lib/pricing';
 	import type { PageProps } from './$types';
@@ -142,7 +143,7 @@
 			<div class="mx-auto mb-6 max-w-[1150px] px-5 sm:px-8">
 				<p
 					role="alert"
-					class="bg-red-50 rounded-xl border border-danger/25 px-4 py-3 text-sm text-danger"
+					class="rounded-xl border border-danger/25 bg-red-50 px-4 py-3 text-sm text-danger"
 				>
 					{form.message}
 				</p>
@@ -402,12 +403,5 @@
 		</section>
 	</main>
 
-	<footer class="border-t border-rule">
-		<div
-			class="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-5 px-5 py-8 text-xs text-ink-faint sm:px-8"
-		>
-			<a href="/" aria-label="Legwork home"><Wordmark /></a>
-			<p>Evidence-backed incident investigation, priced for the work.</p>
-		</div>
-	</footer>
+	<SiteFooter />
 </div>

@@ -4,15 +4,15 @@
 
 ### Web control plane
 
-`apps/web` owns public ingestion, WorkOS-authenticated product pages, GitHub setup/webhooks, service configuration, manual incidents, retries, and callback resends. It does not run repository code or mint GitHub installation tokens.
+`apps/web` owns public ingestion, WorkOS-authenticated product pages, GitHub setup/webhooks, service configuration, manual incidents, and retries. Callback resends are planned but not yet implemented. It does not run repository code or mint GitHub installation tokens.
 
 ### Worker
 
-`apps/worker` claims durable Turso jobs, resolves GitHub revisions, streams source, provisions sandboxes, runs the agent, persists diagnoses/usage, delivers callbacks, purges expired content, and destroys orphaned sandboxes.
+`apps/worker` claims durable libSQL jobs, resolves GitHub revisions, streams source, provisions sandboxes, runs the agent, persists diagnoses/usage, delivers callbacks, purges expired content, and destroys orphaned sandboxes.
 
-### Turso
+### libSQL
 
-Turso stores tenant configuration, incidents, run state, structured evidence, usage, audit events, callback state, and durable jobs. It never stores GitHub archives or sandbox working copies.
+The libSQL database stores tenant configuration, incidents, run state, structured evidence, usage, audit events, callback state, and durable jobs. It never stores GitHub archives or sandbox working copies.
 
 ### External providers
 
@@ -20,7 +20,7 @@ Turso stores tenant configuration, incidents, run state, structured evidence, us
 - GitHub App: read-only metadata, contents, Actions, Deployments, and installation events.
 - Railway: disposable analysis sandboxes.
 - OpenRouter: model tool selection and structured diagnosis.
-- LangGraph: full incident lifecycle state machine with Bun SQLite checkpoints.
+- LangGraph: full incident lifecycle state machine with libSQL checkpoints.
 
 ## Provider boundaries
 
@@ -59,7 +59,7 @@ The implemented method signatures vary slightly, but these ownership boundaries 
 Caller
   -> service API key authentication
   -> validation, rate limit, redaction, quota reservation
-  -> incident + run + durable job in one Turso transaction
+  -> incident + run + durable job in one libSQL transaction
   -> worker lease
   -> exact GitHub SHAs and restricted installation token
   -> exact-SHA temporary GitHub archive capabilities
@@ -79,9 +79,9 @@ Every customer-owned application table carries `organization_id`. WorkOS supplie
 
 Browser-provided organization IDs are never accepted as authority. IDs for services, repositories, incidents, runs, memberships, and callbacks are always combined with the derived organization in reads and mutations.
 
-## Durable jobs on Turso
+## Durable jobs on libSQL
 
-The `durable_jobs` table replaces `pg-boss` because the database was changed from PostgreSQL to Turso.
+The `durable_jobs` table replaces `pg-boss` because the database was changed from PostgreSQL to libSQL.
 
 Queue guarantees:
 
@@ -142,7 +142,7 @@ The real probe must prove file/exec operations, no DNS/public/private/metadata r
 
 OpenRouter requests require parameter support and permit provider fallbacks. Provider data-collection filters and per-request ZDR enforcement are intentionally disabled for the MVP. Routing failures raise `MODEL_PRIVACY_ROUTE_UNAVAILABLE` rather than silently dropping required model parameters.
 
-The durable queue remains the outer scheduler. Each analysis run is a LangGraph thread keyed by its run ID, with checkpoints and pending writes stored tenant-scoped in Bun SQLite for the same 30-day retention period. Queue retries resume the latest checkpoint instead of repeating completed model and tool stages. LangSmith tracing is disabled and no checkpoint or trace data leaves the application database.
+The durable queue remains the outer scheduler. Each analysis run is a LangGraph thread keyed by its run ID, with checkpoints and pending writes stored tenant-scoped in libSQL for the same 30-day retention period. Queue retries resume the latest checkpoint instead of repeating completed model and tool stages. LangSmith tracing is disabled and no checkpoint or trace data leaves the application database.
 
 The application sends incident context and only tool-requested excerpts/output. It does not send whole repositories or persist complete conversations or hidden reasoning.
 
@@ -184,13 +184,13 @@ cannot affect another channel or the HTTP callback.
 Incident payloads, runs, agent steps, diagnoses, and callback and notification deliveries expire
 after 30 days. Daily purge metrics record deletions. Source exists only in the active sandbox. Aggregate usage events contain no prompt, source, logs, or diagnosis content.
 
-No public claim about backup deletion timing is permitted until Turso's actual production backup/restore policy is tested and documented.
+No public claim about backup deletion timing is permitted until the libSQL deployment's actual production backup/restore policy is tested and documented.
 
 ## Secret allocation
 
 Shared where needed:
 
-- Turso URL/token.
+- libSQL URL/token.
 - Application URL.
 
 Web only or primarily web-facing:

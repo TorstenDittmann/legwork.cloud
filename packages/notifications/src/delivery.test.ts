@@ -27,6 +27,11 @@ describe("client errors", () => {
 		expect(classifyResponse(403, 0)).toMatchObject({ kind: "permanent" });
 		expect(classifyResponse(400, 0)).toMatchObject({ kind: "permanent" });
 	});
+
+	it("retries a request timeout, which is transient rather than a revoked webhook", () => {
+		expect(classifyResponse(408, 0)).toMatchObject({ kind: "retry", delaySeconds: 30 });
+		expect(classifyResponse(408, 3)).toMatchObject({ kind: "permanent" });
+	});
 });
 
 describe("server errors", () => {
