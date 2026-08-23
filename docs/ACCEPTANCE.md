@@ -4,8 +4,8 @@ This file distinguishes locally verified behavior from staging gates. Do not con
 
 ## Local verification — complete
 
-- [x] Bun workspace installs under Bun 1.3.14 (`mise.toml`, `packageManager`).
-- [x] `engines` requires Bun >= 1.3.14; no Node.js engine range is declared.
+- [x] Bun workspace installs under Bun 1.4.0 (`mise.toml`, `packageManager`).
+- [x] `engines` requires Bun >= 1.4.0; no Node.js engine range is declared.
 - [x] Strict TypeScript passes in all workspaces.
 - [x] Lint passes: oxlint in packages and the worker, ESLint plus Prettier in `apps/web`.
 - [x] Production web and worker builds pass.

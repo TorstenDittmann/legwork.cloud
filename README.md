@@ -7,6 +7,7 @@ For project continuation and implementation status, start with [`docs/HANDOFF.md
 ## Architecture
 
 - `apps/web`: SvelteKit (Svelte 5) dashboard and versioned HTTP API.
+- `apps/cli`: reactive command wrapper and incident ingestion CLI.
 - `apps/worker`: SQLite-backed leased job worker, durable LangGraph analysis lifecycle, callbacks, and cleanup.
 - `packages/db`: Drizzle schema for libSQL, migrations, tenant queries, quotas, idempotency, and durable jobs.
 - `packages/auth`: WorkOS AuthKit active-organization and `admin`/`member` enforcement.
@@ -21,7 +22,7 @@ For project continuation and implementation status, start with [`docs/HANDOFF.md
 
 LangGraph checkpoints and pending writes live in the same libSQL database as incidents and expire with their analysis run. LangSmith tracing is explicitly disabled; no LangSmith key or external checkpoint service is used.
 
-Bun 1.3.14 is the project runtime and package manager through `mise.toml`.
+Bun 1.4.0 is the project runtime and package manager through `mise.toml`.
 
 ## Local setup
 
@@ -37,6 +38,24 @@ bun run --filter @legwork/worker dev
 ```
 
 Organizations can reserve analysis usage immediately after onboarding, subject to their configured monthly quotas.
+
+## CLI
+
+The CLI turns a failed command into an incident without changing normal command behavior. It streams
+stdout and stderr as usual, submits the bounded output only after a non-zero exit, and returns the
+original exit code.
+
+```sh
+bun run --filter @legwork/cli build
+cd apps/cli
+bun link
+
+legwork configure --service payments-api
+legwork run --environment production -- bun test
+```
+
+See [`apps/cli/README.md`](./apps/cli/README.md) for CI configuration, direct incident submission,
+security behavior, and removal instructions.
 
 ## Billing
 

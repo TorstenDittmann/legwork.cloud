@@ -10,7 +10,7 @@ The MVP is implemented and tracked in git: `main` carries 13 merged pull request
 
 Implemented architecture:
 
-- Bun 1.3.14 as runtime and package manager, pinned through `mise.toml`, `engines`, and `packageManager`.
+- Bun 1.4.0 as runtime and package manager, pinned through `mise.toml`, `engines`, and `packageManager`.
 - SvelteKit (Svelte 5, Vite, `adapter-node`) web/API application; `bun run dev` serves it on port 5173.
 - WorkOS AuthKit active-organization authentication with `admin` and `member` authorization.
 - libSQL with Drizzle ORM and a custom durable leased-job queue. `DATABASE_URL` defaults to the local `file:local.db`; the remote database is a self-hosted libsql-server whose JWTs are minted with `bun run db:tokens`.

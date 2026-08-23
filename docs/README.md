@@ -9,7 +9,7 @@ Start with [`HANDOFF.md`](./HANDOFF.md) when continuing this project in a new ag
 
 The implementation intentionally differs from the original proposal in four ways:
 
-1. Bun 1.3.14 is the runtime and package manager.
+1. Bun 1.4.0 is the runtime and package manager.
 2. SvelteKit replaces Next.js for `apps/web`.
 3. libSQL and a durable leased-job table replace PostgreSQL and `pg-boss`.
 4. WorkOS AuthKit Organizations replace Clerk Organizations.

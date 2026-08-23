@@ -57,8 +57,21 @@ export const createIncidentResponseSchema = z
 	})
 	.strict();
 
+export const serviceConnectionResponseSchema = z
+	.object({
+		status: z.literal("ready"),
+		service: z
+			.object({
+				name: z.string(),
+				slug: z.string(),
+			})
+			.strict(),
+	})
+	.strict();
+
 export type CreateIncidentRequest = z.infer<typeof createIncidentRequestSchema>;
 export type CreateIncidentResponse = z.infer<typeof createIncidentResponseSchema>;
+export type ServiceConnectionResponse = z.infer<typeof serviceConnectionResponseSchema>;
 
 export const runStatusSchema = z.enum([
 	"queued",

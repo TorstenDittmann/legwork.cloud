@@ -1,11 +1,30 @@
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
-import { createIncidentRequestSchema, MAX_IDEMPOTENCY_KEY_LENGTH } from '@legwork/contracts';
+import {
+	createIncidentRequestSchema,
+	MAX_IDEMPOTENCY_KEY_LENGTH,
+	serviceConnectionResponseSchema
+} from '@legwork/contracts';
 import { consumeServiceRateLimit, createDatabase, createIncidentIdempotently } from '@legwork/db';
 import { redactSecrets } from '@legwork/security';
 import { HttpProblem, problemResponse, readLimitedJson } from '$lib/server/http';
 import { authenticateServiceRequest } from '$lib/server/service-auth';
 import type { RequestHandler } from './$types';
+
+export const GET: RequestHandler = async (event) => {
+	try {
+		const service = await authenticateServiceRequest(event.request, event.params.serviceSlug);
+		return json(
+			serviceConnectionResponseSchema.parse({
+				status: 'ready',
+				service: { name: service.name, slug: service.slug }
+			}),
+			{ headers: { 'cache-control': 'no-store' } }
+		);
+	} catch (error) {
+		return problemResponse(error);
+	}
+};
 
 export const POST: RequestHandler = async (event) => {
 	try {

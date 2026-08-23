@@ -17,6 +17,20 @@
         "zod": "4.1.5",
       },
     },
+    "apps/cli": {
+      "name": "@legwork/cli",
+      "version": "0.1.0",
+      "bin": {
+        "legwork": "./dist/legwork.js",
+      },
+      "dependencies": {
+        "@legwork/contracts": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "5.9.2",
+        "vitest": "3.2.6",
+      },
+    },
     "apps/web": {
       "name": "@legwork/web",
       "version": "0.0.1",
@@ -349,6 +363,8 @@
     "@legwork/agent": ["@legwork/agent@workspace:packages/agent"],
 
     "@legwork/auth": ["@legwork/auth@workspace:packages/auth"],
+
+    "@legwork/cli": ["@legwork/cli@workspace:apps/cli"],
 
     "@legwork/contracts": ["@legwork/contracts@workspace:packages/contracts"],
 

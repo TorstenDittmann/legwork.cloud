@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { createIncidentRequestSchema, diagnosisSchema, githubActivityToolSchema } from "./index";
+import {
+	createIncidentRequestSchema,
+	diagnosisSchema,
+	githubActivityToolSchema,
+	serviceConnectionResponseSchema,
+} from "./index";
 
 describe("incident contract", () => {
 	it("accepts a normalized incident", () => {
@@ -24,6 +29,18 @@ describe("incident contract", () => {
 			logs: [{ message: "x" }],
 		});
 		expect(result.success).toBe(false);
+	});
+
+	it("accepts the minimal authenticated service readiness response", () => {
+		expect(
+			serviceConnectionResponseSchema.parse({
+				status: "ready",
+				service: { name: "Payments API", slug: "payments-api" },
+			}),
+		).toEqual({
+			status: "ready",
+			service: { name: "Payments API", slug: "payments-api" },
+		});
 	});
 });
 

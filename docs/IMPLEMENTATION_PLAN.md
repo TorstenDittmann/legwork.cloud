@@ -17,7 +17,7 @@ The MVP supports this lifecycle:
 
 ## Approved technology decisions
 
-- Bun 1.3.14 as the runtime and package manager.
+- Bun 1.4.0 as the runtime and package manager.
 - TypeScript strict mode in a Bun workspace; Bun is pinned through mise.
 - SvelteKit (Svelte 5), Tailwind CSS, and local shadcn-style components.
 - libSQL with Drizzle ORM.

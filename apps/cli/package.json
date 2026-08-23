@@ -1,0 +1,28 @@
+{
+	"name": "@legwork/cli",
+	"version": "0.1.0",
+	"private": true,
+	"bin": {
+		"legwork": "./dist/legwork.js"
+	},
+	"files": [
+		"dist"
+	],
+	"type": "module",
+	"scripts": {
+		"build": "bun build src/index.ts --target=bun --outfile=dist/legwork.js",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"lint": "oxlint src",
+		"test": "vitest run src"
+	},
+	"dependencies": {
+		"@legwork/contracts": "workspace:*"
+	},
+	"devDependencies": {
+		"typescript": "5.9.2",
+		"vitest": "3.2.6"
+	},
+	"engines": {
+		"bun": ">=1.4.0"
+	}
+}

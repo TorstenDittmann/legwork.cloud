@@ -26,7 +26,7 @@ case "$arch" in
   *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
 esac
 curl --fail --silent --show-error --location \
-  "https://github.com/oven-sh/bun/releases/download/bun-v1.3.14/bun-linux-$bun_arch.zip" \
+  "https://github.com/oven-sh/bun/releases/download/bun-v1.4.0/bun-linux-$bun_arch.zip" \
   --output /tmp/bun.zip
 unzip -q /tmp/bun.zip -d /tmp/bun-release
 install -m 0755 "/tmp/bun-release/bun-linux-$bun_arch/bun" /usr/local/bin/bun
