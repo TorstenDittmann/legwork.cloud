@@ -12,7 +12,7 @@
 <input
 	bind:value
 	class={cn(
-		'h-10 w-full rounded-lg border border-rule-strong bg-surface px-3 text-sm text-ink transition-[border-color,box-shadow] outline-none placeholder:text-ink-faint focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-50',
+		'h-11 w-full rounded-lg border border-rule-strong bg-surface px-3 text-sm text-ink transition-[border-color,box-shadow] outline-none placeholder:text-ink-faint focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-50 sm:h-10',
 		className
 	)}
 	{...rest}

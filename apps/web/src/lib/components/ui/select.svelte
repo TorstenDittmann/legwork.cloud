@@ -14,7 +14,7 @@
 <select
 	bind:value
 	class={cn(
-		'h-10 w-full rounded-lg border border-rule-strong bg-surface px-3 text-sm text-ink transition-[border-color,box-shadow] outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/20',
+		'h-11 w-full rounded-lg border border-rule-strong bg-surface px-3 text-sm text-ink transition-[border-color,box-shadow] outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/20 sm:h-10',
 		className
 	)}
 	{...rest}

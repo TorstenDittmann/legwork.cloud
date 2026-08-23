@@ -46,6 +46,11 @@
 	{:else}
 		<EmptyState title="No services yet">
 			Connect GitHub, select a repository, and create the first intake endpoint.
+			{#snippet actions()}
+				{#if data.role === 'admin'}
+					<Button href="/setup">Continue setup</Button>
+				{/if}
+			{/snippet}
 		</EmptyState>
 	{/if}
 </div>

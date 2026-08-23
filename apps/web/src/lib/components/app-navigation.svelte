@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import {
 		Bell,
+		ClipboardCheck,
 		GitBranch,
 		LayoutDashboard,
 		LogOut,
@@ -21,6 +22,7 @@
 
 	const links = [
 		['/dashboard', LayoutDashboard, 'Overview'],
+		['/setup', ClipboardCheck, 'Setup'],
 		['/incidents', Siren, 'Incidents'],
 		['/services', Radio, 'Services'],
 		['/repositories', GitBranch, 'Repositories'],
@@ -40,6 +42,8 @@
 	} = $props();
 
 	let open = $state(false);
+	let dialog = $state<HTMLElement>();
+	let closeButton = $state<HTMLButtonElement>();
 	const navigationTriggerId = 'mobile-navigation-trigger';
 
 	const pathname = $derived(page.url.pathname);
@@ -62,14 +66,41 @@
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
-		if (open && event.key === 'Escape') close();
+		if (!open) return;
+		if (event.key === 'Escape') {
+			close();
+			return;
+		}
+		if (event.key !== 'Tab' || !dialog) return;
+		const focusable = Array.from(
+			dialog.querySelectorAll<HTMLElement>(
+				'a[href], button:not([disabled]), select:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+			)
+		).filter((element) => !element.hidden);
+		const first = focusable[0];
+		const last = focusable.at(-1);
+		if (!first || !last) return;
+		if (event.shiftKey && document.activeElement === first) {
+			event.preventDefault();
+			last.focus();
+		} else if (!event.shiftKey && document.activeElement === last) {
+			event.preventDefault();
+			first.focus();
+		}
 	}
 
 	$effect(() => {
 		if (!open) return;
+		const main = document.getElementById('main-content');
+		const mobileHeader = document.querySelector<HTMLElement>('[data-mobile-header]');
 		document.body.style.overflow = 'hidden';
+		if (main) main.inert = true;
+		if (mobileHeader) mobileHeader.inert = true;
+		requestAnimationFrame(() => closeButton?.focus());
 		return () => {
 			document.body.style.overflow = '';
+			if (main) main.inert = false;
+			if (mobileHeader) mobileHeader.inert = false;
 		};
 	});
 </script>
@@ -85,7 +116,12 @@
 			<label for="organizationId" class="mb-1.5 block text-xs font-medium text-ink-faint">
 				Workspace
 			</label>
-			<Select id="organizationId" name="organizationId" value={organizationId} class="h-9 text-xs">
+			<Select
+				id="organizationId"
+				name="organizationId"
+				value={organizationId}
+				class="text-xs sm:h-9"
+			>
 				{#each organizations as { id, name } (id)}
 					<option value={id}>{name}</option>
 				{/each}
@@ -139,6 +175,7 @@
 {/snippet}
 
 <header
+	data-mobile-header
 	class="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-rule bg-surface/90 px-4 backdrop-blur lg:hidden"
 >
 	<a href="/dashboard" aria-label="Legwork dashboard"><Wordmark /></a>
@@ -149,6 +186,7 @@
 			type="button"
 			aria-label="Open navigation"
 			aria-expanded={open}
+			aria-controls="mobile-navigation-dialog"
 			onclick={() => (open = true)}
 			class="grid size-10 place-items-center rounded-lg border border-rule-strong bg-surface focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
 		>
@@ -169,12 +207,15 @@
 		></button>
 		<!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
 		<aside
+			id="mobile-navigation-dialog"
+			bind:this={dialog}
 			role="dialog"
 			aria-modal="true"
 			aria-label="Navigation"
 			class="absolute inset-y-0 left-0 flex w-[min(88vw,320px)] flex-col border-r border-rule bg-surface pb-[env(safe-area-inset-bottom)] shadow-lift"
 		>
 			<button
+				bind:this={closeButton}
 				type="button"
 				aria-label="Close navigation"
 				onclick={close}

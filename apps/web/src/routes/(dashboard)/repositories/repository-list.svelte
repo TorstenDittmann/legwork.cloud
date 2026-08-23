@@ -17,10 +17,12 @@
 
 	let {
 		repositories,
-		canManage
+		canManage,
+		setupMode
 	}: {
 		repositories: RepositoryItem[];
 		canManage: boolean;
+		setupMode?: boolean;
 	} = $props();
 
 	let search = $state('');
@@ -69,6 +71,19 @@
 </script>
 
 <section class="mt-7" aria-labelledby="repository-inventory-title">
+	{#if setupMode && included > 0}
+		<div
+			class="mb-5 flex flex-col gap-4 rounded-xl border border-accent/20 bg-accent-soft px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+		>
+			<div>
+				<p class="text-sm font-semibold text-ink">Repository included</p>
+				<p class="mt-1 text-sm text-ink-muted">
+					Next, map it to the service you want to investigate.
+				</p>
+			</div>
+			<Button href="/services/new?setup=1">Continue to service</Button>
+		</div>
+	{/if}
 	<div class="flex flex-col gap-3 pb-4 sm:flex-row sm:items-end sm:justify-between">
 		<div>
 			<div class="flex items-center gap-2">
@@ -89,13 +104,13 @@
 				class="pointer-events-none absolute top-2.5 left-3 size-4 text-ink-faint"
 				aria-hidden="true"
 			/>
-			<Input bind:value={search} placeholder="Search repositories…" class="h-9 pr-9 pl-9" />
+			<Input bind:value={search} placeholder="Search repositories…" class="pr-11 pl-9" />
 			{#if search}
 				<button
 					type="button"
 					onclick={() => (search = '')}
 					aria-label="Clear search"
-					class="absolute top-2.5 right-3 text-ink-faint hover:text-ink"
+					class="absolute inset-y-0 right-0 grid w-11 place-items-center text-ink-faint hover:text-ink"
 				>
 					<X class="size-4" />
 				</button>

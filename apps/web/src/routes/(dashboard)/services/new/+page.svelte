@@ -7,9 +7,9 @@
 </script>
 
 <PageHeader
-	eyebrow="Configuration"
-	title="New service"
-	description="Create a stable incident endpoint and bind it to the repositories the agent may inspect."
+	eyebrow="Workspace setup"
+	title="Create your first service"
+	description="Choose the codebase behind this service. Legwork will use that boundary for every investigation."
 />
 <div class="mt-8">
 	<ServiceForm repositories={data.repositories} {form} />

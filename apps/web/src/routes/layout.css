@@ -89,6 +89,12 @@
 		transition-duration: 150ms;
 	}
 
+	a:focus-visible {
+		border-radius: 0.25rem;
+		outline: 2px solid var(--color-accent);
+		outline-offset: 3px;
+	}
+
 	button,
 	a,
 	select,
@@ -130,5 +136,6 @@
 		scroll-behavior: auto !important;
 		animation-duration: 0.01ms !important;
 		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
 	}
 }

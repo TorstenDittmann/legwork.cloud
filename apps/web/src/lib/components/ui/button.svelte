@@ -5,7 +5,7 @@
 	import { cn } from '$lib/utils';
 
 	const variants = cva(
-		'inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-transparent px-4 text-sm font-medium transition-[color,background-color,border-color,transform] duration-150 active:translate-y-px disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas',
+		'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-transparent px-4 text-sm font-medium transition-[color,background-color,border-color,transform] duration-150 active:translate-y-px disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas sm:min-h-10',
 		{
 			variants: {
 				variant: {
@@ -16,7 +16,11 @@
 					destructive: 'bg-danger text-white shadow-sm hover:brightness-95',
 					link: 'min-h-0 px-0 text-accent underline-offset-4 hover:underline'
 				},
-				size: { default: 'h-10', sm: 'min-h-8 h-8 px-3 text-xs', lg: 'h-12 px-6 text-base' }
+				size: {
+					default: 'h-11 sm:h-10',
+					sm: 'h-11 px-3 text-xs sm:min-h-9 sm:h-9',
+					lg: 'h-12 px-6 text-base'
+				}
 			},
 			defaultVariants: { variant: 'default', size: 'default' }
 		}

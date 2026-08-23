@@ -1,5 +1,6 @@
 import { and, count, desc, eq, gte, inArray } from 'drizzle-orm';
 import { analysisRuns, createDatabase, incidents, services } from '@legwork/db';
+import { loadSetupProgress } from '$lib/server/setup';
 import { requireTenant } from '$lib/server/tenant';
 import type { PageServerLoad } from './$types';
 
@@ -9,7 +10,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const month = new Date();
 	month.setUTCDate(1);
 	month.setUTCHours(0, 0, 0, 0);
-	const [[serviceCount], [incidentCount], [activeCount], recent] = await Promise.all([
+	const [[serviceCount], [incidentCount], [activeCount], recent, setup] = await Promise.all([
 		db
 			.select({ value: count() })
 			.from(services)
@@ -41,7 +42,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 			)
 			.where(eq(incidents.organizationId, tenant.organizationId))
 			.orderBy(desc(incidents.occurredAt))
-			.limit(6)
+			.limit(6),
+		loadSetupProgress(tenant.organizationId)
 	]);
 	const recentRuns = recent.length
 		? await db
@@ -64,6 +66,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		if (!runByIncident.has(run.incidentId)) runByIncident.set(run.incidentId, run);
 	return {
 		title: 'Dashboard',
+		role: tenant.role,
+		setup,
 		month,
 		serviceCount: serviceCount?.value ?? 0,
 		incidentCount: incidentCount?.value ?? 0,

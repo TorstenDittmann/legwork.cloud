@@ -53,6 +53,7 @@ export const organizations = sqliteTable("organizations", {
 	monthlyAnalysisQuota: integer("monthly_analysis_quota").notNull().default(50),
 	monthlyTokenQuota: integer("monthly_token_quota").notNull().default(5_000_000),
 	maxConcurrentRuns: integer("max_concurrent_runs").notNull().default(1),
+	activatedAt: integer("activated_at", { mode: "timestamp" }),
 	createdAt: createdAt(),
 	updatedAt: updatedAt(),
 });

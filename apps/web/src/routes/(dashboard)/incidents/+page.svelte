@@ -31,7 +31,7 @@
 	description="Every report, run, and verified conclusion in chronological order."
 >
 	{#snippet actions()}
-		<Button href="/incidents/new">Submit incident</Button>
+		<Button href="/incidents/new">Start investigation</Button>
 	{/snippet}
 </PageHeader>
 <form
@@ -106,7 +106,10 @@
 				<div
 					class="content-auto grid gap-3 border-b border-rule px-5 py-4 last:border-0 md:grid-cols-[100px_minmax(0,1fr)_160px_160px_130px_100px] md:items-center"
 				>
-					<SeverityMark severity={incident.severity} />
+					<div class="flex items-center gap-3">
+						<span class="w-20 shrink-0 text-xs font-medium text-ink-faint md:hidden">Severity</span>
+						<SeverityMark severity={incident.severity} />
+					</div>
 					<div class="min-w-0">
 						<a
 							href={`/incidents/${incident.id}`}
@@ -115,22 +118,40 @@
 							{incident.title}
 						</a>
 					</div>
-					<span class="text-xs text-ink-muted">{serviceName}</span>
-					<time class="font-mono text-xs text-ink-faint tabular-nums">
-						{formatDateTime(incident.occurredAt)}
-					</time>
-					<StatusMark status={run?.status ?? 'queued'} class="justify-self-start" />
-					<span class="font-mono text-xs text-ink-faint tabular-nums">
-						{run?.startedAt && run.completedAt
-							? formatDuration(run.completedAt.getTime() - run.startedAt.getTime())
-							: '—'}
-					</span>
+					<div class="flex items-center gap-3 md:block">
+						<span class="w-20 shrink-0 text-xs font-medium text-ink-faint md:hidden">Service</span>
+						<span class="text-xs text-ink-muted">{serviceName}</span>
+					</div>
+					<div class="flex items-center gap-3 md:block">
+						<span class="w-20 shrink-0 text-xs font-medium text-ink-faint md:hidden">Occurred</span>
+						<time class="font-mono text-xs text-ink-faint tabular-nums">
+							{formatDateTime(incident.occurredAt)}
+						</time>
+					</div>
+					<div class="flex items-center gap-3 md:block">
+						<span class="w-20 shrink-0 text-xs font-medium text-ink-faint md:hidden">Status</span>
+						<StatusMark status={run?.status ?? 'queued'} class="justify-self-start" />
+					</div>
+					<div class="flex items-center gap-3 md:block">
+						<span class="w-20 shrink-0 text-xs font-medium text-ink-faint md:hidden">Duration</span>
+						<span class="font-mono text-xs text-ink-faint tabular-nums">
+							{run?.startedAt && run.completedAt
+								? formatDuration(run.completedAt.getTime() - run.startedAt.getTime())
+								: '—'}
+						</span>
+					</div>
 				</div>
 			{/each}
 		</div>
 	{:else}
 		<EmptyState title="No matching incidents">
 			Adjust the current filters or submit a new incident.
+			{#snippet actions()}
+				{#if data.hasFilters}
+					<Button href="/incidents" variant="outline">Clear filters</Button>
+				{/if}
+				<Button href="/incidents/new">Start investigation</Button>
+			{/snippet}
 		</EmptyState>
 	{/if}
 	{#if data.total > 0}
