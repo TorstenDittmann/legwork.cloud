@@ -199,7 +199,7 @@
 		</div>
 	{/if}
 	{#if data.incident.payload.description}
-		<p class="mt-7 max-w-4xl text-base leading-7 text-ink-muted">
+		<p class="mt-7 max-w-4xl text-base leading-7 break-words whitespace-pre-wrap text-ink-muted">
 			{data.incident.payload.description}
 		</p>
 	{/if}

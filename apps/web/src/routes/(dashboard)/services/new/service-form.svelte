@@ -15,6 +15,10 @@
 
 	let pending = $state(false);
 	let copied = $state('');
+	// Intentional form-local seed; repository options do not change while this form is mounted.
+	// svelte-ignore state_referenced_locally
+	let primaryRepositoryId = $state(repositories[0]?.id ?? '');
+	let relatedRepositoryIds = $state<string[]>([]);
 
 	const revealed = $derived(
 		form?.ingestionKey && form.callbackSigningSecret
@@ -26,6 +30,12 @@
 	async function copy(label: string, value: string) {
 		await navigator.clipboard.writeText(value);
 		copied = label;
+	}
+
+	function removePrimaryFromRelated() {
+		relatedRepositoryIds = relatedRepositoryIds.filter(
+			(repositoryId) => repositoryId !== primaryRepositoryId
+		);
 	}
 </script>
 
@@ -96,7 +106,13 @@
 			/>
 		</Field>
 		<Field label="Primary repository" forId="primaryRepositoryId">
-			<Select id="primaryRepositoryId" name="primaryRepositoryId" required>
+			<Select
+				id="primaryRepositoryId"
+				name="primaryRepositoryId"
+				required
+				bind:value={primaryRepositoryId}
+				onchange={removePrimaryFromRelated}
+			>
 				{#each repositories as repository (repository.id)}
 					<option value={repository.id}>{repository.fullName}</option>
 				{/each}
@@ -108,15 +124,23 @@
 			</legend>
 			<div class="mt-2 grid gap-px overflow-hidden rounded-lg border border-rule bg-rule/70">
 				{#each repositories as repository (repository.id)}
-					<label class="flex min-h-10 items-center gap-3 bg-surface px-3.5 text-sm">
+					{@const isPrimary = repository.id === primaryRepositoryId}
+					<label
+						class="flex min-h-10 items-center gap-3 bg-surface px-3.5 text-sm {isPrimary
+							? 'cursor-not-allowed text-ink-faint'
+							: ''}"
+					>
 						<input
 							type="checkbox"
 							name="relatedRepositoryIds"
 							value={repository.id}
-							class="size-4 accent-accent"
+							bind:group={relatedRepositoryIds}
+							disabled={isPrimary}
+							class="size-4 accent-accent disabled:opacity-50"
 						/>
-						<span translate="no" class="min-w-0 truncate">
-							{repository.fullName}
+						<span class="min-w-0 truncate">
+							<span translate="no">{repository.fullName}</span>
+							{#if isPrimary}<span> (primary)</span>{/if}
 						</span>
 					</label>
 				{/each}
