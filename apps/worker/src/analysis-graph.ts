@@ -168,6 +168,13 @@ export interface IncidentAnalysisGraphDependencies {
 
 const GraphState = Annotation.Root({ data: Annotation<IncidentAnalysisState>() });
 
+export const MAX_INVESTIGATION_TURNS = 20;
+
+// A full investigation turn traverses the model plus seven tool-pipeline nodes.
+// Keep this above the longest bounded path (170 nodes today) while retaining a
+// finite guard against accidental cycles.
+export const ANALYSIS_GRAPH_RECURSION_LIMIT = 200;
+
 function sourceProvider(
 	state: IncidentAnalysisState,
 	dependencies: IncidentAnalysisGraphDependencies,
@@ -543,7 +550,7 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 	});
 
 	const investigationModel = instrument("investigation_model", async (state) => {
-		if (state.investigationTurn >= 20)
+		if (state.investigationTurn >= MAX_INVESTIGATION_TURNS)
 			return { ...state, pendingToolCalls: [], phase: "synthesizing" };
 		const model = new OpenRouterProvider(dependencies.openRouterApiKey, dependencies.model);
 		const started = performance.now();
@@ -1295,7 +1302,10 @@ export async function runIncidentAnalysisGraph(
 			kind: "graph_resumed",
 			summary: "Resuming analysis from the latest durable LangGraph checkpoint",
 		});
-	const output = await graph.invoke(initial, { ...config, recursionLimit: 100 });
+	const output = await graph.invoke(initial, {
+		...config,
+		recursionLimit: ANALYSIS_GRAPH_RECURSION_LIMIT,
+	});
 	await dependencies.recordActivity({
 		kind: "graph_checkpointed",
 		summary: "Analysis graph reached its terminal durable checkpoint",

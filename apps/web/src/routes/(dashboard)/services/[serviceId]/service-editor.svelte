@@ -34,15 +34,23 @@
 	let revealedKey = $state<string | null>(null);
 	let pending = $state<'save' | 'rotate' | null>(null);
 	let dirty = $state(false);
-
-	const primary = $derived(mappings.find((mapping) => mapping.role === 'primary')?.repositoryId);
-	const related = $derived(
-		new Set(
-			mappings
-				.filter((mapping) => mapping.role === 'related')
-				.map((mapping) => mapping.repositoryId)
-		)
+	// Intentional form-local seeds; page data does not change while this editor is mounted.
+	// svelte-ignore state_referenced_locally
+	let primaryRepositoryId = $state(
+		mappings.find((mapping) => mapping.role === 'primary')?.repositoryId ??
+			repositories[0]?.id ??
+			''
 	);
+	// svelte-ignore state_referenced_locally
+	let relatedRepositoryIds = $state(
+		mappings.filter((mapping) => mapping.role === 'related').map((mapping) => mapping.repositoryId)
+	);
+
+	function removePrimaryFromRelated() {
+		relatedRepositoryIds = relatedRepositoryIds.filter(
+			(repositoryId) => repositoryId !== primaryRepositoryId
+		);
+	}
 </script>
 
 <svelte:window
@@ -82,7 +90,13 @@
 			<Input id="service-name" name="name" autocomplete="off" required value={name} />
 		</Field>
 		<Field label="Primary repository" forId="primary-repository">
-			<Select id="primary-repository" name="primaryRepositoryId" required value={primary}>
+			<Select
+				id="primary-repository"
+				name="primaryRepositoryId"
+				required
+				bind:value={primaryRepositoryId}
+				onchange={removePrimaryFromRelated}
+			>
 				{#each repositories as repository (repository.id)}
 					<option value={repository.id}>{repository.fullName}</option>
 				{/each}
@@ -94,16 +108,23 @@
 			</legend>
 			<div class="mt-2 grid gap-px overflow-hidden rounded-lg border border-rule bg-rule/70">
 				{#each repositories as repository (repository.id)}
-					<label class="flex min-h-10 items-center gap-3 bg-surface px-3.5 text-sm">
+					{@const isPrimary = repository.id === primaryRepositoryId}
+					<label
+						class="flex min-h-10 items-center gap-3 bg-surface px-3.5 text-sm {isPrimary
+							? 'cursor-not-allowed text-ink-faint'
+							: ''}"
+					>
 						<input
 							type="checkbox"
 							name="relatedRepositoryIds"
 							value={repository.id}
-							checked={related.has(repository.id)}
-							class="size-4 accent-accent"
+							bind:group={relatedRepositoryIds}
+							disabled={isPrimary}
+							class="size-4 accent-accent disabled:opacity-50"
 						/>
-						<span translate="no" class="min-w-0 truncate">
-							{repository.fullName}
+						<span class="min-w-0 truncate">
+							<span translate="no">{repository.fullName}</span>
+							{#if isPrimary}<span> (primary)</span>{/if}
 						</span>
 					</label>
 				{/each}

@@ -239,7 +239,7 @@
 			followTranscript = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
 			showJump = !followTranscript;
 		}}
-		class="max-h-[38rem] overflow-y-auto overscroll-contain scroll-smooth rounded-2xl border border-rule bg-surface px-3 py-4 shadow-card sm:px-5"
+		class="h-[38rem] overflow-y-auto overscroll-contain scroll-smooth rounded-2xl border border-rule bg-surface px-3 py-4 shadow-card sm:px-5"
 	>
 		{#snippet detailsTrigger()}
 			<span

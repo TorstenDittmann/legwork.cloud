@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+	ANALYSIS_GRAPH_RECURSION_LIMIT,
+	MAX_INVESTIGATION_TURNS,
 	createIncidentAnalysisGraph,
 	type IncidentAnalysisGraphDependencies,
 } from "./analysis-graph";
@@ -18,6 +20,22 @@ const dependencies: IncidentAnalysisGraphDependencies = {
 };
 
 describe("incident analysis graph wiring", () => {
+	it("budgets enough graph steps for every allowed investigation turn", () => {
+		const initializationSteps = 2;
+		const fullToolTurnSteps = 8;
+		const cappedInvestigationStep = 1;
+		const longestTerminalPathSteps = 7;
+		const maximumNodeExecutions =
+			initializationSteps +
+			MAX_INVESTIGATION_TURNS * fullToolTurnSteps +
+			cappedInvestigationStep +
+			longestTerminalPathSteps;
+
+		// LangGraph raises when the execution count reaches the recursion limit,
+		// so the configured value must be strictly greater than the longest path.
+		expect(ANALYSIS_GRAPH_RECURSION_LIMIT).toBeGreaterThan(maximumNodeExecutions);
+	});
+
 	it("validates the model's claimed evidence before hydration can overwrite it", async () => {
 		const graph = createIncidentAnalysisGraph(dependencies).compile();
 		const drawable = await graph.getGraphAsync();
