@@ -61,7 +61,7 @@ export const GET: RequestHandler = async (event) => {
 			metadata: { installationId: installationNumber }
 		});
 		await enqueueGitHubSync(installation.id);
-		redirect(307, `${env.APP_URL ?? url.origin}/repositories?connected=1`);
+		redirect(307, `${env.APP_URL ?? url.origin}/setup?connected=1`);
 	} catch (error) {
 		if (isRedirect(error) || isHttpError(error)) throw error;
 		return problemResponse(error);

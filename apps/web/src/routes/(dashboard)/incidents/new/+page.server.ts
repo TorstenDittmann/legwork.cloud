@@ -7,13 +7,21 @@ import { HttpProblem, problemFail } from '$lib/server/http';
 import { requireTenant } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const tenant = await requireTenant(locals);
 	const rows = await createDatabase()
 		.select({ id: services.id, name: services.name })
 		.from(services)
 		.where(and(eq(services.organizationId, tenant.organizationId), eq(services.enabled, true)));
-	return { title: 'Submit an Incident', services: rows };
+	if (!rows.length) redirect(302, '/setup?missing=service');
+	const requestedServiceId = url.searchParams.get('service');
+	return {
+		title: 'Start an Investigation',
+		services: rows,
+		selectedServiceId: rows.some(({ id }) => id === requestedServiceId)
+			? requestedServiceId
+			: rows[0]?.id
+	};
 };
 
 export const actions: Actions = {
@@ -29,8 +37,9 @@ export const actions: Actions = {
 			// enhance; keep invalid values as-is so schema validation reports them.
 			const occurredAtRaw = String(form.get('occurredAt') ?? '');
 			const occurredAtDate = new Date(occurredAtRaw);
+			const externalId = String(form.get('externalId') ?? '').trim();
 			const incidentRaw = {
-				externalId: form.get('externalId'),
+				externalId: externalId || `manual-${crypto.randomUUID()}`,
 				title: form.get('title'),
 				description: form.get('description') || undefined,
 				severity: form.get('severity'),

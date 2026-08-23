@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import type { BaseCheckpointSaver } from "@langchain/langgraph-checkpoint";
 import {
@@ -1165,6 +1165,10 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 						eq(analysisRuns.organizationId, state.organizationId),
 					),
 				);
+			await tx
+				.update(organizations)
+				.set({ activatedAt: new Date() })
+				.where(and(eq(organizations.id, state.organizationId), isNull(organizations.activatedAt)));
 		});
 		await reconcileUsage(
 			dependencies.db,

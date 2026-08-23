@@ -1,4 +1,5 @@
 import { and, eq, inArray } from 'drizzle-orm';
+import { redirect } from '@sveltejs/kit';
 import { z } from 'zod';
 import {
 	auditEvents,
@@ -42,6 +43,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.where(
 			and(eq(repositories.organizationId, tenant.organizationId), eq(repositories.selected, true))
 		);
+	if (!rows.length) redirect(302, '/setup?missing=repository');
 	return { title: 'New Service', repositories: rows };
 };
 

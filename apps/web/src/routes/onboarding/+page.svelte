@@ -13,11 +13,15 @@
 		<a href="/" aria-label="Legwork home" class="inline-block"><Wordmark /></a>
 		<div class="mt-8 rounded-2xl border border-rule bg-surface shadow-lift">
 			<div class="px-7 pt-7 pb-6">
+				<p class="text-xs font-semibold tracking-[0.12em] text-accent uppercase">
+					Workspace setup · about 2 minutes
+				</p>
 				<h1 class="font-display text-3xl font-semibold tracking-[-0.01em] text-ink">
 					Create your workspace
 				</h1>
 				<p class="mt-3 text-sm leading-6 text-ink-muted">
-					Every repository, service, incident, and run is scoped to the active workspace.
+					This keeps every repository, service, and incident securely scoped to your team. Next,
+					we’ll guide you through connecting your first service.
 				</p>
 				<form method="POST" action="?/complete" class="mt-7" use:enhance>
 					<input type="hidden" name="returnTo" value={data.returnTo} />
@@ -37,7 +41,7 @@
 						<p class="mt-3 text-sm text-danger">{form.message}</p>
 					{/if}
 					<Button type="submit" class="mt-5 w-full">
-						{data.organizationId ? 'Finish organization setup' : 'Create organization'}
+						{data.organizationId ? 'Continue workspace setup' : 'Create workspace and continue'}
 					</Button>
 				</form>
 			</div>

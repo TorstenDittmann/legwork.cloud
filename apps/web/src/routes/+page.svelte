@@ -150,28 +150,42 @@
 
 	let clock = $state(0);
 	let finished = $state(false);
+	let playing = $state(false);
+	let started = $state(false);
 	// False until the client takes over, so no-JS and reduced-motion readers get
 	// the whole trail rather than seven blank rows.
 	let armed = $state(false);
 	let frame = 0;
 
-	function play() {
+	function play(reset = false) {
 		cancelAnimationFrame(frame);
+		if (reset) clock = 0;
 		finished = false;
+		playing = true;
+		started = true;
+		const initialClock = clock;
 		const start = performance.now();
 		const tick = (now: number) => {
-			const progress = Math.min((now - start) / REPLAY_MS, 1);
-			clock = progress * TOTAL_SECONDS;
-			if (progress < 1) frame = requestAnimationFrame(tick);
-			else finished = true;
+			clock = Math.min(initialClock + ((now - start) / REPLAY_MS) * TOTAL_SECONDS, TOTAL_SECONDS);
+			if (clock < TOTAL_SECONDS) frame = requestAnimationFrame(tick);
+			else {
+				finished = true;
+				playing = false;
+			}
 		};
 		frame = requestAnimationFrame(tick);
+	}
+
+	function pause() {
+		cancelAnimationFrame(frame);
+		playing = false;
 	}
 
 	const replayTrail: Attachment<HTMLOListElement> = (list) => {
 		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
 			clock = TOTAL_SECONDS;
 			finished = true;
+			started = true;
 			return;
 		}
 
@@ -304,14 +318,15 @@
 							{formatClock(armed ? clock : TOTAL_SECONDS)}
 						</span>
 						<span class="text-xs text-ink-faint">elapsed in the investigation</span>
-						{#if armed && finished}
-							<button
+						{#if armed}
+							<Button
 								type="button"
-								onclick={play}
-								class="rounded-lg border border-rule-strong px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-surface-raised"
+								variant="outline"
+								size="sm"
+								onclick={() => (finished ? play(true) : playing ? pause() : play())}
 							>
-								Replay
-							</button>
+								{finished ? 'Replay' : playing ? 'Pause' : started ? 'Resume' : 'Play'}
+							</Button>
 						{/if}
 					</div>
 				</div>

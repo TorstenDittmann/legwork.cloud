@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { Clipboard, Share2 } from '@lucide/svelte';
 	import Badge from '$lib/components/ui/badge.svelte';
+	import Button from '$lib/components/ui/button.svelte';
 	import Card from '$lib/components/ui/card.svelte';
 	import CardContent from '$lib/components/ui/card-content.svelte';
 	import CardHeader from '$lib/components/ui/card-header.svelte';
@@ -10,18 +12,83 @@
 	const exhibitId = (index: number) => `E-${String(index + 1).padStart(2, '0')}`;
 
 	let { diagnosis }: { diagnosis: Diagnosis | null } = $props();
+	let feedback = $state('');
+
+	function reportText(value: Diagnosis) {
+		const lines = [
+			value.status === 'diagnosed' ? 'Diagnosis' : 'Inconclusive investigation',
+			value.summary
+		];
+		if (value.rootCause) {
+			lines.push(
+				'',
+				`Root cause (${Math.round(value.rootCause.confidence * 100)}% confidence)`,
+				value.rootCause.statement
+			);
+		}
+		if (value.suggestedFix) {
+			lines.push('', 'Suggested fix', value.suggestedFix.description);
+			lines.push(...value.suggestedFix.steps.map((step, index) => `${index + 1}. ${step}`));
+		}
+		return lines.join('\n');
+	}
+
+	async function copyText(value: string, successMessage: string) {
+		try {
+			await navigator.clipboard.writeText(value);
+			feedback = successMessage;
+		} catch {
+			feedback = 'Copy failed. Select the report text and copy it manually.';
+		}
+	}
+
+	async function shareReport(value: Diagnosis) {
+		const text = reportText(value);
+		if (navigator.share) {
+			try {
+				await navigator.share({ title: 'Legwork diagnosis', text, url: window.location.href });
+				feedback = 'Report shared.';
+			} catch (error) {
+				if (error instanceof DOMException && error.name === 'AbortError') return;
+				await copyText(`${text}\n\n${window.location.href}`, 'Share link copied.');
+			}
+			return;
+		}
+		await copyText(`${text}\n\n${window.location.href}`, 'Share link copied.');
+	}
 </script>
 
 <div class="mt-10 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
 	<div class="space-y-5">
 		{#if diagnosis}
 			<Card class="border-t-2 border-t-accent">
-				<CardHeader>
-					<CardTitle class="text-2xl">
-						{diagnosis.status === 'diagnosed' ? 'Diagnosis' : 'Inconclusive'}
-					</CardTitle>
+				<CardHeader class="flex flex-wrap items-center justify-between gap-3">
+					<CardTitle class="text-2xl"
+						>{diagnosis.status === 'diagnosed' ? 'Diagnosis' : 'Inconclusive'}</CardTitle
+					>
+					<div class="flex flex-wrap gap-2">
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							onclick={() => copyText(reportText(diagnosis), 'Report copied.')}
+						>
+							<Clipboard class="size-3.5" aria-hidden="true" />
+							Copy report
+						</Button>
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							onclick={() => shareReport(diagnosis)}
+						>
+							<Share2 class="size-3.5" aria-hidden="true" />
+							Share
+						</Button>
+					</div>
 				</CardHeader>
 				<CardContent>
+					<p aria-live="polite" class="mb-3 min-h-5 text-xs text-success">{feedback}</p>
 					<p class="text-base leading-7 text-ink-muted">{diagnosis.summary}</p>
 					{#if diagnosis.rootCause}
 						<div class="mt-6 rounded-lg border border-accent/20 bg-accent-soft px-5 py-4">
@@ -38,7 +105,7 @@
 										{#each diagnosis.evidence, index}
 											<a
 												href={`#exhibit-${index + 1}`}
-												class="rounded-full bg-accent/10 px-2 py-0.5 font-mono text-[11px] font-medium text-accent hover:bg-accent/15"
+												class="inline-flex min-h-11 items-center rounded-full bg-accent/10 px-2 font-mono text-[11px] font-medium text-accent hover:bg-accent/15 sm:min-h-8"
 											>
 												{exhibitId(index)}
 											</a>
@@ -102,9 +169,20 @@
 							{/each}
 						</ol>
 						{#if diagnosis.suggestedFix.patch}
+							<div class="mt-4 flex justify-end">
+								<Button
+									type="button"
+									size="sm"
+									variant="outline"
+									onclick={() => copyText(diagnosis.suggestedFix?.patch ?? '', 'Patch copied.')}
+								>
+									<Clipboard class="size-3.5" aria-hidden="true" />
+									Copy patch
+								</Button>
+							</div>
 							<pre
 								translate="no"
-								class="mt-4 overflow-x-auto rounded-lg border border-rule bg-surface-raised p-4 text-xs leading-5">{diagnosis
+								class="mt-2 overflow-x-auto rounded-lg border border-rule bg-surface-raised p-4 text-xs leading-5">{diagnosis
 									.suggestedFix.patch}</pre>
 						{/if}
 						<p class="mt-4 text-xs text-warning">Suggestion only; nothing was applied to GitHub.</p>

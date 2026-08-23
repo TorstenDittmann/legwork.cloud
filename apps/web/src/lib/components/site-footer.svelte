@@ -19,14 +19,21 @@
 			<p class="text-xs text-ink-faint">© 2026 Legwork</p>
 		</div>
 		<nav aria-label="Footer">
-			<ul class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+			<ul class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:gap-x-4">
 				{#each links as link (link.href)}
 					<li>
-						<a href={link.href} class="text-ink-muted hover:text-ink">{link.label}</a>
+						<a
+							href={link.href}
+							class="inline-flex min-h-11 items-center px-1.5 text-ink-muted hover:text-ink"
+							>{link.label}</a
+						>
 					</li>
 				{/each}
 				<li>
-					<a href="mailto:hello@legwork.cloud" class="text-ink-muted hover:text-ink">
+					<a
+						href="mailto:hello@legwork.cloud"
+						class="inline-flex min-h-11 items-center px-1.5 text-ink-muted hover:text-ink"
+					>
 						hello@legwork.cloud
 					</a>
 				</li>

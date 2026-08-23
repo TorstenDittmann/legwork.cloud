@@ -6,10 +6,10 @@
 </script>
 
 <PageHeader
-	eyebrow="Manual intake"
-	title="Submit an incident"
-	description="Provide the failure signal and enough operational context to begin a repository investigation."
+	eyebrow="New investigation"
+	title="What went wrong?"
+	description="Start with the signal you have. Legwork will inspect the linked code revision and build a cited diagnosis."
 />
 <div class="mt-8">
-	<ManualIncidentForm services={data.services} {form} />
+	<ManualIncidentForm services={data.services} selectedServiceId={data.selectedServiceId} {form} />
 </div>

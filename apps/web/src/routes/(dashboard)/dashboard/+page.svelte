@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Button from '$lib/components/ui/button.svelte';
+	import SetupChecklist from '$lib/components/setup-checklist.svelte';
 	import EmptyState from '$lib/components/ui/empty-state.svelte';
 	import PageHeader from '$lib/components/ui/page-header.svelte';
 	import SectionHeader from '$lib/components/ui/section-header.svelte';
@@ -27,9 +28,16 @@
 	}).format(data.month)}
 >
 	{#snippet actions()}
-		<Button href="/incidents/new">Submit incident</Button>
+		{#if data.setup.activated}
+			<Button href="/incidents/new">Start investigation</Button>
+		{:else}
+			<Button href="/setup">Continue setup</Button>
+		{/if}
 	{/snippet}
 </PageHeader>
+{#if !data.setup.activated}
+	<SetupChecklist progress={data.setup} canManage={data.role === 'admin'} class="mt-7" />
+{/if}
 <dl class="mt-7 grid gap-4 sm:grid-cols-3">
 	{#each stats as [label, value] (label)}
 		<div class="rounded-xl border border-rule bg-surface px-5 py-4 shadow-card">
@@ -66,7 +74,14 @@
 		</div>
 	{:else}
 		<EmptyState title="No incidents yet">
-			Submit an incident to begin the first evidence-backed investigation.
+			Start with a real failure signal to begin your first evidence-backed investigation.
+			{#snippet actions()}
+				{#if data.setup.serviceCount > 0}
+					<Button href="/incidents/new">Start first investigation</Button>
+				{:else}
+					<Button href="/setup">Continue setup</Button>
+				{/if}
+			{/snippet}
 		</EmptyState>
 	{/if}
 </section>

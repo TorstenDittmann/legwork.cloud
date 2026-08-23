@@ -5,7 +5,7 @@
 	let { class: className }: { class?: string } = $props();
 </script>
 
-<span class={cn('inline-flex items-center gap-2', className)}>
+<span class={cn('inline-flex min-h-11 items-center gap-2', className)}>
 	<span aria-hidden="true" class="grid size-7 place-items-center rounded-lg bg-accent text-white">
 		<Footprints class="size-4" stroke-width={2.2} />
 	</span>

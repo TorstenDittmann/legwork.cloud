@@ -5,7 +5,7 @@ import { HttpProblem, problemFail } from '$lib/server/http';
 import { requireTenant } from '$lib/server/tenant';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const tenant = await requireTenant(locals);
 	const db = createDatabase();
 	const [rows, installs] = await Promise.all([
@@ -18,6 +18,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return {
 		title: 'Repositories',
 		role: tenant.role,
+		setupMode: url.searchParams.get('setup') === '1',
 		hasInstallation: installs.length > 0,
 		repositories: rows.map((repository) => ({
 			id: repository.id,

@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
-	let { title, children }: { title: string; children: Snippet } = $props();
+	let { title, children, actions }: { title: string; children: Snippet; actions?: Snippet } =
+		$props();
 </script>
 
 <div
@@ -9,4 +10,7 @@
 >
 	<p class="font-display text-xl font-semibold text-ink">{title}</p>
 	<p class="mx-auto mt-2 max-w-md text-sm leading-6 text-ink-muted">{@render children()}</p>
+	{#if actions}
+		<div class="mt-5 flex flex-wrap justify-center gap-2">{@render actions()}</div>
+	{/if}
 </div>
