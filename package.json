@@ -7,7 +7,7 @@
 	],
 	"scripts": {
 		"build": "wsu build",
-		"dev": "bun --bun wsu dev",
+		"dev": "bun --env-file=.env --bun wsu dev",
 		"lint": "wsu run lint",
 		"typecheck": "wsu run typecheck",
 		"test": "vitest run --exclude packages/db/src/db.test.ts && bun x --bun vitest run packages/db/src/db.test.ts",
@@ -20,7 +20,7 @@
 		"check": "bun run lint && bun run typecheck && bun run test"
 	},
 	"devDependencies": {
-		"@types/bun": "1.3.14",
+		"@types/bun": "1.4.0",
 		"@types/node": "22.18.0",
 		"jose": "6.2.8",
 		"oxfmt": "0.62.0",
