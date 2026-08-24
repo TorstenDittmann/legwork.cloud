@@ -74,7 +74,7 @@ describe("diagnosis contract", () => {
 					provider: "github",
 					sourceType: "deployments",
 					operation: "github_recent_activity",
-					locator: { repositoryId: "repo-1" },
+					locator: { repositoryId: "repo-1", lookbackHours: 24 },
 					excerpt: '"state": "failure"',
 					explanation: "The latest production deployment failed.",
 				},

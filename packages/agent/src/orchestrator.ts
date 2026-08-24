@@ -9,6 +9,7 @@ import type {
 import { agentToolSchema } from "@legwork/contracts";
 import type { SnapshotIndex } from "./evidence";
 import { hydrateDiagnosisEvidence, validateDiagnosisEvidence } from "./evidence";
+import { createInconclusiveDiagnosis } from "./inconclusive";
 import type { ChatMessage, DiagnosisModelProvider } from "./openrouter";
 import {
 	MAX_TOOL_CALLS_PER_TURN,
@@ -242,22 +243,16 @@ export async function runDiagnosisAgent(
 		await activity({
 			kind: "validation",
 			summary: "The repaired diagnosis was still invalid; returning an inconclusive result",
-			detail: errors.join("\n"),
+			detail: errors.join("\n").slice(0, 16_000),
 		});
 		return {
 			inputTokens,
 			outputTokens,
-			diagnosis: {
-				schemaVersion: "1",
-				status: "inconclusive",
-				title: "Evidence validation failed",
-				summary: "The analysis could not produce a diagnosis with verifiable evidence.",
-				rootCause: null,
-				evidence: [],
-				suggestedFix: null,
-				checksRun: [],
-				limitations: errors,
-			},
+			diagnosis: createInconclusiveDiagnosis(
+				errors.some((error) => /invalid_(?:type|union)|unrecognized_keys/i.test(error))
+					? "model_output_invalid"
+					: "evidence_unverified",
+			),
 		};
 	};
 	const diagnosisStarted = performance.now();

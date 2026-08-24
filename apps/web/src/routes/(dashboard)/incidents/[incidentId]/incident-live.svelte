@@ -12,6 +12,7 @@
 	import { formatDateTime, formatDuration } from '$lib/utils';
 	import type { Diagnosis } from '@legwork/contracts';
 	import DiagnosisReport from './diagnosis-report.svelte';
+	import IncidentDescription from './incident-description.svelte';
 	import InvestigationRecord from './investigation-record.svelte';
 
 	// Matches the SSE `incident` event payload. The server-load snapshot feeds the same
@@ -193,7 +194,7 @@
 					{/if}
 				</div>
 				<h1
-					class="font-display text-3xl leading-[1.08] font-semibold tracking-[-0.01em] text-pretty md:text-[44px]"
+					class="font-display text-3xl leading-[1.08] font-semibold tracking-[-0.01em] text-pretty [overflow-wrap:anywhere] md:text-[44px]"
 				>
 					{data.incident.title}
 				</h1>
@@ -262,9 +263,10 @@
 		</div>
 	{/if}
 	{#if data.incident.payload.description}
-		<p class="mt-7 max-w-4xl text-base leading-7 break-words whitespace-pre-wrap text-ink-muted">
-			{data.incident.payload.description}
-		</p>
+		<IncidentDescription
+			description={data.incident.payload.description}
+			collapsed={Boolean(diagnosis)}
+		/>
 	{/if}
 	{#if !diagnosis}
 		<section class="mt-9">
