@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Button from '$lib/components/ui/button.svelte';
-	import SetupChecklist from '$lib/components/setup-checklist.svelte';
+	import SetupOverview from '$lib/components/setup-overview.svelte';
 	import EmptyState from '$lib/components/ui/empty-state.svelte';
 	import PageHeader from '$lib/components/ui/page-header.svelte';
 	import SectionHeader from '$lib/components/ui/section-header.svelte';
@@ -31,12 +31,17 @@
 		{#if data.setup.activated}
 			<Button href="/incidents/new">Start investigation</Button>
 		{:else}
-			<Button href="/setup">Continue setup</Button>
+			<Button href={data.setup.nextStep?.href ?? '/dashboard'}>Continue setup</Button>
 		{/if}
 	{/snippet}
 </PageHeader>
 {#if !data.setup.activated}
-	<SetupChecklist progress={data.setup} canManage={data.role === 'admin'} class="mt-7" />
+	<SetupOverview
+		progress={data.setup}
+		canManage={data.role === 'admin'}
+		connected={data.connected}
+		missing={data.missing}
+	/>
 {/if}
 <dl class="mt-7 grid gap-4 sm:grid-cols-3">
 	{#each stats as [label, value] (label)}
@@ -79,7 +84,7 @@
 				{#if data.setup.serviceCount > 0}
 					<Button href="/incidents/new">Start first investigation</Button>
 				{:else}
-					<Button href="/setup">Continue setup</Button>
+					<Button href={data.setup.nextStep?.href ?? '/dashboard'}>Continue setup</Button>
 				{/if}
 			{/snippet}
 		</EmptyState>

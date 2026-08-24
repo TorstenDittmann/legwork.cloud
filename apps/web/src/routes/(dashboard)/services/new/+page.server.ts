@@ -43,7 +43,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.where(
 			and(eq(repositories.organizationId, tenant.organizationId), eq(repositories.selected, true))
 		);
-	if (!rows.length) redirect(302, '/setup?missing=repository');
+	if (!rows.length) redirect(302, '/dashboard?missing=repository');
 	return { title: 'New Service', repositories: rows };
 };
 

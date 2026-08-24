@@ -17,7 +17,7 @@ const slugify = (name: string, id: string) =>
 function safeReturnTo(value: FormDataEntryValue | string | null): string {
 	return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//')
 		? value
-		: '/setup';
+		: '/dashboard';
 }
 
 // AuthKit's switchOrganization returns a Response carrying the refreshed
