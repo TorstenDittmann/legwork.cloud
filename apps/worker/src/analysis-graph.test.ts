@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
 	ANALYSIS_GRAPH_RECURSION_LIMIT,
 	MAX_INVESTIGATION_TURNS,
+	MAX_INVESTIGATION_TURNS_WITHOUT_PROVIDER,
 	createIncidentAnalysisGraph,
+	investigationTurnLimit,
 	type IncidentAnalysisGraphDependencies,
 } from "./analysis-graph";
 
@@ -20,6 +22,16 @@ const dependencies: IncidentAnalysisGraphDependencies = {
 };
 
 describe("incident analysis graph wiring", () => {
+	it("uses a smaller investigation budget without verified observability", () => {
+		expect(MAX_INVESTIGATION_TURNS_WITHOUT_PROVIDER).toBeLessThan(MAX_INVESTIGATION_TURNS);
+		expect(MAX_INVESTIGATION_TURNS_WITHOUT_PROVIDER).toBeGreaterThanOrEqual(8);
+		expect(investigationTurnLimit([])).toBe(MAX_INVESTIGATION_TURNS_WITHOUT_PROVIDER);
+		expect(investigationTurnLimit([{ verified: false }])).toBe(
+			MAX_INVESTIGATION_TURNS_WITHOUT_PROVIDER,
+		);
+		expect(investigationTurnLimit([{ verified: true }])).toBe(MAX_INVESTIGATION_TURNS);
+	});
+
 	it("budgets enough graph steps for every allowed investigation turn", () => {
 		const initializationSteps = 2;
 		const fullToolTurnSteps = 8;

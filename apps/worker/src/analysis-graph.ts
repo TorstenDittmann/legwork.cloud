@@ -6,11 +6,13 @@ import {
 	MAX_TOOL_CALLS_PER_TURN,
 	ModelDiagnosisValidationError,
 	OpenRouterProvider,
+	createInconclusiveDiagnosis,
 	repositoryToolDefinitions,
 	describeTool,
 	describeToolResult,
 	hydrateDiagnosisEvidence,
 	mapWithConcurrency,
+	providerLocatorsMatch,
 	validateDiagnosisEvidence,
 	type AgentRunResult,
 	type ChatMessage,
@@ -130,7 +132,7 @@ export interface IncidentAnalysisState {
 		callId: string;
 		provider: "grafana" | "sentry" | "github";
 		operation: string;
-		locator: Record<string, string>;
+		locator: Record<string, string | number | boolean>;
 		query?: string;
 		windowStart?: string;
 		windowEnd?: string;
@@ -169,6 +171,13 @@ export interface IncidentAnalysisGraphDependencies {
 const GraphState = Annotation.Root({ data: Annotation<IncidentAnalysisState>() });
 
 export const MAX_INVESTIGATION_TURNS = 20;
+export const MAX_INVESTIGATION_TURNS_WITHOUT_PROVIDER = 10;
+
+export function investigationTurnLimit(bindings: Array<{ verified: boolean }>): number {
+	return bindings.some((binding) => binding.verified)
+		? MAX_INVESTIGATION_TURNS
+		: MAX_INVESTIGATION_TURNS_WITHOUT_PROVIDER;
+}
 
 // A full investigation turn traverses the model plus seven tool-pipeline nodes.
 // Keep this above the longest bounded path (170 nodes today) while retaining a
@@ -231,25 +240,11 @@ function snapshotIndex(state: IncidentAnalysisState): SnapshotIndex {
 				(snapshot) =>
 					snapshot.provider === evidence.provider &&
 					snapshot.operation === evidence.operation &&
-					JSON.stringify(snapshot.locator) === JSON.stringify(evidence.locator) &&
+					providerLocatorsMatch(snapshot.locator, evidence.locator) &&
 					snapshot.query === evidence.query &&
 					snapshot.windowStart === evidence.windowStart &&
 					snapshot.windowEnd === evidence.windowEnd,
 			)?.output ?? null,
-	};
-}
-
-function inconclusive(errors: string[]): Diagnosis {
-	return {
-		schemaVersion: "1",
-		status: "inconclusive",
-		title: "Evidence validation failed",
-		summary: "The analysis could not produce a diagnosis with verifiable evidence.",
-		rootCause: null,
-		evidence: [],
-		suggestedFix: null,
-		checksRun: [],
-		limitations: errors,
 	};
 }
 
@@ -542,6 +537,11 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 									repositoryId,
 									sha,
 								})),
+								observability: {
+									verifiedProviders: state.providerBindings
+										.filter((binding) => binding.verified)
+										.map((binding) => binding.provider),
+								},
 							}),
 						}
 					: message,
@@ -550,8 +550,17 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 	});
 
 	const investigationModel = instrument("investigation_model", async (state) => {
-		if (state.investigationTurn >= MAX_INVESTIGATION_TURNS)
+		const turnLimit = investigationTurnLimit(state.providerBindings);
+		if (state.investigationTurn >= turnLimit) {
+			await activity({
+				kind: "investigation_budget_reached",
+				summary: state.providerBindings.some((binding) => binding.verified)
+					? "Moving to diagnosis after reaching the investigation limit"
+					: "Moving to diagnosis because no verified observability source is connected",
+				detail: JSON.stringify({ investigationTurns: state.investigationTurn, turnLimit }),
+			});
 			return { ...state, pendingToolCalls: [], phase: "synthesizing" };
+		}
 		const model = new OpenRouterProvider(dependencies.openRouterApiKey, dependencies.model);
 		const started = performance.now();
 		const result = await retryModel(
@@ -876,7 +885,10 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 					callId: call.callId,
 					provider: "github",
 					operation: call.tool.name,
-					locator: { repositoryId: call.tool.repositoryId },
+					locator: {
+						repositoryId: call.tool.repositoryId,
+						lookbackHours: call.tool.lookbackHours,
+					},
 					output: result.output,
 					truncated: result.truncated,
 				});
@@ -1052,6 +1064,8 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 		const model = new OpenRouterProvider(dependencies.openRouterApiKey, dependencies.model);
 		let result;
 		let repairUsed = state.repairUsed;
+		let rejectedInputTokens = 0;
+		let rejectedOutputTokens = 0;
 		try {
 			result = await retryModel(
 				() => model.createDiagnosis(state.messages, undefined, dependencies.signal),
@@ -1064,21 +1078,40 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 			);
 		} catch (error) {
 			if (!(error instanceof ModelDiagnosisValidationError)) throw error;
+			rejectedInputTokens = error.usage.inputTokens;
+			rejectedOutputTokens = error.usage.outputTokens;
 			await activity({
 				kind: "validation",
 				summary: "Structured diagnosis was invalid; requesting the single repair",
 				detail: error.message,
 			});
-			result = await model.createDiagnosis(state.messages, error.message, dependencies.signal);
-			repairUsed = true;
+			try {
+				result = await model.createDiagnosis(state.messages, error.message, dependencies.signal);
+				repairUsed = true;
+			} catch (repairError) {
+				if (!(repairError instanceof ModelDiagnosisValidationError)) throw repairError;
+				await activity({
+					kind: "validation",
+					summary: "The corrected diagnosis was still malformed; returning a safe result",
+					detail: repairError.message.slice(0, 16_000),
+				});
+				return {
+					...state,
+					phase: "validating",
+					diagnosis: createInconclusiveDiagnosis("model_output_invalid"),
+					repairUsed: true,
+					inputTokens: state.inputTokens + rejectedInputTokens + repairError.usage.inputTokens,
+					outputTokens: state.outputTokens + rejectedOutputTokens + repairError.usage.outputTokens,
+				};
+			}
 		}
 		return {
 			...state,
 			phase: "validating",
 			diagnosis: result.diagnosis,
 			repairUsed,
-			inputTokens: state.inputTokens + result.usage.inputTokens,
-			outputTokens: state.outputTokens + result.usage.outputTokens,
+			inputTokens: state.inputTokens + rejectedInputTokens + result.usage.inputTokens,
+			outputTokens: state.outputTokens + rejectedOutputTokens + result.usage.outputTokens,
 		};
 	});
 
@@ -1097,8 +1130,18 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 	});
 
 	const repair = instrument("repair_diagnosis", async (state) => {
-		if (state.repairUsed)
-			return { ...state, diagnosis: inconclusive(state.validationErrors), validationErrors: [] };
+		if (state.repairUsed) {
+			await activity({
+				kind: "validation",
+				summary: "Evidence validation still failed; returning a safe result",
+				detail: state.validationErrors.join("\n").slice(0, 16_000),
+			});
+			return {
+				...state,
+				diagnosis: createInconclusiveDiagnosis("evidence_unverified"),
+				validationErrors: [],
+			};
+		}
 		const model = new OpenRouterProvider(dependencies.openRouterApiKey, dependencies.model);
 		try {
 			const result = await retryModel(
@@ -1124,9 +1167,14 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 			};
 		} catch (error) {
 			if (!(error instanceof ModelDiagnosisValidationError)) throw error;
+			await activity({
+				kind: "validation",
+				summary: "The corrected diagnosis was malformed; returning a safe result",
+				detail: error.message.slice(0, 16_000),
+			});
 			return {
 				...state,
-				diagnosis: inconclusive([error.message]),
+				diagnosis: createInconclusiveDiagnosis("model_output_invalid"),
 				repairUsed: true,
 				validationErrors: [],
 				inputTokens: state.inputTokens + error.usage.inputTokens,
@@ -1137,8 +1185,16 @@ export function createIncidentAnalysisGraph(dependencies: IncidentAnalysisGraphD
 
 	const persist = instrument("persist_result", async (state) => {
 		if (!state.diagnosis) throw new Error("MODEL_DIAGNOSIS_MISSING");
+		if (state.validationErrors.length > 0)
+			await activity({
+				kind: "validation",
+				summary: "Evidence validation failed; returning a safe result",
+				detail: state.validationErrors.join("\n").slice(0, 16_000),
+			});
 		const diagnosis =
-			state.validationErrors.length > 0 ? inconclusive(state.validationErrors) : state.diagnosis;
+			state.validationErrors.length > 0
+				? createInconclusiveDiagnosis("evidence_unverified")
+				: state.diagnosis;
 		const status = diagnosis.status === "diagnosed" ? "completed" : "inconclusive";
 		await dependencies.db.transaction(async (tx) => {
 			await tx
@@ -1315,7 +1371,7 @@ export async function runIncidentAnalysisGraph(
 		summary: "Analysis graph reached its terminal durable checkpoint",
 	});
 	return {
-		diagnosis: output.data.diagnosis ?? inconclusive(["Analysis completed without a diagnosis"]),
+		diagnosis: output.data.diagnosis ?? createInconclusiveDiagnosis("analysis_incomplete"),
 		inputTokens: output.data.inputTokens,
 		outputTokens: output.data.outputTokens,
 	};

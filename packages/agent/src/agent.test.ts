@@ -3,8 +3,10 @@ import type { Diagnosis, SandboxProvider, ToolResult } from "@legwork/contracts"
 import {
 	describeTool,
 	describeToolResult,
+	createInconclusiveDiagnosis,
 	hydrateDiagnosisEvidence,
 	mapWithConcurrency,
+	providerLocatorsMatch,
 	runDiagnosisAgent,
 	validateDiagnosisEvidence,
 } from "./index";
@@ -32,6 +34,30 @@ const diagnosis: Diagnosis = {
 };
 
 describe("evidence validation", () => {
+	it("matches provider locators independent of key order and preserves numeric bounds", () => {
+		expect(
+			providerLocatorsMatch(
+				{ repositoryId: "repo", lookbackHours: 24 },
+				{ lookbackHours: 24, repositoryId: "repo" },
+			),
+		).toBe(true);
+		expect(
+			providerLocatorsMatch(
+				{ repositoryId: "repo", lookbackHours: 24 },
+				{ repositoryId: "repo", lookbackHours: 12 },
+			),
+		).toBe(false);
+	});
+
+	it("keeps internal validation details out of inconclusive diagnoses", () => {
+		const result = createInconclusiveDiagnosis("model_output_invalid");
+		expect(result.status).toBe("inconclusive");
+		expect(JSON.stringify(result)).not.toMatch(/invalid_union|unrecognized_keys|Zod/i);
+		expect(result.limitations).toEqual([
+			"The generated evidence references were malformed or incomplete.",
+		]);
+	});
+
 	it("accepts matching connected source lines", async () => {
 		const errors = await validateDiagnosisEvidence(diagnosis, {
 			hasRepository: () => true,
@@ -221,6 +247,38 @@ describe("parallel investigation", () => {
 });
 
 describe("diagnosis repair", () => {
+	it("returns safe user copy when the corrected structured response is still invalid", async () => {
+		let calls = 0;
+		const model: DiagnosisModelProvider = {
+			continueAgent: async () => ({
+				message: { role: "assistant", content: "done" },
+				rawToolCalls: [],
+				usage: { inputTokens: 1, outputTokens: 2 },
+			}),
+			createDiagnosis: async () => {
+				calls += 1;
+				throw new ModelDiagnosisValidationError(
+					calls === 1 ? "lineStart is required" : "invalid_union at evidence[0]",
+					calls === 1 ? { inputTokens: 3, outputTokens: 4 } : { inputTokens: 5, outputTokens: 6 },
+				);
+			},
+		};
+		const result = await runDiagnosisAgent(model, {
+			incident: {},
+			repositories: [{ repositoryId: "repo", sha: "a".repeat(40) }],
+			sandbox: { id: "sandbox", createdAt: new Date() },
+			sandboxProvider: {} as SandboxProvider,
+			snapshot: { hasRepository: () => true, readLines: async () => null },
+			onActivity: async () => {},
+		});
+
+		expect(calls).toBe(2);
+		expect(result.inputTokens).toBe(9);
+		expect(result.outputTokens).toBe(12);
+		expect(JSON.stringify(result.diagnosis)).not.toMatch(/invalid_union|evidence\[0\]/i);
+		expect(result.diagnosis).toEqual(createInconclusiveDiagnosis("model_output_invalid"));
+	});
+
 	it("uses the single repair attempt for an invalid structured response", async () => {
 		const repairs: Array<string | undefined> = [];
 		const model: DiagnosisModelProvider = {

@@ -10,6 +10,7 @@
 	import CardTitle from '$lib/components/ui/card-title.svelte';
 	import InlineAlert from '$lib/components/ui/inline-alert.svelte';
 	import Textarea from '$lib/components/ui/textarea.svelte';
+	import { userFacingLimitations } from '$lib/incident-presentation';
 	import { statusTone } from '$lib/components/ui/status';
 	import { formatDateTime } from '$lib/utils';
 	import type { Diagnosis } from '@legwork/contracts';
@@ -61,6 +62,9 @@
 	let savedFeedback = $state<Feedback | null>(initialFeedback);
 	// svelte-ignore state_referenced_locally
 	let resolvedAt = $state<string | Date | null>(initialResolvedAt);
+	const displayLimitations = $derived(
+		diagnosis ? userFacingLimitations(diagnosis.limitations) : []
+	);
 
 	function reportText(value: Diagnosis) {
 		const lines = [value.status === 'diagnosed' ? 'Diagnosis' : 'Inconclusive investigation'];
@@ -182,10 +186,14 @@
 <div class="mt-10 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
 	<div class="min-w-0 space-y-5">
 		{#if diagnosis}
-			<Card class="min-w-0 overflow-hidden border-t-2 border-t-accent">
+			<Card
+				class="min-w-0 overflow-hidden border-t-2 {diagnosis.status === 'diagnosed'
+					? 'border-t-accent'
+					: 'border-t-warning'}"
+			>
 				<CardHeader class="flex min-w-0 flex-wrap items-center justify-between gap-3">
 					<CardTitle class="text-2xl text-balance">
-						{diagnosis.status === 'diagnosed' ? 'Diagnosis' : 'Inconclusive'}
+						{diagnosis.status === 'diagnosed' ? 'Diagnosis' : 'More evidence needed'}
 					</CardTitle>
 					<div class="flex max-w-full flex-wrap gap-2">
 						<Button
@@ -210,35 +218,58 @@
 				</CardHeader>
 				<CardContent class="min-w-0">
 					<p aria-live="polite" class="mb-3 min-h-5 text-xs text-success">{copyMessage}</p>
-					{#if diagnosis.rootCause}
-						<div class="rounded-lg border border-accent/20 bg-accent-soft px-5 py-4">
-							<p class="text-xs font-semibold tracking-wide text-accent uppercase">Root cause</p>
-							<p class="mt-2 text-lg leading-7 font-medium break-words text-ink">
-								{diagnosis.rootCause.statement}
-							</p>
-							<div class="mt-3 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
-								<span class="text-xs font-medium text-ink-muted tabular-nums"
-									>Confidence {Math.round(diagnosis.rootCause.confidence * 100)}%</span
-								>
-								{#if diagnosis.evidence.length > 0}
-									<span class="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-ink-muted">
-										Exhibits
-										{#each diagnosis.evidence as evidence, index (evidence)}
-											<a
-												href={`#exhibit-${index + 1}`}
-												class="inline-flex min-h-11 items-center rounded-full bg-accent/10 px-2 font-mono text-[11px] font-medium text-accent hover:bg-accent/15 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none sm:min-h-8"
-												>{exhibitId(index)}</a
-											>
-										{/each}
-									</span>
-								{/if}
+					{#if diagnosis.status === 'inconclusive'}
+						<div class="rounded-lg border border-warning/20 bg-warning/5 px-5 py-4">
+							<p class="text-xs font-semibold tracking-wide text-warning uppercase">Inconclusive</p>
+							<p class="mt-2 text-base leading-7 break-words text-ink">{diagnosis.summary}</p>
+						</div>
+						<div class="mt-6">
+							<h3 class="text-sm font-semibold text-ink">What to do next</h3>
+							<ol class="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-ink-muted">
+								<li>Connect or verify the relevant Grafana or Sentry source.</li>
+								<li>
+									Make logs or metrics from the failure window available through that connection.
+								</li>
+								<li>
+									Confirm the pinned revision matches the deployed release, then retry the analysis.
+								</li>
+							</ol>
+						</div>
+					{:else}
+						{#if diagnosis.rootCause}
+							<div class="rounded-lg border border-accent/20 bg-accent-soft px-5 py-4">
+								<p class="text-xs font-semibold tracking-wide text-accent uppercase">Root cause</p>
+								<p class="mt-2 text-lg leading-7 font-medium break-words text-ink">
+									{diagnosis.rootCause.statement}
+								</p>
+								<div class="mt-3 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
+									<span class="text-xs font-medium text-ink-muted tabular-nums"
+										>Confidence {Math.round(diagnosis.rootCause.confidence * 100)}%</span
+									>
+									{#if diagnosis.evidence.length > 0}
+										<span
+											class="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-ink-muted"
+										>
+											Exhibits
+											{#each diagnosis.evidence as evidence, index (evidence)}
+												<a
+													href={`#exhibit-${index + 1}`}
+													class="inline-flex min-h-11 items-center rounded-full bg-accent/10 px-2 font-mono text-[11px] font-medium text-accent hover:bg-accent/15 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none sm:min-h-8"
+													>{exhibitId(index)}</a
+												>
+											{/each}
+										</span>
+									{/if}
+								</div>
 							</div>
+						{/if}
+						<div class={diagnosis.rootCause ? 'mt-6' : ''}>
+							<h3 class="text-sm font-semibold text-ink">What happened</h3>
+							<p class="mt-2 text-base leading-7 break-words text-ink-muted">
+								{diagnosis.summary}
+							</p>
 						</div>
 					{/if}
-					<div class={diagnosis.rootCause ? 'mt-6' : ''}>
-						<h3 class="text-sm font-semibold text-ink">What happened</h3>
-						<p class="mt-2 text-base leading-7 break-words text-ink-muted">{diagnosis.summary}</p>
-					</div>
 				</CardContent>
 			</Card>
 
@@ -273,65 +304,62 @@
 				</Card>
 			{/if}
 
-			<Card class="min-w-0 overflow-hidden">
-				<CardHeader><CardTitle>Evidence</CardTitle></CardHeader>
-				<CardContent class="min-w-0 space-y-5">
-					{#each diagnosis.evidence as evidence, index (index)}
-						{@const sourceUrl = githubFileUrl(evidence)}
-						{@const repository =
-							'repositoryId' in evidence ? repositoryFor(evidence.repositoryId) : null}
-						<article
-							id={`exhibit-${index + 1}`}
-							class="max-w-full min-w-0 scroll-mt-24 overflow-hidden rounded-lg border border-rule"
-						>
-							<div
-								class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-rule px-4 py-2.5"
+			{#if diagnosis.evidence.length > 0}<Card class="min-w-0 overflow-hidden">
+					<CardHeader><CardTitle>Evidence</CardTitle></CardHeader>
+					<CardContent class="min-w-0 space-y-5">
+						{#each diagnosis.evidence as evidence, index (index)}
+							{@const sourceUrl = githubFileUrl(evidence)}
+							{@const repository =
+								'repositoryId' in evidence ? repositoryFor(evidence.repositoryId) : null}
+							<article
+								id={`exhibit-${index + 1}`}
+								class="max-w-full min-w-0 scroll-mt-24 overflow-hidden rounded-lg border border-rule"
 							>
-								<span
-									class="shrink-0 rounded-full bg-accent/10 px-2 py-0.5 font-mono text-[11px] font-medium text-accent"
-									>{exhibitId(index)}</span
+								<div
+									class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-rule px-4 py-2.5"
 								>
-								{#if sourceUrl && 'path' in evidence}
-									<a
-										href={sourceUrl}
-										target="_blank"
-										rel="noreferrer"
-										translate="no"
-										class="flex min-w-0 flex-1 items-center gap-1.5 font-mono text-xs break-all text-accent hover:text-accent-hover hover:underline focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
-									>
-										<span
-											>{repository?.fullName}/{evidence.path}:{evidence.lineStart}-{evidence.lineEnd}</span
-										>
-										<ExternalLink aria-hidden="true" class="size-3.5 shrink-0" />
-									</a>
-								{:else}
 									<span
-										translate="no"
-										class="min-w-0 flex-1 font-mono text-xs break-all text-ink-muted"
+										class="shrink-0 rounded-full bg-accent/10 px-2 py-0.5 font-mono text-[11px] font-medium text-accent"
+										>{exhibitId(index)}</span
 									>
-										{'path' in evidence
-											? `${evidence.path}:${evidence.lineStart}-${evidence.lineEnd}`
-											: 'command' in evidence
-												? evidence.command
-												: evidence.operation}
-									</span>
-								{/if}
-							</div>
-							<pre
-								translate="no"
-								class="max-w-full overflow-x-auto bg-surface-raised px-4 py-3 text-xs leading-5 text-ink-muted">{evidence.excerpt}</pre>
-							<p
-								class="border-t border-rule px-4 py-3 text-sm leading-6 break-words text-ink-muted"
-							>
-								{evidence.explanation}
-							</p>
-						</article>
-					{/each}
-					{#if !diagnosis.evidence.length}<p class="text-sm text-ink-faint">
-							No evidence passed validation.
-						</p>{/if}
-				</CardContent>
-			</Card>
+									{#if sourceUrl && 'path' in evidence}
+										<a
+											href={sourceUrl}
+											target="_blank"
+											rel="noreferrer"
+											translate="no"
+											class="flex min-w-0 flex-1 items-center gap-1.5 font-mono text-xs break-all text-accent hover:text-accent-hover hover:underline focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+										>
+											<span
+												>{repository?.fullName}/{evidence.path}:{evidence.lineStart}-{evidence.lineEnd}</span
+											>
+											<ExternalLink aria-hidden="true" class="size-3.5 shrink-0" />
+										</a>
+									{:else}
+										<span
+											translate="no"
+											class="min-w-0 flex-1 font-mono text-xs break-all text-ink-muted"
+										>
+											{'path' in evidence
+												? `${evidence.path}:${evidence.lineStart}-${evidence.lineEnd}`
+												: 'command' in evidence
+													? evidence.command
+													: evidence.operation}
+										</span>
+									{/if}
+								</div>
+								<pre
+									translate="no"
+									class="max-w-full overflow-x-auto bg-surface-raised px-4 py-3 text-xs leading-5 text-ink-muted">{evidence.excerpt}</pre>
+								<p
+									class="border-t border-rule px-4 py-3 text-sm leading-6 break-words text-ink-muted"
+								>
+									{evidence.explanation}
+								</p>
+							</article>
+						{/each}
+					</CardContent>
+				</Card>{/if}
 		{/if}
 	</div>
 
@@ -429,9 +457,9 @@
 			</Card>
 		{/if}
 
-		{#if diagnosis}
+		{#if diagnosis && (diagnosis.checksRun.length > 0 || displayLimitations.length > 0)}
 			<Card>
-				<CardHeader><CardTitle>Limitations & checks</CardTitle></CardHeader>
+				<CardHeader><CardTitle>Checks & limitations</CardTitle></CardHeader>
 				<CardContent class="space-y-3 text-sm text-ink-muted">
 					{#each diagnosis.checksRun as check, index (`${check.name}-${index}`)}
 						<p class="break-words">
@@ -440,14 +468,11 @@
 							>
 						</p>
 					{/each}
-					{#each diagnosis.limitations as limitation, index (`${limitation}-${index}`)}<p
+					{#each displayLimitations as limitation, index (`${limitation}-${index}`)}<p
 							class="break-words"
 						>
 							• {limitation}
 						</p>{/each}
-					{#if !diagnosis.limitations.length && !diagnosis.checksRun.length}<p>
-							No reported limitations.
-						</p>{/if}
 				</CardContent>
 			</Card>
 		{/if}

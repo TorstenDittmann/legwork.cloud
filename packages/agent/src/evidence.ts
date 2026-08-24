@@ -7,7 +7,7 @@ export interface SnapshotIndex {
 	readProvider?(evidence: {
 		provider: string;
 		operation: string;
-		locator: Record<string, string>;
+		locator: Record<string, string | number | boolean>;
 		query?: string | undefined;
 		windowStart?: string | undefined;
 		windowEnd?: string | undefined;
@@ -15,6 +15,15 @@ export interface SnapshotIndex {
 }
 
 const normalize = (value: string) => value.replaceAll(/\s+/g, " ").trim();
+const normalizeLocator = (value: Record<string, string | number | boolean>) =>
+	JSON.stringify(Object.entries(value).sort(([left], [right]) => left.localeCompare(right)));
+
+export function providerLocatorsMatch(
+	left: Record<string, string | number | boolean>,
+	right: Record<string, string | number | boolean>,
+) {
+	return normalizeLocator(left) === normalizeLocator(right);
+}
 
 function stripLineNumbers(value: string): string {
 	return value

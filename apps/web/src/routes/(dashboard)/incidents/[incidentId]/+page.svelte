@@ -46,7 +46,7 @@
 			<span class="text-xs text-ink-faint">{data.snapshot.serviceName}</span>
 		</div>
 		<h1
-			class="mt-4 font-display text-3xl leading-tight font-semibold tracking-[-0.01em] text-ink sm:text-4xl"
+			class="mt-4 font-display text-3xl leading-tight font-semibold tracking-[-0.01em] text-pretty [overflow-wrap:anywhere] text-ink sm:text-4xl"
 		>
 			{data.snapshot.incident.title}
 		</h1>

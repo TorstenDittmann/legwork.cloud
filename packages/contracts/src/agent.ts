@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const repositoryPath = z.string().min(1).max(2_048);
 const repositoryId = z.string().min(1).max(128);
+const evidenceLocatorValue = z.union([z.string().max(2_048), z.number().finite(), z.boolean()]);
 
 export const agentToolSchema = z.discriminatedUnion("name", [
 	z
@@ -103,7 +104,7 @@ export const diagnosisEvidenceSchema = z.union([
 				"deployments",
 			]),
 			operation: z.string().min(1).max(128),
-			locator: z.record(z.string().max(128), z.string().max(2_048)),
+			locator: z.record(z.string().max(128), evidenceLocatorValue),
 			query: z.string().max(2_048).optional(),
 			windowStart: z.string().datetime({ offset: true }).optional(),
 			windowEnd: z.string().datetime({ offset: true }).optional(),
