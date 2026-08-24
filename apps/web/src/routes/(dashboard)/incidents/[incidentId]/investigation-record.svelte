@@ -137,12 +137,14 @@
 		steps,
 		startedAt,
 		live = false,
-		connected = false
+		connected = false,
+		collapsed = false
 	}: {
 		steps: FeedStep[];
 		startedAt: string | Date;
 		live?: boolean;
 		connected?: boolean;
+		collapsed?: boolean;
 	} = $props();
 
 	let showJump = $state(false);
@@ -185,186 +187,201 @@
 </script>
 
 <section class="mt-10" aria-labelledby="agent-activity-heading">
-	<div class="mb-4 flex flex-wrap items-end justify-between gap-2">
-		<div>
-			<h2
-				id="agent-activity-heading"
-				class="font-display text-xl font-semibold tracking-[-0.005em]"
-			>
-				Investigation record
-			</h2>
-			<p class="mt-1 text-sm text-ink-faint">
-				Sandbox lifecycle, prompts, model responses, tool calls, and tool output · chronological
-			</p>
-		</div>
-		<div class="flex items-center gap-3">
-			{#if showJump}
-				<Button
-					size="sm"
-					variant="outline"
-					onclick={() => {
-						const el = transcriptEl;
-						if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-						followTranscript = true;
-						showJump = false;
-					}}
+	<details open={!collapsed} class="group/record">
+		<summary
+			class="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl border border-rule bg-surface px-4 py-3 shadow-card transition-[border-color,background-color] outline-none hover:border-rule-strong hover:bg-surface-raised focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden"
+		>
+			<div class="min-w-0">
+				<h2
+					id="agent-activity-heading"
+					class="font-display text-xl font-semibold tracking-[-0.005em]"
 				>
-					Jump to latest
-				</Button>
-			{/if}
-			{#if internalCount}
-				<Button size="sm" variant="ghost" onclick={() => (showInternal = !showInternal)}>
-					{showInternal ? 'Hide' : 'Show'} internal ({internalCount})
-				</Button>
-			{/if}
-			{#if live}
-				<span
-					aria-live="polite"
-					class="inline-flex items-center gap-1.5 text-xs font-medium {connected
-						? 'text-live'
-						: 'text-warning'}"
-				>
-					<span aria-hidden="true" class="size-1.5 rounded-full bg-current"></span>
-					{visibleEntries.length} events · {connected ? 'live' : 'reconnecting'}
-				</span>
-			{:else}
-				<span class="text-xs font-medium text-ink-faint">{visibleEntries.length} events</span>
-			{/if}
-		</div>
-	</div>
-	<div
-		bind:this={transcriptEl}
-		onscroll={(event) => {
-			const element = event.currentTarget;
-			followTranscript = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
-			showJump = !followTranscript;
-		}}
-		class="h-[38rem] overflow-y-auto overscroll-contain scroll-smooth rounded-2xl border border-rule bg-surface px-3 py-4 shadow-card sm:px-5"
-	>
-		{#snippet detailsTrigger()}
-			<span
-				class="inline-flex items-center gap-0.5 text-xs font-medium whitespace-nowrap text-accent"
-			>
-				Details
-				<ChevronRight aria-hidden="true" class="size-3 transition-transform group-open:rotate-90" />
-			</span>
-		{/snippet}
-
-		{#snippet activity(entry: FeedEntry, summary: string | null, expandable: boolean)}
-			<div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-				<Badge tone={entryTone(entry)} class="px-2 py-0 text-[11px]">
-					{#if entry.state === 'running'}
-						<span aria-hidden="true" class="relative flex size-1.5">
-							<span
-								class="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-60"
-							></span>
-							<span class="relative inline-flex size-1.5 rounded-full bg-current"></span>
-						</span>
-					{/if}
-					{entryLabel(entry)}
-				</Badge>
-				{#if entry.internal}
-					<span class="font-mono text-[10px] tracking-wide text-ink-faint uppercase">
-						Internal
-					</span>
-				{/if}
-				{#if summary}
-					<p
-						class="min-w-0 flex-1 text-[13px] leading-5 {entry.state === 'failed'
-							? 'text-danger'
-							: 'text-ink-muted'}"
+					Investigation record
+				</h2>
+				<p class="mt-1 text-sm text-ink-faint">
+					{visibleEntries.length} events · sandbox, model, and tool audit trail
+				</p>
+			</div>
+			<ChevronRight
+				aria-hidden="true"
+				class="size-5 shrink-0 text-ink-faint transition-transform group-open/record:rotate-90"
+			/>
+		</summary>
+		<div class="mt-4">
+			<div class="mb-3 flex flex-wrap items-center justify-end gap-3">
+				{#if showJump}
+					<Button
+						size="sm"
+						variant="outline"
+						onclick={() => {
+							const el = transcriptEl;
+							if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+							followTranscript = true;
+							showJump = false;
+						}}
 					>
-						{summary}
-						{#if expandable}<span class="ml-1.5">{@render detailsTrigger()}</span>{/if}
-					</p>
-				{:else if expandable}
-					{@render detailsTrigger()}
+						Jump to latest
+					</Button>
 				{/if}
-				{#if entry.state === 'running'}
-					<span class="ml-auto font-mono text-[10px] text-live tabular-nums">
-						{formatDuration(elapsedMs(entry.createdAt))}
+				{#if internalCount}
+					<Button size="sm" variant="ghost" onclick={() => (showInternal = !showInternal)}>
+						{showInternal ? 'Hide' : 'Show'} internal ({internalCount})
+					</Button>
+				{/if}
+				{#if live}
+					<span
+						aria-live="polite"
+						class="inline-flex items-center gap-1.5 text-xs font-medium {connected
+							? 'text-live'
+							: 'text-warning'}"
+					>
+						<span aria-hidden="true" class="size-1.5 rounded-full bg-current"></span>
+						{visibleEntries.length} events · {connected ? 'live' : 'reconnecting'}
 					</span>
-				{:else if entry.durationMs != null}
-					<span class="ml-auto font-mono text-[10px] text-ink-faint tabular-nums">
-						{formatEntryDuration(entry.durationMs)}
-					</span>
+				{:else}
+					<span class="text-xs font-medium text-ink-faint">{visibleEntries.length} events</span>
 				{/if}
 			</div>
-		{/snippet}
-
-		<ol>
-			{#each visibleEntries as entry, index (entry.id)}
-				{@const summary = entrySummary(entry)}
-				{@const detailSections = entryDetailSections(entry)}
-				{@const expandable = detailSections.length > 0}
-				<li
-					class="agent-log-entry grid grid-cols-[2.75rem_1rem_minmax(0,1fr)] gap-x-2.5 sm:grid-cols-[3.75rem_1rem_minmax(0,1fr)] sm:gap-x-3"
-				>
-					<time
-						datetime={new Date(entry.createdAt).toISOString()}
-						title={formatDateTime(entry.createdAt)}
-						class="pt-px text-right font-mono text-xs text-ink-faint tabular-nums"
+			<div
+				bind:this={transcriptEl}
+				onscroll={(event) => {
+					const element = event.currentTarget;
+					followTranscript = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
+					showJump = !followTranscript;
+				}}
+				class="h-[38rem] overflow-y-auto overscroll-contain scroll-smooth rounded-2xl border border-rule bg-surface px-3 py-4 shadow-card sm:px-5"
+			>
+				{#snippet detailsTrigger()}
+					<span
+						class="inline-flex items-center gap-0.5 text-xs font-medium whitespace-nowrap text-accent"
 					>
-						{formatTrailTime(entry.createdAt, startedAt)}
-					</time>
-					<span aria-hidden="true" class="relative flex justify-center">
-						{#if index < visibleEntries.length - 1}
-							<span class="absolute top-2 bottom-0 w-px bg-rule"></span>
+						Details
+						<ChevronRight
+							aria-hidden="true"
+							class="size-3 transition-transform group-open:rotate-90"
+						/>
+					</span>
+				{/snippet}
+
+				{#snippet activity(entry: FeedEntry, summary: string | null, expandable: boolean)}
+					<div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+						<Badge tone={entryTone(entry)} class="px-2 py-0 text-[11px]">
+							{#if entry.state === 'running'}
+								<span aria-hidden="true" class="relative flex size-1.5">
+									<span
+										class="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-60"
+									></span>
+									<span class="relative inline-flex size-1.5 rounded-full bg-current"></span>
+								</span>
+							{/if}
+							{entryLabel(entry)}
+						</Badge>
+						{#if entry.internal}
+							<span class="font-mono text-[10px] tracking-wide text-ink-faint uppercase">
+								Internal
+							</span>
+						{/if}
+						{#if summary}
+							<p
+								class="min-w-0 flex-1 text-[13px] leading-5 {entry.state === 'failed'
+									? 'text-danger'
+									: 'text-ink-muted'}"
+							>
+								{summary}
+								{#if expandable}<span class="ml-1.5">{@render detailsTrigger()}</span>{/if}
+							</p>
+						{:else if expandable}
+							{@render detailsTrigger()}
 						{/if}
 						{#if entry.state === 'running'}
-							<span class="relative mt-1 flex size-2.5">
-								<span
-									class="absolute inline-flex h-full w-full animate-ping rounded-full bg-live opacity-60"
-								></span>
-								<span
-									class="relative inline-flex size-2.5 rounded-full border-2 border-live bg-live"
-								></span>
+							<span class="ml-auto font-mono text-[10px] text-live tabular-nums">
+								{formatDuration(elapsedMs(entry.createdAt))}
 							</span>
-						{:else}
-							<span class={`relative mt-1 size-2.5 rounded-full border-2 ${entryDot(entry)}`}
-							></span>
-						{/if}
-					</span>
-					<div class={index < visibleEntries.length - 1 ? 'min-w-0 pb-4' : 'min-w-0'}>
-						{#if expandable}
-							<details class="group">
-								<summary
-									class="-mx-1.5 cursor-pointer list-none rounded-md px-1.5 py-0.5 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden"
-								>
-									{@render activity(entry, summary, true)}
-								</summary>
-								<div
-									class="mt-2 space-y-2 overflow-hidden rounded-md border border-rule bg-surface-raised/60 p-2.5"
-								>
-									{#each detailSections as section (section.label)}
-										<div>
-											<p class="font-mono text-[10px] tracking-wide text-ink-faint uppercase">
-												{section.label}
-											</p>
-											<pre
-												translate="no"
-												class="mt-1 overflow-x-auto rounded-sm bg-surface px-2.5 py-2 font-mono text-[11px] leading-4 break-words whitespace-pre-wrap text-ink-muted">{section.value}</pre>
-										</div>
-									{/each}
-								</div>
-							</details>
-						{:else}
-							{@render activity(entry, summary, false)}
+						{:else if entry.durationMs != null}
+							<span class="ml-auto font-mono text-[10px] text-ink-faint tabular-nums">
+								{formatEntryDuration(entry.durationMs)}
+							</span>
 						{/if}
 					</div>
-				</li>
-			{/each}
-		</ol>
-		{#if !visibleEntries.length}
-			<div class="grid min-h-36 place-items-center text-center">
-				<div>
-					<span aria-hidden="true" class="mx-auto mb-3 block size-2.5 rounded-full bg-rule-strong"
-					></span>
-					<p class="text-sm text-ink-faint">
-						{live ? 'Waiting for analysis…' : 'No recorded activity.'}
-					</p>
-				</div>
+				{/snippet}
+
+				<ol>
+					{#each visibleEntries as entry, index (entry.id)}
+						{@const summary = entrySummary(entry)}
+						{@const detailSections = entryDetailSections(entry)}
+						{@const expandable = detailSections.length > 0}
+						<li
+							class="agent-log-entry grid grid-cols-[2.75rem_1rem_minmax(0,1fr)] gap-x-2.5 sm:grid-cols-[3.75rem_1rem_minmax(0,1fr)] sm:gap-x-3"
+						>
+							<time
+								datetime={new Date(entry.createdAt).toISOString()}
+								title={formatDateTime(entry.createdAt)}
+								class="pt-px text-right font-mono text-xs text-ink-faint tabular-nums"
+							>
+								{formatTrailTime(entry.createdAt, startedAt)}
+							</time>
+							<span aria-hidden="true" class="relative flex justify-center">
+								{#if index < visibleEntries.length - 1}
+									<span class="absolute top-2 bottom-0 w-px bg-rule"></span>
+								{/if}
+								{#if entry.state === 'running'}
+									<span class="relative mt-1 flex size-2.5">
+										<span
+											class="absolute inline-flex h-full w-full animate-ping rounded-full bg-live opacity-60"
+										></span>
+										<span
+											class="relative inline-flex size-2.5 rounded-full border-2 border-live bg-live"
+										></span>
+									</span>
+								{:else}
+									<span class={`relative mt-1 size-2.5 rounded-full border-2 ${entryDot(entry)}`}
+									></span>
+								{/if}
+							</span>
+							<div class={index < visibleEntries.length - 1 ? 'min-w-0 pb-4' : 'min-w-0'}>
+								{#if expandable}
+									<details class="group">
+										<summary
+											class="-mx-1.5 cursor-pointer list-none rounded-md px-1.5 py-0.5 transition-colors outline-none hover:bg-surface-raised focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden"
+										>
+											{@render activity(entry, summary, true)}
+										</summary>
+										<div
+											class="mt-2 space-y-2 overflow-hidden rounded-md border border-rule bg-surface-raised/60 p-2.5"
+										>
+											{#each detailSections as section (section.label)}
+												<div>
+													<p class="font-mono text-[10px] tracking-wide text-ink-faint uppercase">
+														{section.label}
+													</p>
+													<pre
+														translate="no"
+														class="mt-1 overflow-x-auto rounded-sm bg-surface px-2.5 py-2 font-mono text-[11px] leading-4 break-words whitespace-pre-wrap text-ink-muted">{section.value}</pre>
+												</div>
+											{/each}
+										</div>
+									</details>
+								{:else}
+									{@render activity(entry, summary, false)}
+								{/if}
+							</div>
+						</li>
+					{/each}
+				</ol>
+				{#if !visibleEntries.length}
+					<div class="grid min-h-36 place-items-center text-center">
+						<div>
+							<span
+								aria-hidden="true"
+								class="mx-auto mb-3 block size-2.5 rounded-full bg-rule-strong"
+							></span>
+							<p class="text-sm text-ink-faint">
+								{live ? 'Waiting for analysis…' : 'No recorded activity.'}
+							</p>
+						</div>
+					</div>
+				{/if}
 			</div>
-		{/if}
-	</div>
+		</div>
+	</details>
 </section>

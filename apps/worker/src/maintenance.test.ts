@@ -3,6 +3,8 @@ import { migrate } from "drizzle-orm/libsql/migrator";
 import {
 	createDatabase,
 	createIncidentIdempotently,
+	diagnoses,
+	diagnosisFeedback,
 	durableJobs,
 	langgraphCheckpoints,
 	langgraphCheckpointWrites,
@@ -121,5 +123,38 @@ describe("purgeExpired", () => {
 		const windows = await db.select().from(serviceRateLimits);
 		expect(windows).toHaveLength(1);
 		expect(windows[0]!.windowStartedAt.getTime()).toBeGreaterThan(now.getTime() - 24 * 60 * 60_000);
+	});
+
+	it("purges expired diagnosis feedback", async () => {
+		const now = new Date();
+		const expired = new Date(now.getTime() - 60_000);
+		const fresh = new Date(now.getTime() + 60_000);
+		await db.insert(diagnoses).values({
+			organizationId,
+			runId,
+			diagnosis: {
+				schemaVersion: "1",
+				status: "inconclusive",
+				title: "Needs more evidence",
+				summary: "No root cause was established.",
+				rootCause: null,
+				evidence: [],
+				suggestedFix: null,
+				checksRun: [],
+				limitations: [],
+			},
+			expiresAt: fresh,
+		});
+		await db.insert(diagnosisFeedback).values({
+			organizationId,
+			runId,
+			verdict: "still_investigating",
+			submittedBy: "user_maintenance",
+			expiresAt: expired,
+		});
+
+		await purgeExpired(now);
+		expect(await db.select().from(diagnosisFeedback)).toEqual([]);
+		expect(await db.select().from(diagnoses)).toHaveLength(1);
 	});
 });

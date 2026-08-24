@@ -51,8 +51,15 @@
 			{data.snapshot.incident.title}
 		</h1>
 	</header>
-	<DiagnosisReport diagnosis={selected.diagnosis} />
-	<InvestigationRecord steps={selected.steps} startedAt={selected.run.createdAt} />
+	<DiagnosisReport
+		diagnosis={selected.diagnosis}
+		runId={selected.run.id}
+		feedback={selected.feedback}
+		resolvedAt={data.snapshot.incident.resolvedAt}
+		revisions={selected.run.resolvedRevisions ?? []}
+		repositories={selected.repositories}
+	/>
+	<InvestigationRecord steps={selected.steps} startedAt={selected.run.createdAt} collapsed />
 {:else}
 	{#key data.snapshot.incident.id}
 		<IncidentLive initial={data.snapshot} />

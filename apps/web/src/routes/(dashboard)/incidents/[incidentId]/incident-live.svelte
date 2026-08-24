@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import type { SubmitFunction } from '@sveltejs/kit';
-	import { Check } from '@lucide/svelte';
+	import { Check, Clipboard, ExternalLink } from '@lucide/svelte';
 	import Button from '$lib/components/ui/button.svelte';
 	import InlineAlert from '$lib/components/ui/inline-alert.svelte';
 	import RecordField from '$lib/components/ui/record-field.svelte';
@@ -24,6 +24,7 @@
 			title: string;
 			severity: string;
 			occurredAt: string | Date;
+			resolvedAt?: string | Date | null;
 			payload: { description?: string; environment?: string };
 		};
 		serviceName: string;
@@ -47,6 +48,11 @@
 			createdAt: string | Date;
 		}>;
 		diagnosis: Diagnosis | null;
+		feedback: {
+			verdict: 'confirmed' | 'helpful' | 'incorrect' | 'still_investigating';
+			note: string | null;
+		} | null;
+		repositories: Array<{ id: string; fullName: string }>;
 	};
 
 	const stages = ['Queued', 'Provisioning', 'Repositories', 'Analyzing', 'Synthesis', 'Complete'];
@@ -61,6 +67,7 @@
 	let connected = $state(false);
 	let retrying = $state(false);
 	let retryError = $state('');
+	let revisionMessage = $state('');
 
 	const activityStartedAt = $derived(
 		data.currentRun?.startedAt ?? data.steps[0]?.createdAt ?? data.incident.occurredAt
@@ -114,6 +121,24 @@
 			retrying = false;
 		};
 	};
+
+	const repositoryFor = (repositoryId: string) =>
+		data.repositories.find((repository) => repository.id === repositoryId);
+	const repositoryUrl = (repositoryId: string, sha: string) => {
+		const repository = repositoryFor(repositoryId);
+		return repository
+			? `https://github.com/${repository.fullName}/commit/${encodeURIComponent(sha)}`
+			: null;
+	};
+
+	async function copyRevision(sha: string) {
+		try {
+			await navigator.clipboard.writeText(sha);
+			revisionMessage = 'Commit SHA copied.';
+		} catch {
+			revisionMessage = 'Copy failed. Select the commit SHA and copy it manually.';
+		}
+	}
 </script>
 
 {#if error}
@@ -150,15 +175,22 @@
 				<div class="mb-3 flex flex-wrap items-center gap-2.5">
 					<SeverityMark severity={data.incident.severity} />
 					<StatusMark status={data.currentRun?.status ?? 'queued'} />
-					<span
-						aria-live="polite"
-						class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium {connected
-							? 'bg-live/10 text-live'
-							: 'bg-warning/10 text-warning'}"
-					>
-						<span aria-hidden="true" class="size-1.5 rounded-full bg-current"></span>
-						{connected ? 'Live' : 'Reconnecting'}
-					</span>
+					{#if data.incident.resolvedAt}
+						<span class="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
+							Resolved
+						</span>
+					{/if}
+					{#if !terminal}
+						<span
+							aria-live="polite"
+							class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium {connected
+								? 'bg-live/10 text-live'
+								: 'bg-warning/10 text-warning'}"
+						>
+							<span aria-hidden="true" class="size-1.5 rounded-full bg-current"></span>
+							{connected ? 'Live' : 'Reconnecting'}
+						</span>
+					{/if}
 				</div>
 				<h1
 					class="font-display text-3xl leading-[1.08] font-semibold tracking-[-0.01em] text-pretty md:text-[44px]"
@@ -187,11 +219,42 @@
 				<RecordField label="Analysis duration">{analysisDuration}</RecordField>
 			{/if}
 			{#each data.currentRun?.resolvedRevisions ?? [] as { repositoryId, sha } (repositoryId)}
-				<RecordField label="Revision">
-					<span translate="no" class="font-mono text-xs">{sha.slice(0, 12)}</span>
+				{@const repository = repositoryFor(repositoryId)}
+				{@const commitUrl = repositoryUrl(repositoryId, sha)}
+				<RecordField label="Revision" class="col-span-2 sm:col-span-1">
+					<span class="flex min-w-0 items-center gap-1">
+						{#if commitUrl}
+							<a
+								href={commitUrl}
+								target="_blank"
+								rel="noreferrer"
+								translate="no"
+								class="min-w-0 truncate font-mono text-xs text-accent hover:underline focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+							>
+								{repository?.fullName}@{sha.slice(0, 12)}
+								<ExternalLink aria-hidden="true" class="inline size-3" />
+							</a>
+						{:else}
+							<span translate="no" class="min-w-0 truncate font-mono text-xs">
+								{sha.slice(0, 12)}
+							</span>
+						{/if}
+						<Button
+							type="button"
+							size="sm"
+							variant="ghost"
+							class="shrink-0 px-2"
+							aria-label="Copy full commit SHA"
+							title="Copy full commit SHA"
+							onclick={() => copyRevision(sha)}
+						>
+							<Clipboard aria-hidden="true" class="size-3.5" />
+						</Button>
+					</span>
 				</RecordField>
 			{/each}
 		</RecordFieldGrid>
+		<p aria-live="polite" class="mt-2 min-h-4 text-xs text-success">{revisionMessage}</p>
 	</header>
 	{#if retryError}
 		<div class="mt-4">
@@ -241,6 +304,19 @@
 			</ol>
 		</section>
 	{/if}
-	<DiagnosisReport {diagnosis} />
-	<InvestigationRecord steps={data.steps} startedAt={activityStartedAt} live {connected} />
+	<DiagnosisReport
+		{diagnosis}
+		runId={data.currentRun?.id ?? null}
+		feedback={data.feedback}
+		resolvedAt={data.incident.resolvedAt ?? null}
+		revisions={data.currentRun?.resolvedRevisions ?? []}
+		repositories={data.repositories}
+	/>
+	<InvestigationRecord
+		steps={data.steps}
+		startedAt={activityStartedAt}
+		live
+		{connected}
+		collapsed={Boolean(diagnosis)}
+	/>
 {/if}
