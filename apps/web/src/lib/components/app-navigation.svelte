@@ -3,7 +3,6 @@
 	import { page } from '$app/state';
 	import {
 		Bell,
-		ClipboardCheck,
 		GitBranch,
 		LayoutDashboard,
 		LogOut,
@@ -22,7 +21,6 @@
 
 	const links = [
 		['/dashboard', LayoutDashboard, 'Overview'],
-		['/setup', ClipboardCheck, 'Setup'],
 		['/incidents', Siren, 'Incidents'],
 		['/services', Radio, 'Services'],
 		['/repositories', GitBranch, 'Repositories'],

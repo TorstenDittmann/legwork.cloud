@@ -48,7 +48,7 @@
 			Connect GitHub, select a repository, and create the first intake endpoint.
 			{#snippet actions()}
 				{#if data.role === 'admin'}
-					<Button href="/setup">Continue setup</Button>
+					<Button href="/dashboard">Continue setup</Button>
 				{/if}
 			{/snippet}
 		</EmptyState>

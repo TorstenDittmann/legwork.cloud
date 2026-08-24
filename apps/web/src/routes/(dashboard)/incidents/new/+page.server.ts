@@ -13,7 +13,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.select({ id: services.id, name: services.name })
 		.from(services)
 		.where(and(eq(services.organizationId, tenant.organizationId), eq(services.enabled, true)));
-	if (!rows.length) redirect(302, '/setup?missing=service');
+	if (!rows.length) redirect(302, '/dashboard?missing=service');
 	const requestedServiceId = url.searchParams.get('service');
 	return {
 		title: 'Start an Investigation',

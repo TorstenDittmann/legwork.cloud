@@ -4,7 +4,7 @@ import { loadSetupProgress } from '$lib/server/setup';
 import { requireTenant } from '$lib/server/tenant';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const tenant = await requireTenant(locals);
 	const db = createDatabase();
 	const month = new Date();
@@ -68,6 +68,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		title: 'Dashboard',
 		role: tenant.role,
 		setup,
+		connected: url.searchParams.get('connected') === '1',
+		missing: url.searchParams.get('missing'),
 		month,
 		serviceCount: serviceCount?.value ?? 0,
 		incidentCount: incidentCount?.value ?? 0,
