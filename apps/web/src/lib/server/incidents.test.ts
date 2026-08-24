@@ -8,7 +8,9 @@ import {
 	createDatabase,
 	createIncidentIdempotently,
 	diagnoses,
+	githubInstallations,
 	organizations,
+	repositories,
 	services
 } from '@legwork/db';
 import { loadIncident, loadIncidentRun, loadIncidentStream } from './incidents';
@@ -19,6 +21,7 @@ let organizationId = '';
 let incidentId = '';
 let firstRunId = '';
 let retryRunId = '';
+let repositoryId = '';
 
 const diagnosis: Diagnosis = {
 	schemaVersion: '1',
@@ -44,6 +47,29 @@ beforeAll(async () => {
 		.insert(services)
 		.values({ organizationId: organization!.id, name: 'API', slug: 'api' })
 		.returning();
+	const [installation] = await db
+		.insert(githubInstallations)
+		.values({
+			organizationId: organization!.id,
+			installationId: 9001,
+			accountLogin: 'legwork-test',
+			accountId: 9001
+		})
+		.returning();
+	const [repository] = await db
+		.insert(repositories)
+		.values({
+			organizationId: organization!.id,
+			githubInstallationId: installation!.id,
+			githubRepositoryId: 9002,
+			owner: 'legwork-test',
+			name: 'api',
+			fullName: 'legwork-test/api',
+			defaultBranch: 'main',
+			selected: true
+		})
+		.returning();
+	repositoryId = repository!.id;
 	organizationId = organization!.id;
 	const created = await createIncidentIdempotently(db, {
 		organizationId,
@@ -70,6 +96,14 @@ beforeAll(async () => {
 			organizationId,
 			incidentId,
 			status: 'completed',
+			resolvedRevisions: [
+				{
+					repositoryId: repository!.id,
+					githubRepositoryId: repository!.githubRepositoryId,
+					sha: '0123456789abcdef0123456789abcdef01234567',
+					role: 'primary'
+				}
+			],
 			expiresAt: firstRun!.expiresAt,
 			createdAt: new Date(Date.now() + 10_000)
 		})
@@ -102,10 +136,13 @@ describe('loadIncidentStream', () => {
 			serviceName: full!.serviceName,
 			currentRun: full!.currentRun,
 			steps: full!.steps,
-			diagnosis: full!.diagnosis
+			diagnosis: full!.diagnosis,
+			feedback: full!.feedback,
+			repositories: full!.repositories
 		});
 		expect(stream?.currentRun?.status).toBe('completed');
 		expect(stream?.steps).toHaveLength(1);
+		expect(stream?.repositories).toEqual([{ id: repositoryId, fullName: 'legwork-test/api' }]);
 	});
 
 	it('stays tenant-scoped', async () => {

@@ -393,6 +393,8 @@ export const incidents = sqliteTable(
 		}).notNull(),
 		occurredAt: integer("occurred_at", { mode: "timestamp" }).notNull(),
 		payload: text("payload", { mode: "json" }).$type<CreateIncidentRequest>().notNull(),
+		resolvedAt: integer("resolved_at", { mode: "timestamp" }),
+		resolvedBy: text("resolved_by"),
 		expiresAt: expiresAt(),
 		createdAt: createdAt(),
 		updatedAt: updatedAt(),
@@ -533,6 +535,30 @@ export const diagnoses = sqliteTable("diagnoses", {
 	createdAt: createdAt(),
 	expiresAt: expiresAt(),
 });
+
+export const diagnosisFeedback = sqliteTable(
+	"diagnosis_feedback",
+	{
+		id: id(),
+		organizationId: tenantId(),
+		runId: text("run_id")
+			.notNull()
+			.references(() => analysisRuns.id, { onDelete: "cascade" })
+			.unique(),
+		verdict: text("verdict", {
+			enum: ["confirmed", "helpful", "incorrect", "still_investigating"],
+		}).notNull(),
+		note: text("note"),
+		submittedBy: text("submitted_by").notNull(),
+		createdAt: createdAt(),
+		updatedAt: updatedAt(),
+		expiresAt: expiresAt(),
+	},
+	(table) => [
+		index("diagnosis_feedback_org_date_idx").on(table.organizationId, table.createdAt),
+		index("diagnosis_feedback_expiry_idx").on(table.expiresAt),
+	],
+);
 
 export const usageEvents = sqliteTable(
 	"usage_events",
@@ -705,4 +731,5 @@ export const runRelations = relations(analysisRuns, ({ one, many }) => ({
 	incident: one(incidents, { fields: [analysisRuns.incidentId], references: [incidents.id] }),
 	steps: many(agentSteps),
 	diagnosis: one(diagnoses),
+	feedback: one(diagnosisFeedback),
 }));

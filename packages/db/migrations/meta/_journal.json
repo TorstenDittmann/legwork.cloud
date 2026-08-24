@@ -78,6 +78,13 @@
       "when": 1787446367614,
       "tag": "0010_white_redwing",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1787593534407,
+      "tag": "0011_tough_boom_boom",
+      "breakpoints": true
     }
   ]
 }

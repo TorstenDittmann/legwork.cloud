@@ -6,6 +6,7 @@ import {
 	callbackDeliveries,
 	createDatabase,
 	diagnoses,
+	diagnosisFeedback,
 	incidents,
 	langgraphCheckpoints,
 	langgraphCheckpointWrites,
@@ -67,6 +68,10 @@ export async function purgeExpired(now = new Date()): Promise<void> {
 		.delete(diagnoses)
 		.where(lt(diagnoses.expiresAt, now))
 		.returning({ id: diagnoses.id });
+	const deletedFeedback = await db
+		.delete(diagnosisFeedback)
+		.where(lt(diagnosisFeedback.expiresAt, now))
+		.returning({ id: diagnosisFeedback.id });
 	const deletedSteps = await db
 		.delete(agentSteps)
 		.where(lt(agentSteps.expiresAt, now))
@@ -76,6 +81,7 @@ export async function purgeExpired(now = new Date()): Promise<void> {
 	purgedRecords.inc({ table: "notification_deliveries" }, deletedNotifications.length);
 	purgedRecords.inc({ table: "external_incident_links" }, deletedLinks.length);
 	purgedRecords.inc({ table: "diagnoses" }, deletedDiagnoses.length);
+	purgedRecords.inc({ table: "diagnosis_feedback" }, deletedFeedback.length);
 	purgedRecords.inc({ table: "agent_steps" }, deletedSteps.length);
 	const deletedIncidents = await db
 		.delete(incidents)

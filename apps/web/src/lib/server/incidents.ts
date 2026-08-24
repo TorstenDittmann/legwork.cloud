@@ -1,13 +1,30 @@
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import {
 	agentSteps,
 	analysisRuns,
 	callbackDeliveries,
 	createDatabase,
 	diagnoses,
+	diagnosisFeedback,
 	incidents,
+	repositories,
 	services
 } from '@legwork/db';
+
+async function loadRepositoryRefs(
+	db: ReturnType<typeof createDatabase>,
+	organizationId: string,
+	revisions: Array<{ repositoryId: string }> | null | undefined
+) {
+	const repositoryIds = [...new Set((revisions ?? []).map(({ repositoryId }) => repositoryId))];
+	if (!repositoryIds.length) return [];
+	return db
+		.select({ id: repositories.id, fullName: repositories.fullName })
+		.from(repositories)
+		.where(
+			and(eq(repositories.organizationId, organizationId), inArray(repositories.id, repositoryIds))
+		);
+}
 
 /**
  * The subset of loadIncident() the live SSE stream serializes. Polled every
@@ -39,7 +56,7 @@ export async function loadIncidentStream(organizationId: string, incidentId: str
 			.limit(1)
 	]);
 	if (!incident) return null;
-	const [steps, diagnosis] = currentRun
+	const [steps, diagnosis, feedback, repositoryRefs] = currentRun
 		? await Promise.all([
 				db
 					.select()
@@ -54,15 +71,28 @@ export async function loadIncidentStream(organizationId: string, incidentId: str
 					.where(
 						and(eq(diagnoses.runId, currentRun.id), eq(diagnoses.organizationId, organizationId))
 					)
-					.limit(1)
+					.limit(1),
+				db
+					.select()
+					.from(diagnosisFeedback)
+					.where(
+						and(
+							eq(diagnosisFeedback.runId, currentRun.id),
+							eq(diagnosisFeedback.organizationId, organizationId)
+						)
+					)
+					.limit(1),
+				loadRepositoryRefs(db, organizationId, currentRun.resolvedRevisions)
 			])
-		: [[], []];
+		: [[], [], [], []];
 	return {
 		incident: incident.incident,
 		serviceName: incident.serviceName,
 		currentRun: currentRun ?? null,
 		steps,
-		diagnosis: diagnosis[0]?.diagnosis ?? null
+		diagnosis: diagnosis[0]?.diagnosis ?? null,
+		feedback: feedback[0] ?? null,
+		repositories: repositoryRefs
 	};
 }
 
@@ -85,7 +115,7 @@ export async function loadIncidentRun(organizationId: string, incidentId: string
 		)
 		.limit(1);
 	if (!run) return null;
-	const [steps, diagnosis] = await Promise.all([
+	const [steps, diagnosis, feedback, repositoryRefs] = await Promise.all([
 		db
 			.select()
 			.from(agentSteps)
@@ -95,9 +125,26 @@ export async function loadIncidentRun(organizationId: string, incidentId: string
 			.select()
 			.from(diagnoses)
 			.where(and(eq(diagnoses.runId, run.id), eq(diagnoses.organizationId, organizationId)))
-			.limit(1)
+			.limit(1),
+		db
+			.select()
+			.from(diagnosisFeedback)
+			.where(
+				and(
+					eq(diagnosisFeedback.runId, run.id),
+					eq(diagnosisFeedback.organizationId, organizationId)
+				)
+			)
+			.limit(1),
+		loadRepositoryRefs(db, organizationId, run.resolvedRevisions)
 	]);
-	return { run, steps, diagnosis: diagnosis[0]?.diagnosis ?? null };
+	return {
+		run,
+		steps,
+		diagnosis: diagnosis[0]?.diagnosis ?? null,
+		feedback: feedback[0] ?? null,
+		repositories: repositoryRefs
+	};
 }
 
 export async function loadIncident(organizationId: string, incidentId: string) {
@@ -125,7 +172,7 @@ export async function loadIncident(organizationId: string, incidentId: string) {
 	]);
 	if (!incident) return null;
 	const current = runs[0];
-	const [steps, diagnosis, callbacks] = current
+	const [steps, diagnosis, feedback, callbacks, repositoryRefs] = current
 		? await Promise.all([
 				db
 					.select()
@@ -141,6 +188,16 @@ export async function loadIncident(organizationId: string, incidentId: string) {
 					.limit(1),
 				db
 					.select()
+					.from(diagnosisFeedback)
+					.where(
+						and(
+							eq(diagnosisFeedback.runId, current.id),
+							eq(diagnosisFeedback.organizationId, organizationId)
+						)
+					)
+					.limit(1),
+				db
+					.select()
 					.from(callbackDeliveries)
 					.where(
 						and(
@@ -148,15 +205,18 @@ export async function loadIncident(organizationId: string, incidentId: string) {
 							eq(callbackDeliveries.organizationId, organizationId)
 						)
 					)
-					.orderBy(desc(callbackDeliveries.createdAt))
+					.orderBy(desc(callbackDeliveries.createdAt)),
+				loadRepositoryRefs(db, organizationId, current.resolvedRevisions)
 			])
-		: [[], [], []];
+		: [[], [], [], [], []];
 	return {
 		...incident,
 		runs,
 		currentRun: current ?? null,
 		steps,
 		diagnosis: diagnosis[0]?.diagnosis ?? null,
+		feedback: feedback[0] ?? null,
+		repositories: repositoryRefs,
 		callbacks
 	};
 }

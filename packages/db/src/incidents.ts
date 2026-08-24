@@ -3,6 +3,9 @@ import type { CreateIncidentRequest } from "@legwork/contracts";
 import type { Database } from "./client";
 import {
 	analysisRuns,
+	auditEvents,
+	diagnoses,
+	diagnosisFeedback,
 	durableJobs,
 	incidents,
 	organizations,
@@ -14,6 +17,14 @@ const RETENTION_MS = 30 * 24 * 60 * 60 * 1_000;
 const DEFAULT_TOKEN_RESERVATION = 100_000;
 
 export class QuotaExceededError extends Error {}
+
+const diagnosisFeedbackVerdicts = [
+	"confirmed",
+	"helpful",
+	"incorrect",
+	"still_investigating",
+] as const;
+export type DiagnosisFeedbackVerdict = (typeof diagnosisFeedbackVerdicts)[number];
 
 function monthStart(now: Date): Date {
 	return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
@@ -244,4 +255,97 @@ export async function createRetryRun(
 		},
 		{ behavior: "immediate" },
 	);
+}
+
+export interface SaveDiagnosisFeedbackParams {
+	organizationId: string;
+	incidentId: string;
+	runId: string;
+	verdict: DiagnosisFeedbackVerdict;
+	note?: string;
+	actorId: string;
+}
+
+export async function saveDiagnosisFeedback(db: Database, params: SaveDiagnosisFeedbackParams) {
+	return db.transaction(async (tx) => {
+		const [run] = await tx
+			.select({ expiresAt: analysisRuns.expiresAt })
+			.from(analysisRuns)
+			.innerJoin(
+				diagnoses,
+				and(
+					eq(diagnoses.runId, analysisRuns.id),
+					eq(diagnoses.organizationId, params.organizationId),
+				),
+			)
+			.where(
+				and(
+					eq(analysisRuns.id, params.runId),
+					eq(analysisRuns.incidentId, params.incidentId),
+					eq(analysisRuns.organizationId, params.organizationId),
+				),
+			)
+			.limit(1);
+		if (!run) throw new Error("Diagnosis not found");
+
+		const note = params.note?.trim() || null;
+		const [feedback] = await tx
+			.insert(diagnosisFeedback)
+			.values({
+				organizationId: params.organizationId,
+				runId: params.runId,
+				verdict: params.verdict,
+				note,
+				submittedBy: params.actorId,
+				expiresAt: run.expiresAt,
+			})
+			.onConflictDoUpdate({
+				target: diagnosisFeedback.runId,
+				set: {
+					verdict: params.verdict,
+					note,
+					submittedBy: params.actorId,
+					updatedAt: new Date(),
+				},
+			})
+			.returning();
+		if (!feedback) throw new Error("Failed to save diagnosis feedback");
+
+		await tx.insert(auditEvents).values({
+			organizationId: params.organizationId,
+			actorId: params.actorId,
+			action: "diagnosis.feedback_saved",
+			targetType: "analysis_run",
+			targetId: params.runId,
+			metadata: { verdict: params.verdict, hasNote: Boolean(note) },
+		});
+		return feedback;
+	});
+}
+
+export async function setIncidentResolution(
+	db: Database,
+	organizationId: string,
+	incidentId: string,
+	actorId: string,
+	resolved: boolean,
+) {
+	return db.transaction(async (tx) => {
+		const resolvedAt = resolved ? new Date() : null;
+		const [incident] = await tx
+			.update(incidents)
+			.set({ resolvedAt, resolvedBy: resolved ? actorId : null, updatedAt: new Date() })
+			.where(and(eq(incidents.id, incidentId), eq(incidents.organizationId, organizationId)))
+			.returning({ id: incidents.id, resolvedAt: incidents.resolvedAt });
+		if (!incident) throw new Error("Incident not found");
+
+		await tx.insert(auditEvents).values({
+			organizationId,
+			actorId,
+			action: resolved ? "incident.resolved" : "incident.reopened",
+			targetType: "incident",
+			targetId: incidentId,
+		});
+		return incident;
+	});
 }
