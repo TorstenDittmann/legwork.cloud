@@ -11,9 +11,9 @@ The MVP is implemented and tracked in git: `main` carries 13 merged pull request
 Implemented architecture:
 
 - Bun 1.4.0 as runtime and package manager, pinned through `mise.toml`, `engines`, and `packageManager`.
-- SvelteKit (Svelte 5, Vite, `adapter-node`) web/API application; `bun run dev` serves it on port 5173.
+- SvelteKit (Svelte 5, Vite, `adapter-node`) web/API application; `bun run dev` serves it on port 5173, Docker Compose serves it on port 3000.
 - WorkOS AuthKit active-organization authentication with `admin` and `member` authorization.
-- libSQL with Drizzle ORM and a custom durable leased-job queue. `DATABASE_URL` defaults to the local `file:local.db`; the remote database is a self-hosted libsql-server whose JWTs are minted with `bun run db:tokens`.
+- libSQL with Drizzle ORM and a custom durable leased-job queue. `DATABASE_URL` defaults to the local `file:local.db`; Docker Compose runs a self-hosted libsql-server (JWTs optional via `bun run db:tokens`).
 - Read-only GitHub App integration and exact-SHA archive retrieval.
 - microsandbox `0.7.2` local microVM provider behind `SandboxProvider`.
 - OpenRouter tool loop and structured diagnosis behind the model boundary; each analysis run is a durable LangGraph thread with libSQL checkpoints.
@@ -25,7 +25,7 @@ Implemented architecture:
 
 Useful entry points:
 
-- `README.md`: developer setup and Railway deployment.
+- `README.md`: developer setup and Docker Compose deployment.
 - `packages/db/src/schema.ts`: all 27 tables.
 - `packages/db/src/incidents.ts`: atomic incident, quota reservation, idempotency, retry runs.
 - `packages/db/src/jobs.ts`: queue singleton, lease recovery, deferral, retries.
@@ -82,7 +82,7 @@ These items require real staging credentials or external configuration and must 
 4. Configure WorkOS roles and URLs, then test onboarding and cross-organization denial.
 5. Configure the read-only GitHub App and run installation/webhook/exact-SHA tests.
 6. Exercise OpenRouter with recorded fixtures and confirm privacy-route failure remains fail-closed.
-7. Run `bun run --filter @legwork/sandbox probe` against the real Railway project.
+7. Run `bun run --filter @legwork/sandbox probe` against the Docker Compose worker host (needs `/dev/kvm`).
 8. Leave command execution disabled unless every probe assertion passes.
 9. Rebuild an authenticated end-to-end suite and run the live agent evaluation.
 10. Verify remote libSQL backup aging before making any public backup-deletion promise.

@@ -6,10 +6,11 @@
  * Tokens from an existing key: bun run db:tokens -- --key private-key.pem
  * Expiring tokens:             bun run db:tokens -- --expires 30d
  *
- * The public key goes into the libsql service's SQLD_AUTH_JWT_KEY. The RW token
- * becomes DATABASE_AUTH_TOKEN on the web and worker services; the RO token is for
- * local, read-only access to the same database. Store the private key in a
- * password manager — it is only needed to mint future tokens and never ships.
+ * The public key goes into the libsql service's SQLD_AUTH_JWT_KEY (for example in
+ * docker-compose). The RW token becomes DATABASE_AUTH_TOKEN on the web and worker
+ * services; the RO token is for local, read-only access to the same database. Store
+ * the private key in a password manager — it is only needed to mint future tokens
+ * and never ships.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

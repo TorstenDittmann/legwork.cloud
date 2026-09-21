@@ -13,7 +13,7 @@ const checks = [
   ["dns", async () => dns.lookup("example.com")],
   ["publicHttp", async () => fetch("http://1.1.1.1", { signal: AbortSignal.timeout(2500) })],
   ["publicHttps", async () => fetch("https://example.com", { signal: AbortSignal.timeout(2500) })],
-  ["privateDns", async () => dns.lookup("railway.internal")],
+  ["privateDns", async () => dns.lookup("metadata.google.internal")],
   ["metadata", async () => fetch("http://169.254.169.254/latest/meta-data", { signal: AbortSignal.timeout(2500) })],
 ];
 for (const [name, check] of checks) { try { await check(); console.log(name + ":reachable"); } catch {} }

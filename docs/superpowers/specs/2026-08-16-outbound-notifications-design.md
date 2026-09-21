@@ -213,7 +213,7 @@ The form includes a one-line pointer to where each destination comes from (Slack
 settings → Incoming Webhooks; Discord: channel settings → Integrations → Webhooks).
 
 **Secret boundary:** the web action enqueues the test delivery; the worker sends it.
-`RESEND_API_KEY` stays worker-only alongside `OPENROUTER_API_KEY` and the Railway token, per
+`RESEND_API_KEY` stays worker-only alongside `OPENROUTER_API_KEY`, per
 the allocation table in `ARCHITECTURE.md`. The worker polls at one-second intervals, so the
 button still feels immediate. The web service never holds a platform mail credential.
 

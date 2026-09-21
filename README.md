@@ -26,11 +26,25 @@ Bun 1.4.0 is the project runtime and package manager through `mise.toml`.
 
 ## Local setup
 
+### Option A: Docker Compose
+
+1. Copy `.env.example` to `.env` and fill the required values (at least `DATA_ENCRYPTION_KEY`).
+2. In WorkOS AuthKit, configure the callback as `http://localhost:3000/auth/callback`, the sign-in URL as `http://localhost:3000/sign-in`, and create immutable `admin` and `member` role slugs. Set `member` as the default role.
+3. Create a read-only GitHub App with repository metadata, contents, Actions, and Deployments read permissions plus `installation` and `installation_repositories` webhooks. Configure its setup callback as `/api/github/callback` and webhook URL as `/api/github/webhook`.
+4. Start the stack (worker needs `/dev/kvm` for microsandbox):
+
+```sh
+docker compose up --build
+```
+
+Web listens on `http://localhost:3000`. libSQL is on `http://localhost:8080`. The web container runs migrations on startup.
+
+### Option B: Bun on the host
+
 1. Copy `.env.example` to `.env.local` and fill the required values.
 2. Set `DATABASE_URL` if you do not want the default `file:local.db`, then run `bun run db:migrate`. Set `DATABASE_AUTH_TOKEN` when the remote endpoint requires authentication.
-3. In WorkOS AuthKit, configure the callback as `http://localhost:5173/auth/callback`, the sign-in URL as `http://localhost:5173/sign-in`, and create immutable `admin` and `member` role slugs. Set `member` as the default role.
-4. Create a read-only GitHub App with repository metadata, contents, Actions, and Deployments read permissions plus `installation` and `installation_repositories` webhooks. Configure its setup callback as `/api/github/callback` and webhook URL as `/api/github/webhook`.
-5. Start the web and worker processes:
+3. Configure WorkOS and the GitHub App as above (use port `5173` for local Vite).
+4. Start the web and worker processes:
 
 ```sh
 bun run dev
@@ -81,16 +95,19 @@ webhook URL and work immediately; email requires `RESEND_API_KEY` and `RESEND_FR
 worker plus a sending domain verified in Resend. Each channel routes to every service unless you
 narrow it, and **Send test** posts a real message through the same path a diagnosis takes.
 
-## Railway deployment
+## Docker Compose deployment
 
-Create two Railway services from this repository and use these commands:
+`docker-compose.yml` runs three services: `libsql`, `web`, and `worker`.
 
-| Service | Build                                    | Start                                    | Health         |
-| ------- | ---------------------------------------- | ---------------------------------------- | -------------- |
-| Web     | `bun run --filter @legwork/web build`    | `bun run --filter @legwork/web start`    | `/api/health`  |
-| Worker  | `bun run --filter @legwork/worker build` | `bun run --filter @legwork/worker start` | process health |
+| Service | Image / build                | Port | Notes                                             |
+| ------- | ---------------------------- | ---- | ------------------------------------------------- |
+| libsql  | Turso libsql-server          | 8080 | Persistent volume `libsql-data`                   |
+| web     | `Dockerfile` target `web`    | 3000 | Runs `db:migrate` then the SvelteKit Node adapter |
+| worker  | `Dockerfile` target `worker` | —    | Privileged + `/dev/kvm` for microsandbox          |
 
-Both services use the same remote libSQL `DATABASE_URL`; local development uses `file:local.db`. Only the worker receives the GitHub private key and OpenRouter key. The web service receives WorkOS credentials and GitHub webhook/setup secrets. Scope shared values narrowly in Railway rather than exposing all secrets to both services.
+Only the worker should receive the GitHub App private key and OpenRouter key. The web service receives WorkOS credentials and GitHub webhook/setup secrets. Put shared secrets in `.env` and keep service-specific values scoped the same way.
+
+To enable JWT auth on libSQL later, mint keys with `bun run db:tokens`, set `SQLD_AUTH_JWT_KEY` on the libsql service, and set `DATABASE_AUTH_TOKEN` for web and worker.
 
 ## Sandbox command gate
 
