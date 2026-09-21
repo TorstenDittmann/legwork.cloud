@@ -12,7 +12,7 @@ For project continuation and implementation status, start with [`docs/HANDOFF.md
 - `packages/db`: Drizzle schema for libSQL, migrations, tenant queries, quotas, idempotency, and durable jobs.
 - `packages/auth`: WorkOS AuthKit active-organization and `admin`/`member` enforcement.
 - `packages/github`: signed installation state, webhook verification, short-lived installation tokens, exact-SHA archives.
-- `packages/sandbox`: microsandbox (local microVM) provider by default, optional Docker fallback, shared bootstrap scripts, and the mandatory no-egress capability probe.
+- `packages/sandbox`: microsandbox local microVM provider, shared bootstrap scripts, and the mandatory no-egress capability probe.
 - `packages/agent`: OpenRouter model boundary, strict structured output, and evidence validation.
 - `packages/contracts`: Zod contracts for agents, incidents, providers, callbacks, notifications, and problem responses.
 - `packages/integrations`: Grafana and Sentry alert intake, provider connections, and discovery.
@@ -94,12 +94,9 @@ Both services use the same remote libSQL `DATABASE_URL`; local development uses 
 
 ## Sandbox command gate
 
-Repository code execution is disabled by default. Analysis sandboxes run on [microsandbox](https://microsandbox.dev) local microVMs by default (hardware isolation via KVM / Apple Virtualization / WHP).
+Repository code execution is disabled by default. Analysis sandboxes run on [microsandbox](https://microsandbox.dev) local microVMs (hardware isolation via KVM / Apple Virtualization / WHP), with a codeload.github.com-only network policy and the same `ocai-run-check` no-egress wrapper used for approved commands.
 
-- `SANDBOX_PROVIDER=microsandbox` (default): disposable microVMs with a codeload.github.com-only network policy and the same `ocai-run-check` no-egress wrapper used for approved commands.
-- `SANDBOX_PROVIDER=docker`: optional Docker containers from `packages/sandbox/Dockerfile` when a microVM runtime is unavailable.
-
-Requires Linux+KVM, Apple Silicon, or Windows WHP for microsandbox. Prepare the runtime and run the capability probe:
+Requires Linux+KVM, Apple Silicon, or Windows WHP. Prepare the runtime and run the capability probe:
 
 ```sh
 bun run --filter @legwork/sandbox probe

@@ -87,7 +87,6 @@ export default defineRailway((ctx) => {
 			OPENROUTER_MODEL: preserve(),
 			RESEND_API_KEY: preserve(),
 			RESEND_FROM_ADDRESS: preserve(),
-			SANDBOX_PROVIDER: preserve(),
 			SANDBOX_IMAGE: preserve(),
 			SANDBOX_MEMORY_MIB: preserve(),
 			SANDBOX_CPUS: preserve(),

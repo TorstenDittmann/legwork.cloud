@@ -2,9 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	createSandboxProvider,
 	discoverCheckCommand,
-	LocalSandboxProvider,
 	MicrosandboxProvider,
-	resolveSandboxProviderKind,
 	shellQuote,
 	validateRepositoryManifest,
 } from "./index";
@@ -47,25 +45,13 @@ describe("repository bootstrap manifest", () => {
 	});
 });
 
-describe("sandbox provider selection", () => {
-	it("defaults to microsandbox", () => {
-		expect(resolveSandboxProviderKind(undefined)).toBe("microsandbox");
-		expect(resolveSandboxProviderKind("microsandbox")).toBe("microsandbox");
-	});
-
-	it("maps legacy aliases", () => {
-		expect(resolveSandboxProviderKind("local")).toBe("docker");
-		expect(resolveSandboxProviderKind("docker")).toBe("docker");
-		expect(resolveSandboxProviderKind("railway")).toBe("microsandbox");
-	});
-
-	it("constructs the matching provider implementation", () => {
-		const options = { commandExecutionEnabled: false, capabilityProbePassed: false };
-		expect(createSandboxProvider({ ...options, kind: "microsandbox" })).toBeInstanceOf(
-			MicrosandboxProvider,
-		);
-		expect(createSandboxProvider({ ...options, kind: "docker" })).toBeInstanceOf(
-			LocalSandboxProvider,
-		);
+describe("sandbox provider", () => {
+	it("constructs the microsandbox provider", () => {
+		expect(
+			createSandboxProvider({
+				commandExecutionEnabled: false,
+				capabilityProbePassed: false,
+			}),
+		).toBeInstanceOf(MicrosandboxProvider);
 	});
 });

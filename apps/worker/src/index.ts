@@ -15,8 +15,8 @@ const config = workerConfig();
 const db = createDatabase();
 const workerId = crypto.randomUUID();
 
-await prepareSandboxBackend(config.sandboxProvider);
-logger.info({ provider: config.sandboxProvider }, "Analysis sandbox backend is ready");
+await prepareSandboxBackend();
+logger.info("Microsandbox analysis backend is ready");
 const pollers = [
 	createQueuePoller({
 		db,

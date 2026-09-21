@@ -18,7 +18,7 @@ The libSQL database stores tenant configuration, incidents, run state, structure
 
 - WorkOS: user sessions, organizations, memberships, invitations, and roles.
 - GitHub App: read-only metadata, contents, Actions, Deployments, and installation events.
-- microsandbox: disposable local microVM analysis sandboxes (optional Docker fallback).
+- microsandbox: disposable local microVM analysis sandboxes.
 - OpenRouter: model tool selection and structured diagnosis.
 - LangGraph: full incident lifecycle state machine with libSQL checkpoints.
 
@@ -203,7 +203,7 @@ Worker only:
 
 - GitHub App ID/private key.
 - OpenRouter API key.
-- Microsandbox runtime on the worker host (Linux+KVM, Apple Silicon, or Windows WHP). Optional Docker when `SANDBOX_PROVIDER=docker`.
+- Microsandbox runtime on the worker host (Linux+KVM, Apple Silicon, or Windows WHP).
 - Resend API key and sending address, because the worker sends notification email. The web app only
   enqueues test deliveries, so no mail credential reaches the internet-facing service.
 - Data encryption key, because callback delivery decrypts signing secrets.

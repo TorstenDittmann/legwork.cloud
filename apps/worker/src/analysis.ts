@@ -7,7 +7,7 @@ import {
 	organizations,
 } from "@legwork/db";
 import { analysisDuration, logger } from "@legwork/observability";
-import { createSandboxProvider, type SandboxProviderKind } from "@legwork/sandbox";
+import { createSandboxProvider } from "@legwork/sandbox";
 import { runIncidentAnalysisGraph } from "./analysis-graph";
 
 export interface AnalyzeDependencies {
@@ -15,7 +15,6 @@ export interface AnalyzeDependencies {
 	githubPrivateKey: string;
 	openRouterApiKey: string;
 	model: string;
-	sandboxProvider: SandboxProviderKind;
 	commandExecutionEnabled: boolean;
 	capabilityProbePassed: boolean;
 	encryptionKey: string;
@@ -148,7 +147,6 @@ export async function analyzeIncident(
 				githubPrivateKey: dependencies.githubPrivateKey,
 				openRouterApiKey: dependencies.openRouterApiKey,
 				model: dependencies.model,
-				sandboxProvider: dependencies.sandboxProvider,
 				commandExecutionEnabled: dependencies.commandExecutionEnabled,
 				capabilityProbePassed: dependencies.capabilityProbePassed,
 				encryptionKey: dependencies.encryptionKey,
@@ -187,7 +185,6 @@ export async function analyzeIncident(
 			.limit(1);
 		if (current?.sandboxId) {
 			const provider = createSandboxProvider({
-				kind: dependencies.sandboxProvider,
 				commandExecutionEnabled: dependencies.commandExecutionEnabled,
 				capabilityProbePassed: dependencies.capabilityProbePassed,
 			});

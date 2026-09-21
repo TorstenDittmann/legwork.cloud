@@ -16,7 +16,7 @@ import {
 	serviceRateLimits,
 } from "@legwork/db";
 import { destroyedSandboxes, logger, purgedRecords } from "@legwork/observability";
-import { createSandboxProvider, resolveSandboxProviderKind } from "@legwork/sandbox";
+import { createSandboxProvider } from "@legwork/sandbox";
 
 /** How long completed/failed durable job rows are kept for operator inspection. */
 const FINISHED_JOB_HISTORY_MS = 7 * 24 * 60 * 60_000;
@@ -93,7 +93,6 @@ export async function purgeExpired(now = new Date()): Promise<void> {
 export async function destroyOrphanedSandboxes(now = new Date()): Promise<void> {
 	const db = createDatabase();
 	const provider = createSandboxProvider({
-		kind: resolveSandboxProviderKind(),
 		commandExecutionEnabled: false,
 		capabilityProbePassed: false,
 	});
