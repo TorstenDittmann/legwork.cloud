@@ -53,7 +53,7 @@ import {
 	type RepositoryDescriptor,
 } from "@legwork/github";
 import { activeSandboxes, destroyedSandboxes } from "@legwork/observability";
-import { RailwaySandboxProvider } from "@legwork/sandbox";
+import { createSandboxProvider, type SandboxProviderKind } from "@legwork/sandbox";
 import { redactSecrets } from "@legwork/security";
 import { decryptSecret } from "@legwork/security";
 import { investigationContextProviders, providerToolDefinitions } from "@legwork/integrations";
@@ -153,6 +153,7 @@ export interface IncidentAnalysisGraphDependencies {
 	githubPrivateKey: string;
 	openRouterApiKey: string;
 	model: string;
+	sandboxProvider: SandboxProviderKind;
 	commandExecutionEnabled: boolean;
 	capabilityProbePassed: boolean;
 	encryptionKey: string;
@@ -203,7 +204,8 @@ function sourceProvider(
 }
 
 function sandboxProvider(dependencies: IncidentAnalysisGraphDependencies) {
-	return new RailwaySandboxProvider({
+	return createSandboxProvider({
+		kind: dependencies.sandboxProvider,
 		commandExecutionEnabled: dependencies.commandExecutionEnabled,
 		capabilityProbePassed: dependencies.capabilityProbePassed,
 	});

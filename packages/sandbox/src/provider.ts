@@ -10,60 +10,22 @@ import type {
 	SandboxRepositoryManifest,
 	ToolResult,
 } from "@legwork/contracts";
-import { assertRelativeRepositoryPath } from "@legwork/security";
-import { discoverCheckCommand, shellQuote } from "./commands";
+import { shellQuote } from "./commands";
+import {
+	bounded,
+	buildCheckArgv,
+	classifyCheckResult,
+	commandExecutionBlocked,
+	consumeBootstrapProgress,
+	inspectOperation,
+	repositoryRoot,
+	sandboxHandle,
+	type SandboxExecutionOptions,
+	validateRepositoryManifest,
+} from "./shared";
 import { analysisTemplate } from "./template";
 
-const MAX_OUTPUT = 64 * 1024;
-const WORKSPACE = "/workspace/repositories";
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SHA_PATTERN = /^[0-9a-f]{40}$/;
-
-export interface RailwaySandboxOptions {
-	commandExecutionEnabled: boolean;
-	capabilityProbePassed: boolean;
-}
-
-export function validateRepositoryManifest(
-	manifest: SandboxRepositoryManifest,
-): SandboxRepositoryManifest {
-	if (manifest.repositories.length < 1 || manifest.repositories.length > 3)
-		throw new Error("Repository manifest must contain between one and three repositories");
-	const identifiers = new Set<string>();
-	for (const repository of manifest.repositories) {
-		if (!UUID_PATTERN.test(repository.repositoryId) || identifiers.has(repository.repositoryId))
-			throw new Error("Repository manifest contains an invalid identifier");
-		if (!SHA_PATTERN.test(repository.sha))
-			throw new Error("Repository manifest contains an invalid revision");
-		let url: URL;
-		try {
-			url = new URL(repository.downloadUrl);
-		} catch {
-			throw new Error("Repository manifest contains an invalid download URL");
-		}
-		if (
-			url.protocol !== "https:" ||
-			url.hostname !== "codeload.github.com" ||
-			url.username ||
-			url.password ||
-			url.port
-		)
-			throw new Error("Repository manifest contains a disallowed download URL");
-		identifiers.add(repository.repositoryId);
-	}
-	return manifest;
-}
-
-function bounded(value: string): { output: string; truncated: boolean } {
-	const bytes = Buffer.from(value);
-	if (bytes.length <= MAX_OUTPUT) return { output: value, truncated: false };
-	return { output: bytes.subarray(0, MAX_OUTPUT).toString("utf8"), truncated: true };
-}
-
-function repositoryRoot(repositoryId: string): string {
-	if (!/^[0-9a-f-]{36}$/i.test(repositoryId)) throw new Error("Invalid repository identifier");
-	return `${WORKSPACE}/${repositoryId}`;
-}
+export type RailwaySandboxOptions = SandboxExecutionOptions;
 
 export class RailwaySandboxProvider implements SandboxProvider {
 	constructor(private readonly options: RailwaySandboxOptions) {}
@@ -85,7 +47,7 @@ export class RailwaySandboxProvider implements SandboxProvider {
 			networkIsolation: "ISOLATED",
 			env: { OCAI_RUN_ID: run.runId },
 		});
-		return { id: sandbox.id, createdAt: new Date(), metadata: { runId: run.runId } };
+		return sandboxHandle(sandbox.id, run.runId);
 	}
 
 	async prepareRepositories(
@@ -103,26 +65,12 @@ export class RailwaySandboxProvider implements SandboxProvider {
 			}),
 			sandbox.files.write("/workspace/incident.json", incident, { mode: 0o600 }),
 		]);
-		let output = "";
-		const consume = (chunk: string) => {
-			output += chunk;
-			const lines = output.split("\n");
-			output = lines.pop() ?? "";
-			for (const line of lines) {
-				try {
-					const progress = JSON.parse(line) as RepositoryPreparationProgress;
-					if (progress.phase === "downloading" || progress.phase === "extracting")
-						onProgress?.(progress);
-				} catch {
-					// Bootstrap output is intentionally ignored unless it is a progress event.
-				}
-			}
-		};
+		const pending = { value: "" };
 		const result = await sandbox.exec(
 			"/usr/local/bin/ocai-bootstrap-repositories /workspace/bootstrap-manifest.json",
 			{
 				timeoutSec: 180,
-				onStdout: consume,
+				onStdout: (chunk) => consumeBootstrapProgress(chunk, pending, onProgress),
 			},
 		);
 		if (result.exitCode !== 0 || result.timedOut) {
@@ -145,67 +93,28 @@ export class RailwaySandboxProvider implements SandboxProvider {
 	async inspect(handle: SandboxHandle, operation: InspectionOperation): Promise<ToolResult> {
 		const started = performance.now();
 		const sandbox = await Sandbox.connect(handle.id);
-		const root = repositoryRoot(operation.repositoryId);
-		try {
-			if (operation.name === "read_file") {
-				const safe = assertRelativeRepositoryPath(operation.path);
-				const text = await sandbox.files.read(`${root}/${safe}`);
-				const output = text
-					.split("\n")
-					.slice(operation.start - 1, operation.end)
-					.map((line, index) => `${operation.start + index}: ${line}`)
-					.join("\n");
-				return {
-					status: "ok",
-					...bounded(output),
-					durationMs: Math.round(performance.now() - started),
-				};
-			}
-			if (operation.name === "list_tree") {
-				const safe = assertRelativeRepositoryPath(operation.path);
-				const result = await sandbox.exec(
-					`find ${shellQuote(`${root}/${safe}`)} -maxdepth ${operation.depth} -printf '%P\\n'`,
-					{ timeoutSec: 15 },
-				);
-				const output = bounded(result.stdout || result.stderr);
-				return {
-					status: result.exitCode === 0 ? "ok" : "error",
-					...output,
-					durationMs: Math.round(performance.now() - started),
-				};
-			}
-			const glob = operation.glob ? ` --glob ${shellQuote(operation.glob)}` : "";
-			const result = await sandbox.exec(
-				`rg --line-number --color never --max-count 200${glob} -- ${shellQuote(operation.query)} ${shellQuote(root)}`,
-				{ timeoutSec: 20 },
-			);
-			const output = bounded(result.stdout || result.stderr);
-			return {
-				status: result.exitCode === 0 || result.exitCode === 1 ? "ok" : "error",
-				...output,
-				durationMs: Math.round(performance.now() - started),
-			};
-		} catch (error) {
-			return {
-				status: "error",
-				output: error instanceof Error ? error.message : "Inspection failed",
-				truncated: false,
-				durationMs: Math.round(performance.now() - started),
-			};
-		}
+		return inspectOperation(
+			operation,
+			{
+				readFile: (path) => sandbox.files.read(path),
+				exec: async (command, options) => {
+					const result = await sandbox.exec(command, options);
+					return {
+						exitCode: result.exitCode ?? 1,
+						stdout: result.stdout,
+						stderr: result.stderr,
+						timedOut: result.timedOut,
+					};
+				},
+			},
+			started,
+		);
 	}
 
 	async runCheck(handle: SandboxHandle, request: CheckRequest): Promise<ToolResult> {
 		const started = performance.now();
-		if (!this.options.commandExecutionEnabled || !this.options.capabilityProbePassed) {
-			return {
-				status: "unavailable",
-				output: "",
-				truncated: false,
-				durationMs: 0,
-				limitation: "Command execution is disabled until the no-egress capability probe passes",
-			};
-		}
+		const blocked = commandExecutionBlocked(this.options);
+		if (blocked) return blocked;
 		const sandbox = await Sandbox.connect(handle.id);
 		const root = repositoryRoot(request.repositoryId);
 		try {
@@ -214,47 +123,22 @@ export class RailwaySandboxProvider implements SandboxProvider {
 			let packageJson: unknown;
 			if (names.has("package.json"))
 				packageJson = JSON.parse(await sandbox.files.read(`${root}/package.json`));
-			const discovered = discoverCheckCommand(names, packageJson, request.check);
-			if (!discovered)
+			const discovered = buildCheckArgv(root, names, packageJson, request);
+			if (discovered.unavailable)
 				return {
-					status: "unavailable",
-					output: "",
-					truncated: false,
+					...discovered.unavailable,
 					durationMs: Math.round(performance.now() - started),
-					limitation: `No approved ${request.check} command was discovered`,
 				};
-			const envArgs = Object.entries(discovered.environment).flatMap(([key, value]) => [
-				key,
-				value,
-			]);
-			const argv = [
-				"/usr/local/bin/ocai-run-check",
-				root,
-				"env",
-				...envArgs,
-				discovered.executable,
-				...discovered.args,
-			];
-			const result = await sandbox.exec(argv.map(shellQuote).join(" "), {
+			const result = await sandbox.exec(discovered.argv.map(shellQuote).join(" "), {
 				cwd: root,
 				timeoutSec: 120,
 			});
-			const output = bounded([result.stdout, result.stderr].filter(Boolean).join("\n"));
-			if (result.timedOut)
-				return {
-					status: "timed_out",
-					...output,
-					durationMs: Math.round(performance.now() - started),
-				};
-			const unavailable =
-				result.exitCode === 127 ||
-				/not found|missing dependency|cannot find module/i.test(output.output);
-			return {
-				status: unavailable ? "unavailable" : result.exitCode === 0 ? "ok" : "error",
-				...output,
-				durationMs: Math.round(performance.now() - started),
-				...(unavailable ? { limitation: "Required offline dependencies are unavailable" } : {}),
-			};
+			return classifyCheckResult(
+				result.exitCode ?? 1,
+				Boolean(result.timedOut),
+				bounded([result.stdout, result.stderr].filter(Boolean).join("\n")),
+				started,
+			);
 		} catch (error) {
 			return {
 				status: "error",

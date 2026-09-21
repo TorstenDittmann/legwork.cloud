@@ -1,3 +1,5 @@
+import { resolveSandboxProviderKind, type SandboxProviderKind } from "@legwork/sandbox";
+
 function required(name: string): string {
 	const value = process.env[name];
 	if (!value) throw new Error(`${name} is required`);
@@ -7,6 +9,7 @@ function required(name: string): string {
 export function workerConfig() {
 	process.env.LANGCHAIN_TRACING_V2 = "false";
 	process.env.LANGSMITH_TRACING = "false";
+	const sandboxProvider: SandboxProviderKind = resolveSandboxProviderKind();
 	return {
 		appUrl: required("APP_URL"),
 		githubAppId: required("GITHUB_APP_ID"),
@@ -19,6 +22,7 @@ export function workerConfig() {
 		resendFromAddress: process.env.RESEND_FROM_ADDRESS ?? "",
 		workerConcurrency: Number(process.env.WORKER_CONCURRENCY ?? "5"),
 		shutdownGraceMs: Number(process.env.SHUTDOWN_GRACE_MS ?? "25000"),
+		sandboxProvider,
 		commandExecutionEnabled: process.env.SANDBOX_COMMAND_EXECUTION === "true",
 		capabilityProbePassed: process.env.SANDBOX_CAPABILITY_PROBE_PASSED === "true",
 	};

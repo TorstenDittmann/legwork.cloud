@@ -3,7 +3,9 @@
 	"version": "0.0.0",
 	"private": true,
 	"files": [
-		"dist"
+		"dist",
+		"Dockerfile",
+		"scripts"
 	],
 	"type": "module",
 	"main": "./src/index.ts",
@@ -12,7 +14,8 @@
 		"build": "tsc -p tsconfig.json",
 		"typecheck": "tsc -p tsconfig.json --noEmit",
 		"lint": "oxlint src",
-		"probe": "bun src/probe-cli.ts"
+		"probe": "bun src/probe-cli.ts",
+		"image:build": "bun -e 'import { buildLocalAnalysisImage } from \"./src/local-provider.ts\"; await buildLocalAnalysisImage();'"
 	},
 	"dependencies": {
 		"@legwork/contracts": "workspace:*",

@@ -14,6 +14,7 @@ const dependencies: IncidentAnalysisGraphDependencies = {
 	githubPrivateKey: "key",
 	openRouterApiKey: "key",
 	model: "test/model",
+	sandboxProvider: "local",
 	commandExecutionEnabled: false,
 	capabilityProbePassed: false,
 	encryptionKey: "0".repeat(64),

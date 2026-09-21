@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { discoverCheckCommand, shellQuote, validateRepositoryManifest } from "./index";
+import {
+	createSandboxProvider,
+	discoverCheckCommand,
+	LocalSandboxProvider,
+	RailwaySandboxProvider,
+	resolveSandboxProviderKind,
+	shellQuote,
+	validateRepositoryManifest,
+} from "./index";
 
 describe("check mapping", () => {
 	it("maps only declared package scripts", () => {
@@ -36,5 +44,27 @@ describe("repository bootstrap manifest", () => {
 				],
 			}),
 		).toThrow();
+	});
+});
+
+describe("sandbox provider selection", () => {
+	it("honors an explicit provider kind", () => {
+		expect(resolveSandboxProviderKind("local", "token")).toBe("local");
+		expect(resolveSandboxProviderKind("railway", undefined)).toBe("railway");
+	});
+
+	it("defaults to local without a Railway token", () => {
+		expect(resolveSandboxProviderKind(undefined, undefined)).toBe("local");
+		expect(resolveSandboxProviderKind(undefined, "token")).toBe("railway");
+	});
+
+	it("constructs the matching provider implementation", () => {
+		const options = { commandExecutionEnabled: false, capabilityProbePassed: false };
+		expect(createSandboxProvider({ ...options, kind: "local" })).toBeInstanceOf(
+			LocalSandboxProvider,
+		);
+		expect(createSandboxProvider({ ...options, kind: "railway" })).toBeInstanceOf(
+			RailwaySandboxProvider,
+		);
 	});
 });

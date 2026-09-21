@@ -18,7 +18,7 @@ The libSQL database stores tenant configuration, incidents, run state, structure
 
 - WorkOS: user sessions, organizations, memberships, invitations, and roles.
 - GitHub App: read-only metadata, contents, Actions, Deployments, and installation events.
-- Railway: disposable analysis sandboxes.
+- Railway or local Docker: disposable analysis sandboxes behind `SandboxProvider`.
 - OpenRouter: model tool selection and structured diagnosis.
 - LangGraph: full incident lifecycle state machine with libSQL checkpoints.
 
@@ -63,7 +63,7 @@ Caller
   -> worker lease
   -> exact GitHub SHAs and restricted installation token
   -> exact-SHA temporary GitHub archive capabilities
-  -> disposable Railway Sandbox
+  -> disposable analysis sandbox (Railway or local Docker)
   -> controlled archive download and validation bootstrap
   -> bounded static inspection / optional fixed offline check
   -> OpenRouter structured diagnosis
@@ -203,7 +203,8 @@ Worker only:
 
 - GitHub App ID/private key.
 - OpenRouter API key.
-- Railway API token and sandbox template configuration.
+- Railway API token and sandbox template configuration when `SANDBOX_PROVIDER=railway`.
+- Docker access on the worker host when `SANDBOX_PROVIDER=local` (default without `RAILWAY_TOKEN`).
 - Resend API key and sending address, because the worker sends notification email. The web app only
   enqueues test deliveries, so no mail credential reaches the internet-facing service.
 - Data encryption key, because callback delivery decrypts signing secrets.
