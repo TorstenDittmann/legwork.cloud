@@ -1,0 +1,10 @@
+{
+	"name": "Legwork",
+	"install": "bash scripts/cloud-agent-install.sh",
+	"terminals": [
+		{
+			"name": "web",
+			"command": "export PATH=\"$HOME/.bun/bin:$PATH\" && cd apps/web && bun --env-file=../../.env --bun vite dev --host"
+		}
+	]
+}
