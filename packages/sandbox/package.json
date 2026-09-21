@@ -20,7 +20,7 @@
 	"dependencies": {
 		"@legwork/contracts": "workspace:*",
 		"@legwork/security": "workspace:*",
-		"railway": "3.6.0"
+		"microsandbox": "0.7.2"
 	},
 	"devDependencies": {
 		"typescript": "5.9.2"

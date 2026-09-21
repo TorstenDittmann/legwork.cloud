@@ -3,7 +3,7 @@ import {
 	createSandboxProvider,
 	discoverCheckCommand,
 	LocalSandboxProvider,
-	RailwaySandboxProvider,
+	MicrosandboxProvider,
 	resolveSandboxProviderKind,
 	shellQuote,
 	validateRepositoryManifest,
@@ -48,23 +48,24 @@ describe("repository bootstrap manifest", () => {
 });
 
 describe("sandbox provider selection", () => {
-	it("honors an explicit provider kind", () => {
-		expect(resolveSandboxProviderKind("local", "token")).toBe("local");
-		expect(resolveSandboxProviderKind("railway", undefined)).toBe("railway");
+	it("defaults to microsandbox", () => {
+		expect(resolveSandboxProviderKind(undefined)).toBe("microsandbox");
+		expect(resolveSandboxProviderKind("microsandbox")).toBe("microsandbox");
 	});
 
-	it("defaults to local without a Railway token", () => {
-		expect(resolveSandboxProviderKind(undefined, undefined)).toBe("local");
-		expect(resolveSandboxProviderKind(undefined, "token")).toBe("railway");
+	it("maps legacy aliases", () => {
+		expect(resolveSandboxProviderKind("local")).toBe("docker");
+		expect(resolveSandboxProviderKind("docker")).toBe("docker");
+		expect(resolveSandboxProviderKind("railway")).toBe("microsandbox");
 	});
 
 	it("constructs the matching provider implementation", () => {
 		const options = { commandExecutionEnabled: false, capabilityProbePassed: false };
-		expect(createSandboxProvider({ ...options, kind: "local" })).toBeInstanceOf(
-			LocalSandboxProvider,
+		expect(createSandboxProvider({ ...options, kind: "microsandbox" })).toBeInstanceOf(
+			MicrosandboxProvider,
 		);
-		expect(createSandboxProvider({ ...options, kind: "railway" })).toBeInstanceOf(
-			RailwaySandboxProvider,
+		expect(createSandboxProvider({ ...options, kind: "docker" })).toBeInstanceOf(
+			LocalSandboxProvider,
 		);
 	});
 });

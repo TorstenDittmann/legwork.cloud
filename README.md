@@ -1,6 +1,6 @@
 # Legwork
 
-Evidence-backed, read-only incident diagnosis for approved GitHub repositories. Each analysis resolves immutable commit SHAs, gives a disposable sandbox (Railway or local Docker) temporary archive download capabilities, runs a durable LangGraph workflow, validates every evidence citation, and destroys the sandbox.
+Evidence-backed, read-only incident diagnosis for approved GitHub repositories. Each analysis resolves immutable commit SHAs, gives a disposable microsandbox (local microVM) temporary archive download capabilities, runs a durable LangGraph workflow, validates every evidence citation, and destroys the sandbox.
 
 For project continuation and implementation status, start with [`docs/HANDOFF.md`](./docs/HANDOFF.md). The documentation index is at [`docs/README.md`](./docs/README.md).
 
@@ -12,7 +12,7 @@ For project continuation and implementation status, start with [`docs/HANDOFF.md
 - `packages/db`: Drizzle schema for libSQL, migrations, tenant queries, quotas, idempotency, and durable jobs.
 - `packages/auth`: WorkOS AuthKit active-organization and `admin`/`member` enforcement.
 - `packages/github`: signed installation state, webhook verification, short-lived installation tokens, exact-SHA archives.
-- `packages/sandbox`: Railway or local Docker sandbox provider, shared bootstrap scripts, and the mandatory no-egress capability probe.
+- `packages/sandbox`: microsandbox (local microVM) provider by default, optional Docker fallback, shared bootstrap scripts, and the mandatory no-egress capability probe.
 - `packages/agent`: OpenRouter model boundary, strict structured output, and evidence validation.
 - `packages/contracts`: Zod contracts for agents, incidents, providers, callbacks, notifications, and problem responses.
 - `packages/integrations`: Grafana and Sentry alert intake, provider connections, and discovery.
@@ -94,17 +94,15 @@ Both services use the same remote libSQL `DATABASE_URL`; local development uses 
 
 ## Sandbox command gate
 
-Repository code execution is disabled by default. Analysis sandboxes can run on Railway or on local Docker containers.
+Repository code execution is disabled by default. Analysis sandboxes run on [microsandbox](https://microsandbox.dev) local microVMs by default (hardware isolation via KVM / Apple Virtualization / WHP).
 
-- `SANDBOX_PROVIDER=local` uses disposable Docker containers from `packages/sandbox/Dockerfile` (requires a working Docker daemon).
-- `SANDBOX_PROVIDER=railway` uses the Railway Sandbox SDK.
-- When `SANDBOX_PROVIDER` is unset, the worker picks Railway only if `RAILWAY_TOKEN` is present; otherwise it defaults to local Docker.
+- `SANDBOX_PROVIDER=microsandbox` (default): disposable microVMs with a codeload.github.com-only network policy and the same `ocai-run-check` no-egress wrapper used for approved commands.
+- `SANDBOX_PROVIDER=docker`: optional Docker containers from `packages/sandbox/Dockerfile` when a microVM runtime is unavailable.
 
-Build or refresh the local image, then run the capability probe against the selected provider:
+Requires Linux+KVM, Apple Silicon, or Windows WHP for microsandbox. Prepare the runtime and run the capability probe:
 
 ```sh
-bun run --filter @legwork/sandbox image:build
-SANDBOX_PROVIDER=local bun run --filter @legwork/sandbox probe
+bun run --filter @legwork/sandbox probe
 ```
 
 The probe creates a real sandbox and checks file transfer, execution, DNS, public HTTP, private DNS, metadata endpoints, UID/capability isolation, namespace reconfiguration, secret visibility, timeout termination, and destruction. Set both of these only after the complete probe returns `passed: true` in the target environment:
@@ -125,4 +123,4 @@ bun run build
 bun audit
 ```
 
-Live GitHub, OpenRouter, WorkOS, callback, and Railway lifecycle checks require staging credentials. Never enable command execution from mocked probe results. Define and test volume snapshot and restore procedures before publishing a backup-deletion window.
+Live GitHub, OpenRouter, WorkOS, callback, and sandbox lifecycle checks require staging credentials. Never enable command execution from mocked probe results. Define and test volume snapshot and restore procedures before publishing a backup-deletion window.

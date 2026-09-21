@@ -41,7 +41,7 @@ packages/
   github/                 GitHub App auth, state, webhooks, source provider
   integrations/           Grafana and Sentry alert intake, provider connections
   notifications/          Slack, Discord, and email delivery channels
-  sandbox/                Railway + local Docker providers, commands, template, capability probe
+  sandbox/                microsandbox + Docker providers, commands, capability probe
   agent/                  OpenRouter provider, prompts, orchestration, evidence
   security/               Redaction, encryption, archives, paths, SSRF, HMAC
   observability/          Structured logs and Prometheus-style metrics
@@ -140,7 +140,7 @@ Defaults:
 
 ### Phase 4: sandbox — implemented, mandatory staging gate pending
 
-- Railway and local Docker providers and template.
+- Microsandbox provider (default) and optional Docker fallback.
 - Streamed archive extraction with shared limits and one-file backpressure.
 - Bounded static inspection tools.
 - Fixed ecosystem check mapping.

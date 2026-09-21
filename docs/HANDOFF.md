@@ -2,7 +2,7 @@
 
 ## Objective
 
-Legwork is a private-beta, multi-tenant incident-debugging SaaS. It accepts normalized incidents for a service, resolves approved GitHub repositories at immutable commit SHAs, analyzes source in a disposable Railway Sandbox through a constrained OpenRouter agent, presents an evidence-backed diagnosis, sends a signed callback, and removes retained incident content after 30 days.
+Legwork is a private-beta, multi-tenant incident-debugging SaaS. It accepts normalized incidents for a service, resolves approved GitHub repositories at immutable commit SHAs, analyzes source in a disposable microsandbox through a constrained OpenRouter agent, presents an evidence-backed diagnosis, sends a signed callback, and removes retained incident content after 30 days.
 
 ## Current state
 
@@ -15,7 +15,7 @@ Implemented architecture:
 - WorkOS AuthKit active-organization authentication with `admin` and `member` authorization.
 - libSQL with Drizzle ORM and a custom durable leased-job queue. `DATABASE_URL` defaults to the local `file:local.db`; the remote database is a self-hosted libsql-server whose JWTs are minted with `bun run db:tokens`.
 - Read-only GitHub App integration and exact-SHA archive retrieval.
-- Railway Sandbox SDK `3.6.0` and a local Docker provider behind `SandboxProvider`.
+- microsandbox `0.7.2` local microVM provider behind `SandboxProvider`, with optional Docker fallback.
 - OpenRouter tool loop and structured diagnosis behind the model boundary; each analysis run is a durable LangGraph thread with libSQL checkpoints.
 - Grafana and Sentry alert intake and provider connections (`packages/integrations`).
 - Slack, Discord, and Resend email notification channels (`packages/notifications`).
@@ -31,9 +31,9 @@ Useful entry points:
 - `packages/db/src/jobs.ts`: queue singleton, lease recovery, deferral, retries.
 - `apps/web/src/routes/api/v1/services/[serviceSlug]/incidents/+server.ts`: public ingestion API.
 - `apps/worker/src/analysis.ts` and `apps/worker/src/analysis-graph.ts`: complete analysis lifecycle.
-- `packages/sandbox/src/provider.ts`: constrained Railway adapter.
-- `packages/sandbox/src/local-provider.ts`: Docker-backed local adapter.
-- `packages/sandbox/src/factory.ts`: `SANDBOX_PROVIDER` / `RAILWAY_TOKEN` selection.
+- `packages/sandbox/src/microsandbox-provider.ts`: production local microVM adapter.
+- `packages/sandbox/src/local-provider.ts`: optional Docker-backed adapter.
+- `packages/sandbox/src/factory.ts`: `SANDBOX_PROVIDER` selection (`microsandbox` default).
 - `packages/sandbox/src/probe.ts`: mandatory real capability probe.
 - `packages/agent/src/openrouter.ts`: model calls and required-parameter routing.
 - `apps/worker/src/callbacks.ts`: callback construction and delivery.
@@ -66,7 +66,7 @@ These items require real staging credentials or external configuration and must 
 - GitHub App installation, repository webhooks, suspension/removal, token minting, and exact-SHA download.
 - OpenRouter routing and the selected model's real tool/structured-output behavior.
 - Callback delivery to a real public HTTPS endpoint, including all retry intervals.
-- Railway Sandbox create/upload/execute/destroy lifecycle, or the local Docker equivalent.
+- Microsandbox create/upload/execute/destroy lifecycle (or the Docker fallback).
 - The mandatory no-egress capability probe.
 - Remote libSQL migration, concurrency behavior, and restore/backup retention policy.
 - Browser end-to-end coverage: the Playwright suite was removed in commit `e8141d1` and nothing replaces it yet.

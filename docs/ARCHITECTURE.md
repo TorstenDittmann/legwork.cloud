@@ -18,7 +18,7 @@ The libSQL database stores tenant configuration, incidents, run state, structure
 
 - WorkOS: user sessions, organizations, memberships, invitations, and roles.
 - GitHub App: read-only metadata, contents, Actions, Deployments, and installation events.
-- Railway or local Docker: disposable analysis sandboxes behind `SandboxProvider`.
+- microsandbox: disposable local microVM analysis sandboxes (optional Docker fallback).
 - OpenRouter: model tool selection and structured diagnosis.
 - LangGraph: full incident lifecycle state machine with libSQL checkpoints.
 
@@ -63,7 +63,7 @@ Caller
   -> worker lease
   -> exact GitHub SHAs and restricted installation token
   -> exact-SHA temporary GitHub archive capabilities
-  -> disposable analysis sandbox (Railway or local Docker)
+  -> disposable analysis sandbox (microsandbox microVM)
   -> controlled archive download and validation bootstrap
   -> bounded static inspection / optional fixed offline check
   -> OpenRouter structured diagnosis
@@ -97,7 +97,7 @@ Queue guarantees:
 
 The worker stores GitHub installation and repository numeric IDs, never installation tokens. Tokens are minted only to resolve source and obtain exact-SHA temporary archive redirects. Tokens and the GitHub App private key are never forwarded into the sandbox.
 
-The sandbox receives only temporary `codeload.github.com` archive capabilities in a short-lived manifest. Its privileged bootstrap downloads and validates those archives using Railway's public NAT egress, deletes the manifest and compressed archives, and then hands the extracted repositories to the unprivileged analyst user. Temporary URLs are never logged or placed in an exec command.
+The sandbox receives only temporary `codeload.github.com` archive capabilities in a short-lived manifest. Its privileged bootstrap downloads and validates those archives using the sandbox's allowlisted egress, deletes the manifest and compressed archives, and then hands the extracted repositories to the unprivileged analyst user. Temporary URLs are never logged or placed in an exec command.
 
 Archive policy applies one shared budget across all repositories in a run:
 
@@ -121,11 +121,11 @@ read_file(repositoryId, path, start, end)
 run_check(repositoryId, test|build|lint|typecheck)
 ```
 
-Model-controlled strings are schema-validated, path-contained, shell-quoted where necessary, and output-bounded. The model never receives Railway credentials or a generic command string.
+Model-controlled strings are schema-validated, path-contained, shell-quoted where necessary, and output-bounded. The model never receives host credentials or a generic command string.
 
 ## Sandbox execution gate
 
-Repository bootstrap is the only phase allowed to use the sandbox's public NAT egress. Agent inspection and approved repository commands run through `ocai-run-check`, which creates a no-egress network namespace. The capability probe verifies DNS, public HTTP, private-network, and metadata access remain unavailable inside that command boundary.
+Repository bootstrap is the only phase allowed to use sandbox egress, and only to `codeload.github.com` via the microsandbox network policy. Agent inspection and approved repository commands run through `ocai-run-check`, which creates a no-egress network namespace. The capability probe verifies DNS, public HTTP, private-network, and metadata access remain unavailable inside that command boundary.
 
 Static inspection is always available after a sandbox is created. Repository execution requires both:
 
@@ -203,8 +203,7 @@ Worker only:
 
 - GitHub App ID/private key.
 - OpenRouter API key.
-- Railway API token and sandbox template configuration when `SANDBOX_PROVIDER=railway`.
-- Docker access on the worker host when `SANDBOX_PROVIDER=local` (default without `RAILWAY_TOKEN`).
+- Microsandbox runtime on the worker host (Linux+KVM, Apple Silicon, or Windows WHP). Optional Docker when `SANDBOX_PROVIDER=docker`.
 - Resend API key and sending address, because the worker sends notification email. The web app only
   enqueues test deliveries, so no mail credential reaches the internet-facing service.
 - Data encryption key, because callback delivery decrypts signing secrets.

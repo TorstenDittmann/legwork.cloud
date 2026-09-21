@@ -1,13 +1,15 @@
 import type { SandboxProvider } from "@legwork/contracts";
-import { createSandboxProvider, resolveSandboxProviderKind } from "./factory";
-import { buildLocalAnalysisImage } from "./local-provider";
-import { buildAnalysisTemplate } from "./template";
+import {
+	createSandboxProvider,
+	prepareSandboxBackend,
+	resolveSandboxProviderKind,
+} from "./factory";
 
 export interface CapabilityProbeResult {
 	passed: boolean;
 	assertions: Record<string, boolean>;
 	sandboxDestroyed: boolean;
-	provider: "railway" | "local";
+	provider: "microsandbox" | "docker";
 }
 
 const NETWORK_FIXTURE = `
@@ -37,22 +39,33 @@ type ProbeIo = {
 	) => Promise<{ exitCode: number; stdout: string; stderr: string; timedOut?: boolean }>;
 };
 
-async function createProbeIo(kind: "railway" | "local", sandboxId: string): Promise<ProbeIo> {
-	if (kind === "railway") {
-		const { Sandbox } = await import("railway");
-		const sandbox = await Sandbox.connect(sandboxId);
+async function createProbeIo(kind: "microsandbox" | "docker", sandboxId: string): Promise<ProbeIo> {
+	if (kind === "microsandbox") {
+		const { Sandbox, ExecTimeoutError } = await import("microsandbox");
+		const sandbox = await (await Sandbox.get(`legwork-${sandboxId}`)).connectOrStart();
 		return {
 			writeText: async (path, content) => {
-				await sandbox.files.write(path, content, { mode: 0o600 });
+				await sandbox.fs().write(path, content);
 			},
 			exec: async (command, options) => {
-				const result = await sandbox.exec(command, options);
-				return {
-					exitCode: result.exitCode ?? 1,
-					stdout: result.stdout,
-					stderr: result.stderr,
-					timedOut: result.timedOut,
-				};
+				try {
+					const result = await sandbox.execWith("sh", (exec) => {
+						let builder = exec.args(["-c", command]);
+						if (options?.timeoutSec !== undefined)
+							builder = builder.timeout(options.timeoutSec * 1000);
+						return builder;
+					});
+					return {
+						exitCode: result.code ?? 1,
+						stdout: result.stdout(),
+						stderr: result.stderr(),
+						timedOut: false,
+					};
+				} catch (error) {
+					if (error instanceof ExecTimeoutError)
+						return { exitCode: 124, stdout: "", stderr: error.message, timedOut: true };
+					throw error;
+				}
 			},
 		};
 	}
@@ -72,15 +85,8 @@ async function createProbeIo(kind: "railway" | "local", sandboxId: string): Prom
 					const child = spawn(dockerBin, ["cp", local, `${name}:${path}`], {
 						stdio: ["ignore", "pipe", "pipe"],
 					});
-					let stderr = "";
-					child.stderr?.on("data", (chunk: Buffer) => {
-						stderr += chunk.toString("utf8");
-					});
 					child.on("error", () => resolve(127));
-					child.on("close", (code) => {
-						if ((code ?? 1) !== 0 && stderr.trim()) resolve(code ?? 1);
-						else resolve(code ?? 1);
-					});
+					child.on("close", (code) => resolve(code ?? 1));
 				});
 				if (exitCode !== 0) throw new Error("Failed to write probe file");
 			} finally {
@@ -129,9 +135,7 @@ async function createProbeIo(kind: "railway" | "local", sandboxId: string): Prom
 export async function runCapabilityProbe(
 	kind = resolveSandboxProviderKind(),
 ): Promise<CapabilityProbeResult> {
-	if (kind === "local") await buildLocalAnalysisImage();
-	else await buildAnalysisTemplate();
-
+	await prepareSandboxBackend(kind);
 	const provider: SandboxProvider = createSandboxProvider({
 		kind,
 		commandExecutionEnabled: true,
