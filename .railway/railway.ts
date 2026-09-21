@@ -59,8 +59,6 @@ export default defineRailway((ctx) => {
 			restartPolicyType: "ON_FAILURE",
 			restartPolicyMaxRetries: 10,
 		},
-		// Public access is safe only while SQLD_AUTH_JWT_KEY is live; verified 2026-08-10
-		// (unauthenticated /v2/pipeline returns 401).
 		domains: [{ domain: "libsql-production-f752.up.railway.app", port: 8080 }],
 		env: {
 			SQLD_AUTH_JWT_KEY: preserve(),
@@ -71,7 +69,7 @@ export default defineRailway((ctx) => {
 	const worker = service("worker", {
 		source: legworkRepo,
 		build: "bun run --filter @legwork/worker build",
-		start: "bun run db:migrate && bun run --filter @legwork/worker start",
+		start: "bun run --filter @legwork/worker start",
 		deploy: {
 			restartPolicyType: "ON_FAILURE",
 			restartPolicyMaxRetries: 5,
