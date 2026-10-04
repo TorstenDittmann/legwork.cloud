@@ -48,13 +48,14 @@ This file distinguishes locally verified behavior from staging gates. Do not con
 - [ ] Retention purge against the remote libSQL database.
 - [ ] libSQL backup aging and restore behavior documented.
 
-## Mandatory Railway sandbox gate — pending
+## Mandatory sandbox gate — pending
 
 - [ ] Real sandbox creation succeeds.
 - [ ] Streamed file upload and static execution operations succeed.
 - [ ] Untrusted fixture cannot resolve public DNS.
 - [ ] Public IPv4/IPv6 and HTTP(S) are unreachable.
-- [ ] Railway private DNS is unreachable.
+- [ ] Private DNS (`railway.internal`, `host.docker.internal`) and private-network HTTP are unreachable.
+- [ ] Docker provider: the sandbox runs under gVisor (`runsc`) with no network interface.
 - [ ] Metadata-style endpoints are unreachable.
 - [ ] Process runs as UID 10001 and cannot regain root.
 - [ ] Process cannot change namespace configuration.
@@ -114,4 +115,4 @@ Run all seeded incidents through the configured staging model and record results
 
 ## Private-beta launch decision
 
-Launch only after the staging integration, Railway sandbox, adversarial, agent-quality, and end-to-end gates pass. Start with organization allowlisting and static inspection. Enable command execution separately after the real capability probe succeeds in the deployed environment.
+Launch only after the staging integration, sandbox, adversarial, agent-quality, and end-to-end gates pass. Start with organization allowlisting and static inspection. Enable command execution separately after the real capability probe succeeds in the deployed environment.

@@ -1,20 +1,38 @@
-import { Sandbox } from "railway";
-import { analysisTemplate } from "./template";
-
 export interface CapabilityProbeResult {
 	passed: boolean;
 	assertions: Record<string, boolean>;
 	sandboxDestroyed: boolean;
 }
 
+export interface ProbeExecResult {
+	exitCode: number | null;
+	stdout: string;
+	timedOut: boolean;
+}
+
+/** A freshly created sandbox on the provider under test. Commands run as the sandbox's root. */
+export interface ProbeSession {
+	writeFile(path: string, content: string): Promise<void>;
+	readFile(path: string): Promise<string>;
+	exec(command: string, timeoutSec: number): Promise<ProbeExecResult>;
+	destroy(): Promise<void>;
+	/** Provider-specific assertions, such as the isolation runtime in use. */
+	assertions?(): Promise<Record<string, boolean>>;
+}
+
 const NETWORK_FIXTURE = `
 import dns from "node:dns/promises";
+const reach = (url) => fetch(url, { signal: AbortSignal.timeout(2500) });
 const checks = [
   ["dns", async () => dns.lookup("example.com")],
-  ["publicHttp", async () => fetch("http://1.1.1.1", { signal: AbortSignal.timeout(2500) })],
-  ["publicHttps", async () => fetch("https://example.com", { signal: AbortSignal.timeout(2500) })],
+  ["publicHttp", async () => reach("http://1.1.1.1")],
+  ["publicHttps", async () => reach("https://example.com")],
   ["privateDns", async () => dns.lookup("railway.internal")],
-  ["metadata", async () => fetch("http://169.254.169.254/latest/meta-data", { signal: AbortSignal.timeout(2500) })],
+  ["privateDns", async () => dns.lookup("host.docker.internal")],
+  ["privateHttp", async () => reach("http://10.0.0.1")],
+  ["privateHttp", async () => reach("http://172.17.0.1")],
+  ["privateHttp", async () => reach("http://192.168.0.1")],
+  ["metadata", async () => reach("http://169.254.169.254/latest/meta-data")],
 ];
 for (const [name, check] of checks) { try { await check(); console.log(name + ":reachable"); } catch {} }
 `;
@@ -26,25 +44,22 @@ if (spawnSync("unshare", ["--net", "true"]).status === 0) console.log("namespace
 try { const value = fs.readFileSync("/proc/1/environ", "utf8"); if (/TOKEN|SECRET|KEY=/.test(value)) console.log("secret-visible"); } catch {}
 `;
 
-export async function runCapabilityProbe(): Promise<CapabilityProbeResult> {
+export async function runCapabilityProbe(
+	open: () => Promise<ProbeSession>,
+): Promise<CapabilityProbeResult> {
 	const assertions: Record<string, boolean> = {};
-	let sandbox: Sandbox | undefined;
+	let sandbox: ProbeSession | undefined;
 	let sandboxDestroyed = false;
 	try {
-		sandbox = await Sandbox.create(analysisTemplate(), {
-			idleTimeoutMinutes: 10,
-			networkIsolation: "ISOLATED",
-			env: {},
-		});
-		await sandbox.files.write("/workspace/probe.txt", "probe");
-		await sandbox.files.write("/workspace/network-probe.mjs", NETWORK_FIXTURE);
-		await sandbox.files.write("/workspace/privilege-probe.mjs", PRIVILEGE_FIXTURE);
-		assertions.fileOperations = (await sandbox.files.read("/workspace/probe.txt")) === "probe";
-		assertions.execution =
-			(await sandbox.exec("test -r /workspace/probe.txt", { timeoutSec: 5 })).exitCode === 0;
+		sandbox = await open();
+		await sandbox.writeFile("/workspace/probe.txt", "probe");
+		await sandbox.writeFile("/workspace/network-probe.mjs", NETWORK_FIXTURE);
+		await sandbox.writeFile("/workspace/privilege-probe.mjs", PRIVILEGE_FIXTURE);
+		assertions.fileOperations = (await sandbox.readFile("/workspace/probe.txt")) === "probe";
+		assertions.execution = (await sandbox.exec("test -r /workspace/probe.txt", 5)).exitCode === 0;
 		const network = await sandbox.exec(
 			"/usr/local/bin/ocai-run-check /workspace/repositories/probe bun /workspace/network-probe.mjs",
-			{ timeoutSec: 20 },
+			20,
 		);
 		assertions.noEgressNamespaceAvailable = network.exitCode === 0;
 		assertions.noDns = !network.stdout.includes("dns:reachable");
@@ -52,10 +67,11 @@ export async function runCapabilityProbe(): Promise<CapabilityProbeResult> {
 			!network.stdout.includes("publicHttp:reachable") &&
 			!network.stdout.includes("publicHttps:reachable");
 		assertions.noPrivateDns = !network.stdout.includes("privateDns:reachable");
+		assertions.noPrivateHttp = !network.stdout.includes("privateHttp:reachable");
 		assertions.noMetadata = !network.stdout.includes("metadata:reachable");
 		const privilege = await sandbox.exec(
 			"/usr/local/bin/ocai-run-check /workspace/repositories/probe bun /workspace/privilege-probe.mjs",
-			{ timeoutSec: 10 },
+			10,
 		);
 		assertions.privilegeProbeCompleted = privilege.exitCode === 0;
 		assertions.nonRoot = !privilege.stdout.includes("unexpected-user");
@@ -63,9 +79,10 @@ export async function runCapabilityProbe(): Promise<CapabilityProbeResult> {
 		assertions.noControlPlaneSecrets = !privilege.stdout.includes("secret-visible");
 		const timeout = await sandbox.exec(
 			"/usr/local/bin/ocai-run-check /workspace/repositories/probe bun -e 'while (true) {}'",
-			{ timeoutSec: 1 },
+			1,
 		);
 		assertions.timeoutTermination = timeout.timedOut;
+		Object.assign(assertions, (await sandbox.assertions?.()) ?? {});
 	} finally {
 		if (sandbox) {
 			await sandbox.destroy();

@@ -1,5 +1,4 @@
 import { and, eq, inArray, lt, or } from "drizzle-orm";
-import { Sandbox } from "railway";
 import {
 	agentSteps,
 	analysisRuns,
@@ -17,6 +16,7 @@ import {
 	serviceRateLimits,
 } from "@legwork/db";
 import { destroyedSandboxes, logger, purgedRecords } from "@legwork/observability";
+import { createSandboxProvider } from "@legwork/sandbox";
 
 /** How long completed/failed durable job rows are kept for operator inspection. */
 const FINISHED_JOB_HISTORY_MS = 7 * 24 * 60 * 60_000;
@@ -103,11 +103,14 @@ export async function destroyOrphanedSandboxes(now = new Date()): Promise<void> 
 				),
 			),
 		);
+	const provider = createSandboxProvider({
+		commandExecutionEnabled: false,
+		capabilityProbePassed: false,
+	});
 	for (const candidate of candidates) {
 		if (!candidate.sandboxId) continue;
 		try {
-			const sandbox = await Sandbox.connect(candidate.sandboxId);
-			await sandbox.destroy();
+			await provider.destroy({ id: candidate.sandboxId, createdAt: now });
 			await db
 				.update(analysisRuns)
 				.set({ sandboxId: null, updatedAt: new Date() })

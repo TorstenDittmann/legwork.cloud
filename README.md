@@ -1,6 +1,6 @@
 # Legwork
 
-Evidence-backed, read-only incident diagnosis for approved GitHub repositories. Each analysis resolves immutable commit SHAs, gives a disposable Railway Sandbox temporary archive download capabilities, runs a durable LangGraph workflow, validates every evidence citation, and destroys the sandbox.
+Evidence-backed, read-only incident diagnosis for approved GitHub repositories. Each analysis resolves immutable commit SHAs, streams validated archives into a disposable sandbox, runs a durable LangGraph workflow, validates every evidence citation, and destroys the sandbox.
 
 For project continuation and implementation status, start with [`docs/HANDOFF.md`](./docs/HANDOFF.md). The documentation index is at [`docs/README.md`](./docs/README.md).
 
@@ -12,7 +12,7 @@ For project continuation and implementation status, start with [`docs/HANDOFF.md
 - `packages/db`: Drizzle schema for libSQL, migrations, tenant queries, quotas, idempotency, and durable jobs.
 - `packages/auth`: WorkOS AuthKit active-organization and `admin`/`member` enforcement.
 - `packages/github`: signed installation state, webhook verification, short-lived installation tokens, exact-SHA archives.
-- `packages/sandbox`: Railway SDK `3.6.0` provider and mandatory no-egress capability probe.
+- `packages/sandbox`: Docker + gVisor and Railway Sandbox providers, the shared sandbox image scripts, and the mandatory no-egress capability probe.
 - `packages/agent`: OpenRouter model boundary, strict structured output, and evidence validation.
 - `packages/contracts`: Zod contracts for agents, incidents, providers, callbacks, notifications, and problem responses.
 - `packages/integrations`: Grafana and Sentry alert intake, provider connections, and discovery.
@@ -92,15 +92,24 @@ Create two Railway services from this repository and use these commands:
 
 Both services use the same remote libSQL `DATABASE_URL`; local development uses `file:local.db`. Only the worker receives the GitHub private key and OpenRouter key. The web service receives WorkOS credentials and GitHub webhook/setup secrets. Scope shared values narrowly in Railway rather than exposing all secrets to both services.
 
+## Sandbox runtime
+
+`SANDBOX_PROVIDER` selects where analyses run:
+
+- `railway` (default for now): Railway Sandboxes, created from the template in `packages/sandbox/src/template.ts`. Needs `RAILWAY_TOKEN`.
+- `docker`: one container per analysis under gVisor, with no network interface at all. The worker streams each exact-SHA archive into the container, so it needs outbound access to `codeload.github.com` and access to a Docker daemon that has the `runsc` runtime registered. The image is built from `packages/sandbox/image` on first start, or ahead of time with `bun run --filter @legwork/sandbox image:build`.
+
+To run the Docker provider locally without gVisor, set `SANDBOX_DOCKER_RUNTIME=runc`. Static inspection works, but `run_check` stays unavailable and the probe fails its `isolatedRuntime` assertion, by design.
+
 ## Sandbox command gate
 
-Repository code execution is disabled by default. With Railway Sandbox credentials configured, run:
+Repository code execution is disabled by default. With the target sandbox provider configured, run:
 
 ```sh
 bun run --filter @legwork/sandbox probe
 ```
 
-The probe creates a real sandbox and checks file transfer, execution, DNS, public HTTP, Railway private DNS, metadata endpoints, UID/capability isolation, namespace reconfiguration, secret visibility, timeout termination, and destruction. Set both of these only after the complete probe returns `passed: true` in the target environment:
+The probe creates a real sandbox on the configured provider and checks file transfer, execution, DNS, public HTTP, private DNS and private-network HTTP, metadata endpoints, UID/capability isolation, namespace reconfiguration, secret visibility, timeout termination, and destruction. On Docker it also requires the gVisor runtime and a disabled network. Set both of these only after the complete probe returns `passed: true` in the target environment:
 
 ```sh
 SANDBOX_COMMAND_EXECUTION=true

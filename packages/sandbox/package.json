@@ -3,7 +3,8 @@
 	"version": "0.0.0",
 	"private": true,
 	"files": [
-		"dist"
+		"dist",
+		"image"
 	],
 	"type": "module",
 	"main": "./src/index.ts",
@@ -12,7 +13,8 @@
 		"build": "tsc -p tsconfig.json",
 		"typecheck": "tsc -p tsconfig.json --noEmit",
 		"lint": "oxlint src",
-		"probe": "bun src/probe-cli.ts"
+		"probe": "bun src/probe-cli.ts",
+		"image:build": "docker build --tag legwork-sandbox:local image"
 	},
 	"dependencies": {
 		"@legwork/contracts": "workspace:*",

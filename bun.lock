@@ -100,7 +100,6 @@
         "@legwork/sandbox": "workspace:*",
         "@legwork/security": "workspace:*",
         "drizzle-orm": "0.45.2",
-        "railway": "3.6.0",
         "undici": "7.29.0",
       },
       "devDependencies": {
