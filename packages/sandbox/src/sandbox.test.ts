@@ -5,6 +5,8 @@ import {
 	discoverCheckCommand,
 	DockerSandboxProvider,
 	dockerSandboxConfig,
+	RailwaySandboxProvider,
+	sandboxProviderFor,
 	sandboxProviderKind,
 	shellQuote,
 	stagedArchivePath,
@@ -95,6 +97,22 @@ describe("provider selection", () => {
 		expect(sandboxProviderKind({})).toBe("railway");
 		expect(sandboxProviderKind({ SANDBOX_PROVIDER: "docker" })).toBe("docker");
 		expect(() => sandboxProviderKind({ SANDBOX_PROVIDER: "local" })).toThrow();
+	});
+
+	it("routes existing sandboxes by ID format, whatever SANDBOX_PROVIDER says", () => {
+		const containerId = "a".repeat(64);
+		const railwayId = "123e4567-e89b-42d3-a456-426614174000";
+		expect(sandboxProviderFor(containerId, disabled, {})).toBeInstanceOf(DockerSandboxProvider);
+		expect(sandboxProviderFor(railwayId, disabled, { SANDBOX_PROVIDER: "docker" })).toBeInstanceOf(
+			RailwaySandboxProvider,
+		);
+	});
+
+	it("reports a non-Docker sandbox ID as missing instead of throwing", async () => {
+		const provider = createSandboxProvider(disabled, { SANDBOX_PROVIDER: "docker" });
+		await expect(
+			provider.health({ id: "123e4567-e89b-42d3-a456-426614174000", createdAt: new Date() }),
+		).resolves.toBe("missing");
 	});
 
 	it("runs Docker sandboxes under gVisor unless overridden", () => {

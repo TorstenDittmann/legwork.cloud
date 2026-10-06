@@ -2,6 +2,7 @@ import type { SandboxProvider } from "@legwork/contracts";
 import {
 	DockerSandboxProvider,
 	dockerSandboxConfig,
+	isDockerSandboxId,
 	openDockerProbeSession,
 	prepareDockerSandboxRuntime,
 } from "./docker-provider";
@@ -25,6 +26,20 @@ export function createSandboxProvider(
 	env: NodeJS.ProcessEnv = process.env,
 ): SandboxProvider {
 	if (sandboxProviderKind(env) === "docker")
+		return new DockerSandboxProvider({ ...options, ...dockerSandboxConfig(env) });
+	return new RailwaySandboxProvider(options);
+}
+
+/**
+ * Provider that owns an existing sandbox, chosen from its ID format rather than
+ * `SANDBOX_PROVIDER`, so cleanup still reaches sandboxes created before a switch.
+ */
+export function sandboxProviderFor(
+	sandboxId: string,
+	options: SandboxProviderOptions,
+	env: NodeJS.ProcessEnv = process.env,
+): SandboxProvider {
+	if (isDockerSandboxId(sandboxId))
 		return new DockerSandboxProvider({ ...options, ...dockerSandboxConfig(env) });
 	return new RailwaySandboxProvider(options);
 }

@@ -36,6 +36,11 @@ export const ISOLATED_RUNTIME = "runsc";
 const MAX_COMPRESSED = 250 * 1024 * 1024;
 const MAX_READ = 4 * 1024 * 1024;
 const CONTAINER_ID = /^[0-9a-f]{64}$/;
+
+/** Docker container IDs are 64 hex characters; Railway sandbox IDs are UUIDs. */
+export function isDockerSandboxId(id: string): boolean {
+	return CONTAINER_ID.test(id);
+}
 const RUN_LABEL = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(-[0-9]{1,6})?$/i;
 const INCIDENT_PATH = "/workspace/incident.json";
 const MANIFEST_PATH = "/workspace/bootstrap-manifest.json";
@@ -164,6 +169,8 @@ export class DockerSandboxProvider implements SandboxProvider {
 	constructor(private readonly options: DockerSandboxOptions) {}
 
 	async health(handle: SandboxHandle): Promise<"ready" | "missing" | "unhealthy"> {
+		// A handle from another provider can never name one of our containers.
+		if (!isDockerSandboxId(handle.id)) return "missing";
 		const result = await docker(
 			["container", "inspect", "--format", "{{.State.Running}}", containerId(handle)],
 			{ timeoutMs: 15_000 },

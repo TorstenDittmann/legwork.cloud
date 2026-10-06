@@ -7,7 +7,7 @@ import {
 	organizations,
 } from "@legwork/db";
 import { analysisDuration, logger } from "@legwork/observability";
-import { createSandboxProvider } from "@legwork/sandbox";
+import { sandboxProviderFor } from "@legwork/sandbox";
 import { runIncidentAnalysisGraph } from "./analysis-graph";
 
 export interface AnalyzeDependencies {
@@ -184,7 +184,7 @@ export async function analyzeIncident(
 			.where(and(eq(analysisRuns.id, runId), eq(analysisRuns.organizationId, run.organizationId)))
 			.limit(1);
 		if (current?.sandboxId) {
-			const provider = createSandboxProvider({
+			const provider = sandboxProviderFor(current.sandboxId, {
 				commandExecutionEnabled: dependencies.commandExecutionEnabled,
 				capabilityProbePassed: dependencies.capabilityProbePassed,
 			});
