@@ -57,10 +57,9 @@ def download(url, destination, budget):
                 raise RuntimeError("Archive compressed size limit exceeded")
             output.write(chunk)
 
-def staged_archive_paths(repository_id):
-    # /tmp for the Docker provider; sbx gives /tmp only a small tmpfs, so it stages under /workspace.
-    name = f"ocai-archive-{repository_id}.tar.gz"
-    return (f"/tmp/{name}", f"/workspace/.staged/{name}")
+def staged_archive_path(repository_id):
+    # sbx gives /tmp only a small tmpfs, so archives are staged on the /workspace tmpfs.
+    return f"/workspace/.staged/ocai-archive-{repository_id}.tar.gz"
 
 def account_staged(archive, budget):
     # Providers without sandbox egress stream the archive in before bootstrap runs.
@@ -156,7 +155,7 @@ def main():
             raise RuntimeError("Invalid repository revision")
         if staged is None and not isinstance(url, str):
             raise RuntimeError("Invalid repository download URL")
-        if staged is not None and (url is not None or staged not in staged_archive_paths(repository_id)):
+        if staged is not None and (url is not None or staged != staged_archive_path(repository_id)):
             raise RuntimeError("Invalid staged repository archive")
         destination = WORKSPACE / repository_id
         if destination.exists():

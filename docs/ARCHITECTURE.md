@@ -18,7 +18,7 @@ The libSQL database stores tenant configuration, incidents, run state, structure
 
 - WorkOS: user sessions, organizations, memberships, invitations, and roles.
 - GitHub App: read-only metadata, contents, Actions, Deployments, and installation events.
-- Sandboxes: [sbx](https://sbx.torsten.work) sandboxes on its gVisor backend (the target), Docker containers under gVisor on a host we run, or Railway Sandboxes (the default until the cutover). `SANDBOX_PROVIDER` selects one.
+- Sandboxes: [sbx](https://sbx.torsten.work) sandboxes on its gVisor backend (the target), or Railway Sandboxes (the default until the cutover). `SANDBOX_PROVIDER` selects one.
 - Hosting: [orch](https://orch.torsten.work) runs the web app, the worker and libSQL from `orch.pkl`. Railway hosting is being retired.
 - OpenRouter: model tool selection and structured diagnosis.
 - LangGraph: full incident lifecycle state machine with libSQL checkpoints.
@@ -64,7 +64,7 @@ Caller
   -> worker lease
   -> exact GitHub SHAs and restricted installation token
   -> exact-SHA temporary GitHub archive capabilities
-  -> disposable sandbox (sbx sandbox, gVisor container or Railway Sandbox)
+  -> disposable sandbox (sbx sandbox or Railway Sandbox)
   -> controlled archive transfer and validation bootstrap
   -> bounded static inspection / optional fixed offline check
   -> OpenRouter structured diagnosis
@@ -100,7 +100,7 @@ The worker stores GitHub installation and repository numeric IDs, never installa
 
 On Railway, the sandbox receives only temporary `codeload.github.com` archive capabilities in a short-lived manifest. Its privileged bootstrap downloads and validates those archives using Railway's public NAT egress, deletes the manifest and compressed archives, and then hands the extracted repositories to the unprivileged analyst user. Temporary URLs are never logged or placed in an exec command.
 
-On sbx and Docker, the sandbox has no network interface at all. The worker downloads each archive from `codeload.github.com` (no redirects, metered against the shared compressed budget) and streams it straight into the sandbox at a fixed staging path; nothing is written to the worker's disk. sbx takes uploads as a tar archive, so there the worker buffers each archive in memory within the same budget and uploads it wrapped in a one-entry tar. The same bootstrap then validates, extracts, and deletes the staged archives, and the manifest it reads carries no URLs.
+On sbx, the sandbox has no network interface at all. The worker downloads each archive from `codeload.github.com` (no redirects, metered against the shared compressed budget), buffers it in memory and uploads it to a fixed staging path wrapped in a one-entry tar; nothing is written to the worker's disk. The same bootstrap then validates, extracts, and deletes the staged archives, and the manifest it reads carries no URLs.
 
 Archive policy applies one shared budget across all repositories in a run:
 
@@ -128,7 +128,7 @@ Model-controlled strings are schema-validated, path-contained, shell-quoted wher
 
 ## Sandbox execution gate
 
-On Railway, repository bootstrap is the only phase allowed to use the sandbox's public NAT egress; sbx and Docker sandboxes never have egress. Agent inspection and approved repository commands run through `ocai-run-check`, which creates a no-egress network namespace. On sbx the sandbox itself is the boundary: it runs every command as one non-root user with no capabilities, so `ocai-run-check-sbx` only applies resource limits and a clean environment. The capability probe verifies DNS, public HTTP, private-network, and metadata access remain unavailable inside that command boundary.
+On Railway, repository bootstrap is the only phase allowed to use the sandbox's public NAT egress; sbx sandboxes never have egress. Agent inspection and approved repository commands run through `ocai-run-check`, which creates a no-egress network namespace. On sbx the sandbox itself is the boundary: it runs every command as one non-root user with no capabilities, so `ocai-run-check-sbx` only applies resource limits and a clean environment. The capability probe verifies DNS, public HTTP, private-network, and metadata access remain unavailable inside that command boundary.
 
 Static inspection is always available after a sandbox is created. Repository execution requires both:
 
@@ -206,7 +206,7 @@ Worker only:
 
 - GitHub App ID/private key.
 - OpenRouter API key.
-- A sandbox-scoped sbx API key, a Railway API token and sandbox template configuration, or access to the Docker daemon that runs sandboxes. Docker access is host-root-equivalent, so it belongs to the worker alone.
+- A sandbox-scoped sbx API key, or a Railway API token and sandbox template configuration.
 - Resend API key and sending address, because the worker sends notification email. The web app only
   enqueues test deliveries, so no mail credential reaches the internet-facing service.
 - Data encryption key, because callback delivery decrypts signing secrets.

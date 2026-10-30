@@ -24,7 +24,7 @@ The MVP supports this lifecycle:
 - Custom libSQL-backed jobs with singleton keys, leases, lease recovery, deferral, and bounded attempts.
 - WorkOS AuthKit Organizations and `admin`/`member` roles.
 - Read-only GitHub App; no OAuth token or personal access token storage.
-- Docker + gVisor and Railway Sandbox SDK `3.6.0` providers behind one interface.
+- sbx (gVisor) and Railway Sandbox SDK `3.6.0` providers behind one interface.
 - OpenRouter model from `OPENROUTER_MODEL`, defaulting to `deepseek/deepseek-v4-flash-0731`.
 - Vitest; the Playwright end-to-end suite was removed in commit `e8141d1`.
 
@@ -41,7 +41,7 @@ packages/
   github/                 GitHub App auth, state, webhooks, source provider
   integrations/           Grafana and Sentry alert intake, provider connections
   notifications/          Slack, Discord, and email delivery channels
-  sandbox/                Docker and Railway providers, image, commands, capability probe
+  sandbox/                sbx and Railway providers, sandbox scripts, commands, capability probe
   agent/                  OpenRouter provider, prompts, orchestration, evidence
   security/               Redaction, encryption, archives, paths, SSRF, HMAC
   observability/          Structured logs and Prometheus-style metrics

@@ -33,7 +33,7 @@ import {
 } from "./shared";
 import { sandboxScript } from "./template";
 
-/** Same base as image/Dockerfile, pinned by digest. */
+/** Debian base, pinned by digest. */
 const BASE_IMAGE =
 	"debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251";
 /** gVisor: the only backend under which repository commands may run. */
@@ -71,7 +71,7 @@ function sbxClient(config: SbxSandboxConfig): SbxClient {
 	return new SbxClient({ baseUrl: config.url, apiKey: config.apiKey });
 }
 
-// Mirrors image/Dockerfile. It contains tools only: no runtime or control-plane credential
+// Mirrors the Railway template in template.ts. It contains tools only: no runtime or control-plane credential
 // is baked in. There is no analyst account: sbx runs every command as one unprivileged user.
 export function sbxAnalysisSteps(): BuildStep[] {
 	return [

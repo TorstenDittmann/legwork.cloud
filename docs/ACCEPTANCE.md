@@ -55,7 +55,7 @@ This file distinguishes locally verified behavior from staging gates. Do not con
 - [ ] Untrusted fixture cannot resolve public DNS.
 - [ ] Public IPv4/IPv6 and HTTP(S) are unreachable.
 - [ ] Private DNS (`railway.internal`, `host.docker.internal`) and private-network HTTP are unreachable.
-- [ ] Docker provider: the sandbox runs under gVisor (`runsc`) with no network interface.
+- [ ] sbx provider: the sandbox runs on the `gvisor` backend with network mode `none`.
 - [ ] Metadata-style endpoints are unreachable.
 - [ ] Process runs as UID 10001 and cannot regain root.
 - [ ] Process cannot change namespace configuration.

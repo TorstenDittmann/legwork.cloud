@@ -53,12 +53,6 @@ export function repositoryRoot(repositoryId: string): string {
 	return `${WORKSPACE}/${repositoryId}`;
 }
 
-/** Path the bootstrap accepts for an archive streamed in by a provider without sandbox egress. */
-export function stagedArchivePath(repositoryId: string): string {
-	if (!UUID_PATTERN.test(repositoryId)) throw new Error("Invalid repository identifier");
-	return `/tmp/ocai-archive-${repositoryId}.tar.gz`;
-}
-
 export function numberLines(lines: string[], start: number): string {
 	return lines.map((line, index) => `${start + index}: ${line}`).join("\n");
 }

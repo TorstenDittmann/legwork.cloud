@@ -15,7 +15,7 @@ Implemented architecture:
 - WorkOS AuthKit active-organization authentication with `admin` and `member` authorization.
 - libSQL with Drizzle ORM and a custom durable leased-job queue. `DATABASE_URL` defaults to the local `file:local.db`; the remote database is a self-hosted libsql-server whose JWTs are minted with `bun run db:tokens`.
 - Read-only GitHub App integration and exact-SHA archive retrieval.
-- Three `SandboxProvider` implementations selected by `SANDBOX_PROVIDER`: sbx on gVisor and Docker + gVisor (both no network, worker-supplied archives), and the Railway Sandbox SDK pinned to `3.6.0` (still the default).
+- Two `SandboxProvider` implementations selected by `SANDBOX_PROVIDER`: sbx on gVisor (no network, worker-supplied archives) and the Railway Sandbox SDK pinned to `3.6.0` (still the default).
 - `orch.pkl` and the root `Dockerfile` deploy web, worker and libSQL to orch.
 - OpenRouter tool loop and structured diagnosis behind the model boundary; each analysis run is a durable LangGraph thread with libSQL checkpoints.
 - Grafana and Sentry alert intake and provider connections (`packages/integrations`).
@@ -32,7 +32,7 @@ Useful entry points:
 - `packages/db/src/jobs.ts`: queue singleton, lease recovery, deferral, retries.
 - `apps/web/src/routes/api/v1/services/[serviceSlug]/incidents/+server.ts`: public ingestion API.
 - `apps/worker/src/analysis.ts` and `apps/worker/src/analysis-graph.ts`: complete analysis lifecycle.
-- `packages/sandbox/src/sbx-provider.ts`, `docker-provider.ts` and `railway-provider.ts`: constrained sandbox adapters; `image/` holds the bootstrap, `ocai-run-check`, and the Docker image.
+- `packages/sandbox/src/sbx-provider.ts` and `railway-provider.ts`: constrained sandbox adapters; `image/` holds the bootstrap and the check wrappers.
 - `packages/sandbox/src/probe.ts`: mandatory real capability probe.
 - `packages/agent/src/openrouter.ts`: model calls and required-parameter routing.
 - `apps/worker/src/callbacks.ts`: callback construction and delivery.
@@ -65,7 +65,7 @@ These items require real staging credentials or external configuration and must 
 - GitHub App installation, repository webhooks, suspension/removal, token minting, and exact-SHA download.
 - OpenRouter routing and the selected model's real tool/structured-output behavior.
 - Callback delivery to a real public HTTPS endpoint, including all retry intervals.
-- Sandbox create/upload/execute/destroy lifecycle on Railway, and on a real gVisor host. The Docker provider has been exercised end to end under `runc` only. The sbx provider has not run against a real sbx server yet; its bootstrap path was exercised locally as a non-root user.
+- Sandbox create/upload/execute/destroy lifecycle on Railway and on a real sbx server. The sbx provider has not run against a real sbx server yet; its bootstrap path was exercised locally as a non-root user.
 - The mandatory no-egress capability probe.
 - Remote libSQL migration, concurrency behavior, and restore/backup retention policy.
 - Browser end-to-end coverage: the Playwright suite was removed in commit `e8141d1` and nothing replaces it yet.
@@ -82,7 +82,7 @@ These items require real staging credentials or external configuration and must 
 4. Configure WorkOS roles and URLs, then test onboarding and cross-organization denial.
 5. Configure the read-only GitHub App and run installation/webhook/exact-SHA tests.
 6. Exercise OpenRouter with recorded fixtures and confirm privacy-route failure remains fail-closed.
-7. Run `bun run --filter @legwork/sandbox probe` against the real sandbox provider (a gVisor host for Docker).
+7. Run `bun run --filter @legwork/sandbox probe` against the real sandbox provider (`SANDBOX_PROVIDER=sbx` for sbx).
 8. Leave command execution disabled unless every probe assertion passes.
 9. Rebuild an authenticated end-to-end suite and run the live agent evaluation.
 10. Verify remote libSQL backup aging before making any public backup-deletion promise.

@@ -4,8 +4,6 @@ import {
 	checkArgv,
 	createSandboxProvider,
 	discoverCheckCommand,
-	DockerSandboxProvider,
-	dockerSandboxConfig,
 	RailwaySandboxProvider,
 	sandboxProviderFor,
 	sandboxProviderKind,
@@ -13,7 +11,6 @@ import {
 	sbxAnalysisTemplate,
 	shellQuote,
 	singleFileTar,
-	stagedArchivePath,
 	validateRepositoryManifest,
 } from "./index";
 
@@ -87,60 +84,11 @@ describe("check arguments", () => {
 	});
 });
 
-describe("staged archives", () => {
-	it("derives the only path the bootstrap accepts", () => {
-		expect(stagedArchivePath("bc294d1f-5aeb-4862-8ffe-2a3355fb451f")).toBe(
-			"/tmp/ocai-archive-bc294d1f-5aeb-4862-8ffe-2a3355fb451f.tar.gz",
-		);
-		expect(() => stagedArchivePath("../../etc/passwd")).toThrow();
-	});
-});
-
 describe("provider selection", () => {
-	it("defaults to Railway and accepts Docker and sbx", () => {
+	it("defaults to Railway and accepts sbx", () => {
 		expect(sandboxProviderKind({})).toBe("railway");
-		expect(sandboxProviderKind({ SANDBOX_PROVIDER: "docker" })).toBe("docker");
-		expect(() => sandboxProviderKind({ SANDBOX_PROVIDER: "local" })).toThrow();
-	});
-
-	it("routes existing sandboxes by ID format, whatever SANDBOX_PROVIDER says", () => {
-		const containerId = "a".repeat(64);
-		const railwayId = "123e4567-e89b-42d3-a456-426614174000";
-		expect(sandboxProviderFor(containerId, disabled, {})).toBeInstanceOf(DockerSandboxProvider);
-		expect(sandboxProviderFor(railwayId, disabled, { SANDBOX_PROVIDER: "docker" })).toBeInstanceOf(
-			RailwaySandboxProvider,
-		);
-	});
-
-	it("reports a non-Docker sandbox ID as missing instead of throwing", async () => {
-		const provider = createSandboxProvider(disabled, { SANDBOX_PROVIDER: "docker" });
-		await expect(
-			provider.health({ id: "123e4567-e89b-42d3-a456-426614174000", createdAt: new Date() }),
-		).resolves.toBe("missing");
-	});
-
-	it("runs Docker sandboxes under gVisor unless overridden", () => {
-		expect(dockerSandboxConfig({})).toEqual({
-			image: "legwork-sandbox:local",
-			runtime: "runsc",
-		});
-		expect(createSandboxProvider(disabled, { SANDBOX_PROVIDER: "docker" })).toBeInstanceOf(
-			DockerSandboxProvider,
-		);
-	});
-
-	it("refuses repository commands outside gVisor even when enabled", async () => {
-		const provider = new DockerSandboxProvider({
-			image: "legwork-sandbox:local",
-			runtime: "runc",
-			commandExecutionEnabled: true,
-			capabilityProbePassed: true,
-		});
-		const result = await provider.runCheck(
-			{ id: "0".repeat(64), createdAt: new Date() },
-			{ name: "run_check", repositoryId: "bc294d1f-5aeb-4862-8ffe-2a3355fb451f", check: "test" },
-		);
-		expect(result.status).toBe("unavailable");
+		expect(sandboxProviderKind({ SANDBOX_PROVIDER: "sbx" })).toBe("sbx");
+		expect(() => sandboxProviderKind({ SANDBOX_PROVIDER: "docker" })).toThrow();
 	});
 });
 

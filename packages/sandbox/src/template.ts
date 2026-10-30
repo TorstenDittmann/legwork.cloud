@@ -1,14 +1,14 @@
 import { readFileSync } from "node:fs";
 import { Sandbox } from "railway";
 
-/** Directory holding the sandbox scripts and the Docker provider's image definition. */
+/** Directory holding the scripts installed into every sandbox. */
 export const SANDBOX_IMAGE_DIRECTORY = new URL("../image/", import.meta.url);
 
 export function sandboxScript(name: string): string {
 	return readFileSync(new URL(name, SANDBOX_IMAGE_DIRECTORY), "utf8");
 }
 
-// The Railway template mirrors image/Dockerfile. It contains tools only: no runtime or
+// The Railway template mirrors the sbx template in sbx-provider.ts. It contains tools only: no runtime or
 // control-plane credential is baked in.
 export function analysisTemplate() {
 	return Sandbox.template()

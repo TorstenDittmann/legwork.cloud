@@ -14,7 +14,6 @@
 		"typecheck": "tsc -p tsconfig.json --noEmit",
 		"lint": "oxlint src",
 		"probe": "bun src/probe-cli.ts",
-		"image:build": "docker build --tag legwork-sandbox:local image",
 		"sbx:template": "bun src/sbx-template-cli.ts"
 	},
 	"dependencies": {
