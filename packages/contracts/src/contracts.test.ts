@@ -102,7 +102,7 @@ describe("diagnosis contract", () => {
 	});
 
 	it("exposes required file line ranges in the provider JSON schema", () => {
-		const schema = z.toJSONSchema(diagnosisSchema) as {
+		const schema = z.toJSONSchema(diagnosisSchema) as unknown as {
 			properties: { evidence: { items: { anyOf: Array<{ required: string[] }> } } };
 		};
 		const variants = schema.properties.evidence.items.anyOf;
