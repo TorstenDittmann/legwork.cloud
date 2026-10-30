@@ -27,7 +27,7 @@
 		"@legwork/sandbox": "workspace:*",
 		"@legwork/security": "workspace:*",
 		"drizzle-orm": "0.45.2",
-		"undici": "7.30.1"
+		"undici": "7.29.1"
 	},
 	"devDependencies": {
 		"typescript": "5.9.2"
