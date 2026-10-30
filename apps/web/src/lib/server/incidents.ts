@@ -220,3 +220,51 @@ export async function loadIncident(organizationId: string, incidentId: string) {
 		callbacks
 	};
 }
+
+/**
+ * The latest run and diagnosis for one incident, as seen by a service API key.
+ * Scoped to the service as well as the organization so a key can only read the
+ * incidents it is allowed to create.
+ */
+export async function loadServiceIncidentResult(
+	organizationId: string,
+	serviceId: string,
+	incidentId: string
+) {
+	const db = createDatabase();
+	const [[incident], [currentRun]] = await Promise.all([
+		db
+			.select()
+			.from(incidents)
+			.where(
+				and(
+					eq(incidents.id, incidentId),
+					eq(incidents.organizationId, organizationId),
+					eq(incidents.serviceId, serviceId)
+				)
+			)
+			.limit(1),
+		db
+			.select()
+			.from(analysisRuns)
+			.where(
+				and(
+					eq(analysisRuns.incidentId, incidentId),
+					eq(analysisRuns.organizationId, organizationId)
+				)
+			)
+			.orderBy(desc(analysisRuns.createdAt))
+			.limit(1)
+	]);
+	if (!incident) return null;
+	const [diagnosis] = currentRun
+		? await db
+				.select()
+				.from(diagnoses)
+				.where(
+					and(eq(diagnoses.runId, currentRun.id), eq(diagnoses.organizationId, organizationId))
+				)
+				.limit(1)
+		: [];
+	return { incident, currentRun: currentRun ?? null, diagnosis: diagnosis?.diagnosis ?? null };
+}

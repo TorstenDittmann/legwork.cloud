@@ -3,6 +3,16 @@
 The Legwork CLI is a reactive incident trigger. It leaves successful commands alone and reports a
 wrapped command only when that command fails.
 
+## Install
+
+The CLI runs on Bun 1.4 or newer. Run it without installing:
+
+```sh
+bunx @legwork/cli configure --service payments-api
+```
+
+Or install it globally with `bun add -g @legwork/cli`.
+
 ## Install from this repository
 
 Use the repository-pinned Bun 1.4.0 runtime, then build and link the executable:
@@ -71,6 +81,44 @@ deploy-command 2>&1 | legwork incident \
 A complete payload matching the versioned incident contract can be sent with `--payload incident.json`.
 Use `--json` with `configure`, `doctor`, or `incident` for machine-readable output.
 
+## Wait for the diagnosis
+
+Add `--wait` to get the diagnosis back in the same process. This is the simplest way to hand a
+Legwork diagnosis to a coding agent or to a CI log:
+
+```sh
+# After a failure, print the diagnosis to stderr. The exit code is still the command's.
+legwork run --wait -- bun test
+
+# Report, wait, and get the full result as JSON.
+deploy-command 2>&1 | legwork incident --stdin --title "Deploy failed" --wait --json
+
+# Check or wait on an incident you already reported.
+legwork status <incident-id> --wait --json
+```
+
+`--timeout <seconds>` caps the wait (default 600). `status --wait` and `incident --wait` exit `0` for
+a completed or inconclusive diagnosis and `1` for a failed, cancelled, or timed-out analysis. The
+JSON is the `incidentResultResponseSchema` contract from `@legwork/contracts`, served by
+`GET /api/v1/services/<service>/incidents/<incident-id>` with the same ingestion key. A key can only
+read incidents from its own service.
+
+## GitHub Actions
+
+The `actions/run` action in this repository wraps a CI step:
+
+```yaml
+- uses: TorstenDittmann/legwork.cloud/actions/run@main
+  with:
+    command: bun test
+    service: payments-api
+    api-key: ${{ secrets.LEGWORK_API_KEY }}
+    environment: ci
+    wait: true # print the diagnosis in the log and the job summary
+```
+
+The step fails exactly when the command fails. See `actions/run/action.yml` for every input.
+
 ## CI without a config file
 
 Flags take precedence over environment variables, which take precedence over the saved config:
@@ -95,3 +143,10 @@ Run `legwork help <command>` for every option.
 - `incident` returns `0` after the incident is queued, `1` for connection/API failures, and `2` for
   invalid usage.
 - `run` returns the wrapped command's exit code, including when incident reporting itself fails.
+- `status` returns `0` after printing the current state; with `--wait`, it follows the rule above.
+
+## Releasing
+
+Bump `version` in `apps/cli/package.json`, then push a matching `cli-v<version>` tag. The
+`Release CLI` workflow tests, packs, and publishes to npm with provenance. It needs an `NPM_TOKEN`
+secret with publish rights to the `@legwork` scope.

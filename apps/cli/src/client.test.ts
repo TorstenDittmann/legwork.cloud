@@ -88,4 +88,32 @@ describe("LegworkClient", () => {
 		await new LegworkClient(config, fetchImplementation).createIncident(incident, "cli-stable-key");
 		expect(fetchImplementation).toHaveBeenCalledTimes(2);
 	});
+
+	it("reads an incident result from the service-scoped endpoint", async () => {
+		let url = "";
+		const result = {
+			incidentId: queued.incidentId,
+			externalId: "deploy-42",
+			title: "Deployment failed",
+			severity: "high",
+			runId: queued.runId,
+			status: "analyzing",
+			failure: null,
+			diagnosis: null,
+			dashboardUrl: queued.dashboardUrl,
+			createdAt: "2026-08-23T12:00:00.000Z",
+			completedAt: null,
+		};
+		const fetchImplementation = async (input: string) => {
+			url = input;
+			return Response.json(result);
+		};
+
+		await expect(
+			new LegworkClient(config, fetchImplementation).getIncident(queued.incidentId),
+		).resolves.toEqual(result);
+		expect(url).toBe(
+			`https://legwork.example/api/v1/services/payments-api/incidents/${queued.incidentId}`,
+		);
+	});
 });

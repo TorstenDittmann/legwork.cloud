@@ -1,5 +1,6 @@
 import type { CreateIncidentRequest } from "@legwork/contracts";
 import { UsageError } from "./errors";
+import { parseTimeoutSeconds } from "./wait";
 
 type Severity = CreateIncidentRequest["severity"];
 
@@ -34,6 +35,16 @@ export type CliCommand =
 			idempotencyKey?: string;
 			context: string[];
 			stdin: boolean;
+			wait: boolean;
+			timeoutSeconds: number;
+			json: boolean;
+			help: boolean;
+	  } & ConnectionOptions)
+	| ({
+			kind: "status";
+			incidentId?: string;
+			wait: boolean;
+			timeoutSeconds: number;
 			json: boolean;
 			help: boolean;
 	  } & ConnectionOptions)
@@ -48,6 +59,8 @@ export type CliCommand =
 			idempotencyKey?: string;
 			context: string[];
 			command: string[];
+			wait: boolean;
+			timeoutSeconds: number;
 			help: boolean;
 	  } & ConnectionOptions);
 
@@ -175,6 +188,33 @@ export function parseCliArgs(args: string[]): CliCommand {
 		};
 	}
 
+	const waitSpecs: Record<string, OptionSpec> = {
+		"--wait": { key: "wait", kind: "boolean" },
+		"--timeout": { key: "timeout", kind: "value" },
+	};
+
+	if (name === "status") {
+		const [first, ...options] = rest;
+		const incidentId = first && !first.startsWith("-") ? first : undefined;
+		const parsed = parseOptions(incidentId ? options : rest, {
+			...commonSpecs,
+			...waitSpecs,
+			"--json": { key: "json", kind: "boolean" },
+		});
+		rejectTrailingArguments(parsed);
+		if (!has(parsed.values, "help") && !incidentId)
+			throw new UsageError("status requires an incident id");
+		return {
+			kind: "status",
+			...connection(parsed.values),
+			...(incidentId ? { incidentId } : {}),
+			wait: has(parsed.values, "wait"),
+			timeoutSeconds: parseTimeoutSeconds(one(parsed.values, "timeout")),
+			json: has(parsed.values, "json"),
+			help: has(parsed.values, "help"),
+		};
+	}
+
 	const incidentSpecs: Record<string, OptionSpec> = {
 		...commonSpecs,
 		"--title": { key: "title", kind: "value" },
@@ -197,6 +237,7 @@ export function parseCliArgs(args: string[]): CliCommand {
 			"--stdin": { key: "stdin", kind: "boolean" },
 			"--stack-trace-file": { key: "stackTraceFile", kind: "value" },
 			"--payload": { key: "payloadFile", kind: "value" },
+			...waitSpecs,
 			"--json": { key: "json", kind: "boolean" },
 		});
 		rejectTrailingArguments(parsed);
@@ -225,13 +266,15 @@ export function parseCliArgs(args: string[]): CliCommand {
 			...(idempotencyKey ? { idempotencyKey } : {}),
 			context: many(parsed.values, "context"),
 			stdin: has(parsed.values, "stdin"),
+			wait: has(parsed.values, "wait"),
+			timeoutSeconds: parseTimeoutSeconds(one(parsed.values, "timeout")),
 			json: has(parsed.values, "json"),
 			help: has(parsed.values, "help"),
 		};
 	}
 
 	if (name === "run") {
-		const parsed = parseOptions(rest, incidentSpecs);
+		const parsed = parseOptions(rest, { ...incidentSpecs, ...waitSpecs });
 		if (!has(parsed.values, "help") && !parsed.foundDelimiter)
 			throw new UsageError("run requires -- before the command");
 		if (!has(parsed.values, "help") && parsed.rest.length === 0)
@@ -255,6 +298,8 @@ export function parseCliArgs(args: string[]): CliCommand {
 			...(idempotencyKey ? { idempotencyKey } : {}),
 			context: many(parsed.values, "context"),
 			command: parsed.rest,
+			wait: has(parsed.values, "wait"),
+			timeoutSeconds: parseTimeoutSeconds(one(parsed.values, "timeout")),
 			help: has(parsed.values, "help"),
 		};
 	}

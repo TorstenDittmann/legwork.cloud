@@ -54,6 +54,10 @@ legwork configure --service payments-api
 legwork run --environment production -- bun test
 ```
 
+Add `--wait` to print the diagnosis once the analysis finishes, or `legwork status <incident-id>
+--wait --json` to fetch it later. Coding agents and CI can read results this way with the same
+ingestion key. A GitHub Action wrapper lives in [`actions/run`](./actions/run/action.yml).
+
 See [`apps/cli/README.md`](./apps/cli/README.md) for CI configuration, direct incident submission,
 security behavior, and removal instructions.
 

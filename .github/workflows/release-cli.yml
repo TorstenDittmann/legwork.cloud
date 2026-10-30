@@ -1,0 +1,35 @@
+name: Release CLI
+on:
+  push:
+    tags: ["cli-v*"]
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: bun install --frozen-lockfile
+      - name: Check the tag matches the package version
+        working-directory: apps/cli
+        run: |
+          version="$(jq -r .version package.json)"
+          if [ "cli-v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match apps/cli version $version"
+            exit 1
+          fi
+      - run: bun run --filter @legwork/cli test
+      - name: Pack
+        working-directory: apps/cli
+        run: bun pm pack --filename legwork-cli.tgz
+      - name: Publish
+        working-directory: apps/cli
+        run: npm publish legwork-cli.tgz --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
