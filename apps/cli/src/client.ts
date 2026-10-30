@@ -1,17 +1,20 @@
 import {
 	createIncidentRequestSchema,
 	createIncidentResponseSchema,
+	incidentResultResponseSchema,
 	problemDetailsSchema,
 	serviceConnectionResponseSchema,
 	type CreateIncidentRequest,
 	type CreateIncidentResponse,
+	type IncidentResultResponse,
 	type ServiceConnectionResponse,
 } from "@legwork/contracts";
 import type { LegworkConfig } from "./config";
 import { CliError } from "./errors";
+import { VERSION } from "./version";
 
 const REQUEST_TIMEOUT_MS = 15_000;
-const USER_AGENT = "legwork-cli/0.1.0";
+const USER_AGENT = `legwork-cli/${VERSION}`;
 
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -47,15 +50,22 @@ export class LegworkClient {
 		return parsed.data;
 	}
 
+	async getIncident(incidentId: string): Promise<IncidentResultResponse> {
+		const response = await this.#request("GET", { path: `/${encodeURIComponent(incidentId)}` });
+		const parsed = incidentResultResponseSchema.safeParse(await responseJson(response));
+		if (!parsed.success) throw new CliError("Legwork returned an unexpected incident response");
+		return parsed.data;
+	}
+
 	async #request(
 		method: "GET" | "POST",
-		options: { body?: string; idempotencyKey?: string } = {},
+		options: { body?: string; idempotencyKey?: string; path?: string } = {},
 	): Promise<Response> {
 		for (let attempt = 0; attempt < 2; attempt += 1) {
 			const controller = new AbortController();
 			const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 			try {
-				const response = await this.fetchImplementation(this.#endpoint, {
+				const response = await this.fetchImplementation(`${this.#endpoint}${options.path ?? ""}`, {
 					method,
 					signal: controller.signal,
 					headers: {

@@ -1,0 +1,81 @@
+name: Legwork run
+description: Run a command and, if it fails, queue a Legwork investigation with its output. The command's exit code is preserved.
+branding:
+  icon: search
+  color: green
+inputs:
+  command:
+    description: Shell command to run with bash.
+    required: true
+  service:
+    description: Legwork service slug.
+    required: true
+  api-key:
+    description: Service ingestion key. Pass it from a secret.
+    required: true
+  api-url:
+    description: Legwork API origin. Leave empty for the CLI default.
+    required: false
+    default: ""
+  title:
+    description: Incident title. Defaults to the workflow and job name.
+    required: false
+    default: ""
+  severity:
+    description: critical, high, medium, low, or unknown.
+    required: false
+    default: high
+  environment:
+    description: Environment name reported with the incident.
+    required: false
+    default: ""
+  wait:
+    description: After a failure, wait for the diagnosis, print it in the log, and add it to the job summary.
+    required: false
+    default: "false"
+  timeout:
+    description: Seconds to wait for the diagnosis when wait is true.
+    required: false
+    default: "600"
+  cli-version:
+    description: Version of the @legwork/cli npm package.
+    required: false
+    default: latest
+runs:
+  using: composite
+  steps:
+    - uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: 1.4.0
+    - name: Run with Legwork
+      shell: bash
+      env:
+        LEGWORK_COMMAND: ${{ inputs.command }}
+        LEGWORK_SERVICE: ${{ inputs.service }}
+        LEGWORK_API_KEY: ${{ inputs.api-key }}
+        LEGWORK_API_URL_INPUT: ${{ inputs.api-url }}
+        LEGWORK_TITLE: "${{ inputs.title != '' && inputs.title || format('CI failed: {0} / {1}', github.workflow, github.job) }}"
+        LEGWORK_SEVERITY: ${{ inputs.severity }}
+        LEGWORK_ENVIRONMENT: ${{ inputs.environment }}
+        LEGWORK_WAIT: ${{ inputs.wait }}
+        LEGWORK_TIMEOUT: ${{ inputs.timeout }}
+        LEGWORK_CLI_VERSION: ${{ inputs.cli-version }}
+      run: |
+        if [ -n "$LEGWORK_API_URL_INPUT" ]; then export LEGWORK_API_URL="$LEGWORK_API_URL_INPUT"; fi
+        args=(--title "$LEGWORK_TITLE" --severity "$LEGWORK_SEVERITY")
+        if [ -n "$LEGWORK_ENVIRONMENT" ]; then args+=(--environment "$LEGWORK_ENVIRONMENT"); fi
+        if [ "$LEGWORK_WAIT" = "true" ]; then args+=(--wait --timeout "$LEGWORK_TIMEOUT"); fi
+        set +e
+        log="$log"
+        { bunx "@legwork/cli@$LEGWORK_CLI_VERSION" run "${args[@]}" -- bash -c "$LEGWORK_COMMAND" 2>&1 1>&3 3>&- | tee "$log"; status=${PIPESTATUS[0]}; } 3>&1
+        set -e
+        if [ "$status" -ne 0 ] && [ "$LEGWORK_WAIT" = "true" ] && grep -q "Failure reported:" "$log"; then
+          {
+            echo "## Legwork diagnosis"
+            echo
+            echo '```text'
+            sed -n '/Failure reported:/,$p' "$log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi
+        exit "$status"

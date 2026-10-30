@@ -52,6 +52,17 @@ describe("parseCliArgs", () => {
 		});
 	});
 
+	it("parses status with a positional incident id and wait options", () => {
+		expect(parseCliArgs(["status", "abc", "--wait", "--timeout", "30", "--json"])).toMatchObject({
+			kind: "status",
+			incidentId: "abc",
+			wait: true,
+			timeoutSeconds: 30,
+			json: true,
+		});
+		expect(() => parseCliArgs(["status", "--wait"])).toThrow("status requires an incident id");
+	});
+
 	it("requires a delimiter before a wrapped command", () => {
 		expect(() => parseCliArgs(["run", "bun", "test"])).toThrow(UsageError);
 	});

@@ -6,6 +6,7 @@ import {
 	MAX_REQUEST_BYTES,
 	type CreateIncidentRequest,
 	type CreateIncidentResponse,
+	type IncidentResultResponse,
 } from "@legwork/contracts";
 import { parseCliArgs, type CliCommand } from "./args";
 import { LegworkClient } from "./client";
@@ -33,8 +34,8 @@ import {
 	validateIdempotencyKey,
 } from "./payload";
 import { TailBuffer } from "./tail-buffer";
-
-const VERSION = "0.1.0";
+import { VERSION } from "./version";
+import { DEFAULT_WAIT_TIMEOUT_SECONDS, resultExitCode, waitForIncident } from "./wait";
 
 const mainHelp = `Legwork CLI ${VERSION}
 
@@ -44,6 +45,7 @@ Usage:
   legwork configure [options]
   legwork run [incident options] -- <command> [args...]
   legwork incident --title <title> [options]
+  legwork status <incident-id> [--wait] [options]
   legwork doctor [options]
 
 Quick start:
@@ -54,6 +56,7 @@ Commands:
   configure   Save and verify a service connection
   run         Run a command; report it only when it fails
   incident    Report an incident from flags, stdin, or a JSON payload
+  status      Show an incident's analysis status and diagnosis
   doctor      Verify the configured service and ingestion key
 
 Run legwork help <command> for command-specific options.`;
@@ -98,8 +101,23 @@ Options:
   --stack-trace-file <path>  Read diagnostic output from a file
   --payload <path>           Send a complete JSON incident payload
   --idempotency-key <key>    Override the generated idempotency key
+  --wait                     Wait for the analysis and print the diagnosis
+  --timeout <seconds>        Give up waiting after this long (default: ${DEFAULT_WAIT_TIMEOUT_SECONDS})
   --json                     Print machine-readable output
   -h, --help                 Show this help
+
+Connection overrides: --service, --url, --api-key`,
+	status: `Usage: legwork status <incident-id> [options]
+
+Show the latest analysis run and diagnosis for an incident. With --wait, poll
+until the analysis finishes. Exits 0 for a completed or inconclusive
+diagnosis and 1 for a failed, cancelled, or unfinished analysis.
+
+Options:
+  --wait                 Poll until the analysis finishes
+  --timeout <seconds>    Give up waiting after this long (default: ${DEFAULT_WAIT_TIMEOUT_SECONDS})
+  --json                 Print machine-readable output
+  -h, --help             Show this help
 
 Connection overrides: --service, --url, --api-key`,
 	run: `Usage: legwork run [incident options] -- <command> [args...]
@@ -116,6 +134,8 @@ Options:
   --commit-sha <sha>         Full 40-character Git commit SHA
   --context <key=value>      Add context; repeat for multiple values
   --idempotency-key <key>    Override the generated idempotency key
+  --wait                     After a failure, wait and print the diagnosis to stderr
+  --timeout <seconds>        Give up waiting after this long (default: ${DEFAULT_WAIT_TIMEOUT_SECONDS})
   -h, --help                 Show this help
 
 Connection overrides: --service, --url, --api-key`,
@@ -144,6 +164,8 @@ export async function runCli(args: string[]): Promise<number> {
 				return await doctor(command);
 			case "incident":
 				return await incident(command);
+			case "status":
+				return await status(command);
 			case "run":
 				return await runCommand(command);
 		}
@@ -227,9 +249,68 @@ async function incident(command: Extract<CliCommand, { kind: "incident" }>): Pro
 	const idempotencyKey = command.idempotencyKey
 		? validateIdempotencyKey(command.idempotencyKey)
 		: createIdempotencyKey(config.service, request.externalId);
-	const result = await new LegworkClient(config).createIncident(request, idempotencyKey);
-	printIncidentResult(result, command.json);
-	return 0;
+	const client = new LegworkClient(config);
+	const result = await client.createIncident(request, idempotencyKey);
+	if (!command.wait) {
+		printIncidentResult(result, command.json);
+		return 0;
+	}
+	if (!command.json) process.stderr.write(`Waiting for analysis: ${result.dashboardUrl}\n`);
+	const final = await waitForIncident(() => client.getIncident(result.incidentId), {
+		timeoutMs: command.timeoutSeconds * 1000,
+	});
+	printStatus(final, command.json);
+	return resultExitCode(final);
+}
+
+async function status(command: Extract<CliCommand, { kind: "status" }>): Promise<number> {
+	const config = await resolveConfig(connectionOverrides(command));
+	const client = new LegworkClient(config);
+	const incidentId = command.incidentId!;
+	const result = command.wait
+		? await waitForIncident(() => client.getIncident(incidentId), {
+				timeoutMs: command.timeoutSeconds * 1000,
+			})
+		: await client.getIncident(incidentId);
+	printStatus(result, command.json);
+	return command.wait ? resultExitCode(result) : 0;
+}
+
+function printStatus(
+	result: IncidentResultResponse,
+	json: boolean,
+	destination: NodeJS.WriteStream = process.stdout,
+): void {
+	if (json) {
+		printJson(result);
+		return;
+	}
+	const lines = [`${result.title}`, `  Status: ${result.status ?? "pending"}`];
+	const diagnosis = result.diagnosis;
+	if (diagnosis) {
+		lines.push(`  Diagnosis: ${diagnosis.title}`, "", indent(diagnosis.summary));
+		if (diagnosis.rootCause)
+			lines.push(
+				"",
+				`  Root cause (${Math.round(diagnosis.rootCause.confidence * 100)}% confidence):`,
+				indent(diagnosis.rootCause.statement),
+			);
+		if (diagnosis.suggestedFix) {
+			lines.push("", "  Suggested fix:", indent(diagnosis.suggestedFix.description));
+			for (const step of diagnosis.suggestedFix.steps) lines.push(`    - ${step}`);
+		}
+	} else if (result.failure?.message) {
+		lines.push(`  Failure: ${result.failure.message}`);
+	}
+	lines.push("", `  ${result.dashboardUrl}`);
+	destination.write(`${lines.join("\n")}\n`);
+}
+
+function indent(text: string): string {
+	return text
+		.split("\n")
+		.map((line) => `    ${line}`)
+		.join("\n");
 }
 
 function validateIncidentUsage(command: Extract<CliCommand, { kind: "incident" }>): void {
@@ -351,8 +432,19 @@ async function runCommand(command: Extract<CliCommand, { kind: "run" }>): Promis
 		const idempotencyKey = command.idempotencyKey
 			? validateIdempotencyKey(command.idempotencyKey)
 			: createIdempotencyKey(config.service, request.externalId);
-		const result = await new LegworkClient(config).createIncident(request, idempotencyKey);
+		const client = new LegworkClient(config);
+		const result = await client.createIncident(request, idempotencyKey);
 		process.stderr.write(`${successMark(true)} Failure reported: ${result.dashboardUrl}\n`);
+		if (command.wait) {
+			try {
+				const final = await waitForIncident(() => client.getIncident(result.incidentId), {
+					timeoutMs: command.timeoutSeconds * 1000,
+				});
+				printStatus(final, false, process.stderr);
+			} catch (error) {
+				process.stderr.write(`Legwork diagnosis unavailable: ${normalizeError(error).message}\n`);
+			}
+		}
 	} catch (error) {
 		process.stderr.write(
 			`Legwork could not report this failure: ${normalizeError(error).message}\n`,

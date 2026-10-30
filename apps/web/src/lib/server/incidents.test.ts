@@ -13,7 +13,12 @@ import {
 	repositories,
 	services
 } from '@legwork/db';
-import { loadIncident, loadIncidentRun, loadIncidentStream } from './incidents';
+import {
+	loadIncident,
+	loadIncidentRun,
+	loadIncidentStream,
+	loadServiceIncidentResult
+} from './incidents';
 
 const db = createDatabase(`/tmp/legwork-incidents-test-${process.pid}.db`);
 
@@ -22,6 +27,7 @@ let incidentId = '';
 let firstRunId = '';
 let retryRunId = '';
 let repositoryId = '';
+let serviceId = '';
 
 const diagnosis: Diagnosis = {
 	schemaVersion: '1',
@@ -70,6 +76,7 @@ beforeAll(async () => {
 		})
 		.returning();
 	repositoryId = repository!.id;
+	serviceId = service!.id;
 	organizationId = organization!.id;
 	const created = await createIncidentIdempotently(db, {
 		organizationId,
@@ -167,5 +174,22 @@ describe('loadIncidentRun', () => {
 
 	it('stays scoped to the incident and tenant', async () => {
 		expect(await loadIncidentRun(organizationId, 'not-this-incident', firstRunId)).toBeNull();
+	});
+});
+
+describe('loadServiceIncidentResult', () => {
+	it('returns the current run and its diagnosis', async () => {
+		const result = await loadServiceIncidentResult(organizationId, serviceId, incidentId);
+		expect(result?.incident.id).toBe(incidentId);
+		expect(result?.currentRun?.id).toBe(retryRunId);
+		expect(result?.diagnosis).toEqual(diagnosis);
+	});
+
+	it('stays scoped to the service', async () => {
+		const [other] = await db
+			.insert(services)
+			.values({ organizationId, name: 'Other', slug: 'other' })
+			.returning();
+		expect(await loadServiceIncidentResult(organizationId, other!.id, incidentId)).toBeNull();
 	});
 });

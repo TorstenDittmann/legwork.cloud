@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { diagnosisSchema } from "./agent";
 
 export const MAX_REQUEST_BYTES = 256 * 1024;
 export const MAX_DIAGNOSTIC_TEXT_BYTES = 128 * 1024;
@@ -83,3 +84,28 @@ export const runStatusSchema = z.enum([
 	"cancelled",
 ]);
 export type RunStatus = z.infer<typeof runStatusSchema>;
+
+export const incidentResultResponseSchema = z
+	.object({
+		incidentId: z.string().uuid(),
+		externalId: z.string(),
+		title: z.string(),
+		severity: createIncidentRequestSchema.shape.severity,
+		runId: z.string().uuid().nullable(),
+		status: runStatusSchema.nullable(),
+		failure: z
+			.object({ code: z.string().nullable(), message: z.string().nullable() })
+			.strict()
+			.nullable(),
+		diagnosis: diagnosisSchema.nullable(),
+		dashboardUrl: z.string().url(),
+		createdAt: z.string().datetime({ offset: true }),
+		completedAt: z.string().datetime({ offset: true }).nullable(),
+	})
+	.strict();
+export type IncidentResultResponse = z.infer<typeof incidentResultResponseSchema>;
+
+export const terminalRunStatuses = ["completed", "inconclusive", "failed", "cancelled"] as const;
+export function isTerminalRunStatus(status: RunStatus | null): boolean {
+	return status !== null && (terminalRunStatuses as readonly string[]).includes(status);
+}

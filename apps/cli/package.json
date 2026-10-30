@@ -1,7 +1,20 @@
 {
 	"name": "@legwork/cli",
 	"version": "0.1.0",
-	"private": true,
+	"description": "Turn failed commands and CI jobs into evidence-backed Legwork incident diagnoses",
+	"keywords": [
+		"ci",
+		"cli",
+		"diagnosis",
+		"incident",
+		"legwork"
+	],
+	"license": "UNLICENSED",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/TorstenDittmann/legwork.cloud.git",
+		"directory": "apps/cli"
+	},
 	"bin": {
 		"legwork": "./dist/legwork.js"
 	},
@@ -9,16 +22,19 @@
 		"dist"
 	],
 	"type": "module",
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	},
 	"scripts": {
 		"build": "bun build src/index.ts --target=bun --outfile=dist/legwork.js",
 		"typecheck": "tsc -p tsconfig.json --noEmit",
 		"lint": "oxlint src",
-		"test": "vitest run src"
-	},
-	"dependencies": {
-		"@legwork/contracts": "workspace:*"
+		"test": "vitest run src",
+		"prepack": "bun run build"
 	},
 	"devDependencies": {
+		"@legwork/contracts": "workspace:*",
 		"typescript": "5.9.2",
 		"vitest": "4.1.11"
 	},
