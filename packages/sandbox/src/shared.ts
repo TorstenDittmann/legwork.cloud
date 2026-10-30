@@ -64,19 +64,16 @@ export function numberLines(lines: string[], start: number): string {
 }
 
 /** Arguments for `ocai-run-check`, which applies the no-egress, unprivileged boundary. */
-export function checkArgv(root: string, command: DiscoveredCommand): string[] {
+export function checkArgv(
+	root: string,
+	command: DiscoveredCommand,
+	wrapper = "/usr/local/bin/ocai-run-check",
+): string[] {
 	const assignments = Object.entries(command.environment).map(([key, value]) => {
 		if (!/^[A-Z_][A-Z0-9_]*$/.test(key)) throw new Error("Invalid check environment name");
 		return `${key}=${value}`;
 	});
-	return [
-		"/usr/local/bin/ocai-run-check",
-		root,
-		"env",
-		...assignments,
-		command.executable,
-		...command.args,
-	];
+	return [wrapper, root, "env", ...assignments, command.executable, ...command.args];
 }
 
 export function checkResult(

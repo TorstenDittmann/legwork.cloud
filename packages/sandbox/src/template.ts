@@ -4,7 +4,7 @@ import { Sandbox } from "railway";
 /** Directory holding the sandbox scripts and the Docker provider's image definition. */
 export const SANDBOX_IMAGE_DIRECTORY = new URL("../image/", import.meta.url);
 
-function sandboxScript(name: string): string {
+export function sandboxScript(name: string): string {
 	return readFileSync(new URL(name, SANDBOX_IMAGE_DIRECTORY), "utf8");
 }
 

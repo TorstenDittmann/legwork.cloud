@@ -81,9 +81,21 @@ webhook URL and work immediately; email requires `RESEND_API_KEY` and `RESEND_FR
 worker plus a sending domain verified in Resend. Each channel routes to every service unless you
 narrow it, and **Send test** posts a real message through the same path a diagnosis takes.
 
+## orch deployment
+
+Production runs on [orch](https://orch.torsten.work) from `orch.pkl`: the `web` and `worker` services share one image built from the root `Dockerfile`, `db` is a LibSQL database with backups every six hours, and every deploy runs `bun run db:migrate` as a pre-deploy hook before the rollout. orch generates the database credentials and passes the connection URL as `DATABASE_URL`.
+
+Set the application secrets named in `orch.pkl` once before the first deploy, for example:
+
+```sh
+printf '%s' "$OPENROUTER_API_KEY" | orch secret set legwork openrouter-api-key --from-stdin
+```
+
+Run `orch github init` once from a checkout to trust this repository and write `.github/workflows/deploy.yml`; every push to `main` then builds `ghcr.io/torstendittmann/legwork.cloud` and deploys it.
+
 ## Railway deployment
 
-Create two Railway services from this repository and use these commands:
+Railway is being retired. Until the cutover, create two Railway services from this repository and use these commands:
 
 | Service | Build                                    | Start                                    | Health         |
 | ------- | ---------------------------------------- | ---------------------------------------- | -------------- |
@@ -97,6 +109,14 @@ Both services use the same remote libSQL `DATABASE_URL`; local development uses 
 `SANDBOX_PROVIDER` selects where analyses run:
 
 - `railway` (default for now): Railway Sandboxes, created from the template in `packages/sandbox/src/template.ts`. Needs `RAILWAY_TOKEN`.
+- `sbx`: one [sbx](https://sbx.torsten.work) sandbox per analysis on the `gvisor` backend with network mode `none`, no Linux capabilities and a non-root user. The worker downloads each exact-SHA archive from `codeload.github.com` and uploads it, so the sandbox never has egress. Needs `SBX_URL` and a sandbox-scoped `SBX_API_KEY`. The analysis template is named after a hash of its image and steps; after changing anything in `packages/sandbox/image`, create the new one with an admin key before deploying the worker:
+
+  ```sh
+  SBX_URL=https://sbx.torsten.work SBX_API_KEY=<admin key> bun run --filter @legwork/sandbox sbx:template
+  ```
+
+  The worker refuses to start if its template is missing or gVisor is unavailable.
+
 - `docker`: one container per analysis under gVisor, with no network interface at all. The worker streams each exact-SHA archive into the container, so it needs outbound access to `codeload.github.com` and access to a Docker daemon that has the `runsc` runtime registered. The image is built from `packages/sandbox/image` on first start, or ahead of time with `bun run --filter @legwork/sandbox image:build`.
 
 To run the Docker provider locally without gVisor, set `SANDBOX_DOCKER_RUNTIME=runc`. Static inspection works, but `run_check` stays unavailable and the probe fails its `isolatedRuntime` assertion, by design.
@@ -109,7 +129,7 @@ Repository code execution is disabled by default. With the target sandbox provid
 bun run --filter @legwork/sandbox probe
 ```
 
-The probe creates a real sandbox on the configured provider and checks file transfer, execution, DNS, public HTTP, private DNS and private-network HTTP, metadata endpoints, UID/capability isolation, namespace reconfiguration, secret visibility, timeout termination, and destruction. On Docker it also requires the gVisor runtime and a disabled network. Set both of these only after the complete probe returns `passed: true` in the target environment:
+The probe creates a real sandbox on the configured provider and checks file transfer, execution, DNS, public HTTP, private DNS and private-network HTTP, metadata endpoints, UID/capability isolation, namespace reconfiguration, secret visibility, timeout termination, and destruction. On Docker and sbx it also requires the gVisor runtime and a disabled network. Set both of these only after the complete probe returns `passed: true` in the target environment:
 
 ```sh
 SANDBOX_COMMAND_EXECUTION=true

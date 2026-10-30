@@ -14,11 +14,13 @@
 		"typecheck": "tsc -p tsconfig.json --noEmit",
 		"lint": "oxlint src",
 		"probe": "bun src/probe-cli.ts",
-		"image:build": "docker build --tag legwork-sandbox:local image"
+		"image:build": "docker build --tag legwork-sandbox:local image",
+		"sbx:template": "bun src/sbx-template-cli.ts"
 	},
 	"dependencies": {
 		"@legwork/contracts": "workspace:*",
 		"@legwork/security": "workspace:*",
+		"@sbx.torsten.work/sbx": "0.2.5",
 		"railway": "3.6.0"
 	},
 	"devDependencies": {
