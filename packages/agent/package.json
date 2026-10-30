@@ -18,7 +18,7 @@
 		"@langchain/langgraph": "1.4.9",
 		"@legwork/contracts": "workspace:*",
 		"@legwork/security": "workspace:*",
-		"zod": "4.1.5"
+		"zod": "4.6.7"
 	},
 	"devDependencies": {
 		"@langchain/langgraph-checkpoint-validation": "1.1.0",
