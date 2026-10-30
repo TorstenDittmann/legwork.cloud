@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { callbackDeliveries, createDatabase, notificationDeliveries } from "@legwork/db";
 import { logger } from "@legwork/observability";
-import { buildAnalysisTemplate } from "@legwork/sandbox";
+import { prepareSandboxRuntime } from "@legwork/sandbox";
 import { analyzeIncident, OrganizationConcurrencyDeferredError } from "./analysis";
 import { handleAnalysisFailure } from "./analysis-failure";
 import { CallbackRetryError, deliverCallback, enqueueAutomaticCallback } from "./callbacks";
@@ -15,8 +15,8 @@ const config = workerConfig();
 const db = createDatabase();
 const workerId = crypto.randomUUID();
 
-await buildAnalysisTemplate();
-logger.info("Railway sandbox template is ready");
+const sandboxProvider = await prepareSandboxRuntime();
+logger.info({ sandboxProvider }, "sandbox runtime is ready");
 
 const pollers = [
 	createQueuePoller({

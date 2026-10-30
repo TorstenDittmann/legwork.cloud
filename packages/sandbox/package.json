@@ -3,7 +3,8 @@
 	"version": "0.0.0",
 	"private": true,
 	"files": [
-		"dist"
+		"dist",
+		"image"
 	],
 	"type": "module",
 	"main": "./src/index.ts",
@@ -12,11 +13,13 @@
 		"build": "tsc -p tsconfig.json",
 		"typecheck": "tsc -p tsconfig.json --noEmit",
 		"lint": "oxlint src",
-		"probe": "bun src/probe-cli.ts"
+		"probe": "bun src/probe-cli.ts",
+		"sbx:template": "bun src/sbx-template-cli.ts"
 	},
 	"dependencies": {
 		"@legwork/contracts": "workspace:*",
 		"@legwork/security": "workspace:*",
+		"@sbx.torsten.work/sbx": "0.2.5",
 		"railway": "3.6.0"
 	},
 	"devDependencies": {

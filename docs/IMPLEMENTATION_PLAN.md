@@ -9,7 +9,7 @@ The MVP supports this lifecycle:
 3. The service receives one active ingestion key and a callback signing secret, each shown only at creation or rotation.
 4. A member submits an incident manually or a caller posts it to the versioned service webhook.
 5. The API validates and redacts the payload, reserves quota, persists the incident/run, and atomically inserts a durable analysis job.
-6. The worker resolves all repositories to exact SHAs and streams validated archives into one disposable Railway Sandbox.
+6. The worker resolves all repositories to exact SHAs and streams validated archives into one disposable sandbox.
 7. The OpenRouter agent may list, search, and read bounded source or request one fixed offline check.
 8. Evidence is validated against the uploaded snapshot before the structured diagnosis is stored.
 9. The sandbox is destroyed, and a signed completion callback is queued when configured.
@@ -24,7 +24,7 @@ The MVP supports this lifecycle:
 - Custom libSQL-backed jobs with singleton keys, leases, lease recovery, deferral, and bounded attempts.
 - WorkOS AuthKit Organizations and `admin`/`member` roles.
 - Read-only GitHub App; no OAuth token or personal access token storage.
-- Railway Sandbox SDK `3.6.0` behind a provider interface.
+- sbx (gVisor) and Railway Sandbox SDK `3.6.0` providers behind one interface.
 - OpenRouter model from `OPENROUTER_MODEL`, defaulting to `deepseek/deepseek-v4-flash-0731`.
 - Vitest; the Playwright end-to-end suite was removed in commit `e8141d1`.
 
@@ -41,7 +41,7 @@ packages/
   github/                 GitHub App auth, state, webhooks, source provider
   integrations/           Grafana and Sentry alert intake, provider connections
   notifications/          Slack, Discord, and email delivery channels
-  sandbox/                Railway provider, commands, template, capability probe
+  sandbox/                sbx and Railway providers, sandbox scripts, commands, capability probe
   agent/                  OpenRouter provider, prompts, orchestration, evidence
   security/               Redaction, encryption, archives, paths, SSRF, HMAC
   observability/          Structured logs and Prometheus-style metrics
@@ -173,7 +173,7 @@ Defaults:
 ### Phase 8: staging security and evaluation — pending
 
 - Real external integration suite.
-- Mandatory Railway capability probe.
+- Mandatory sandbox capability probe on the target provider.
 - Adversarial repositories.
 - Live 20-case agent evaluation and scoring.
 - Full authenticated E2E suite.

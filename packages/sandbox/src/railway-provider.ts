@@ -12,58 +12,21 @@ import type {
 } from "@legwork/contracts";
 import { assertRelativeRepositoryPath } from "@legwork/security";
 import { discoverCheckCommand, shellQuote } from "./commands";
+import type { ProbeSession } from "./probe";
+import {
+	bounded,
+	checkArgv,
+	checkResult,
+	errorResult,
+	numberLines,
+	repositoryRoot,
+	type SandboxProviderOptions,
+	unavailableCheck,
+	validateRepositoryManifest,
+} from "./shared";
 import { analysisTemplate } from "./template";
 
-const MAX_OUTPUT = 64 * 1024;
-const WORKSPACE = "/workspace/repositories";
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SHA_PATTERN = /^[0-9a-f]{40}$/;
-
-export interface RailwaySandboxOptions {
-	commandExecutionEnabled: boolean;
-	capabilityProbePassed: boolean;
-}
-
-export function validateRepositoryManifest(
-	manifest: SandboxRepositoryManifest,
-): SandboxRepositoryManifest {
-	if (manifest.repositories.length < 1 || manifest.repositories.length > 3)
-		throw new Error("Repository manifest must contain between one and three repositories");
-	const identifiers = new Set<string>();
-	for (const repository of manifest.repositories) {
-		if (!UUID_PATTERN.test(repository.repositoryId) || identifiers.has(repository.repositoryId))
-			throw new Error("Repository manifest contains an invalid identifier");
-		if (!SHA_PATTERN.test(repository.sha))
-			throw new Error("Repository manifest contains an invalid revision");
-		let url: URL;
-		try {
-			url = new URL(repository.downloadUrl);
-		} catch {
-			throw new Error("Repository manifest contains an invalid download URL");
-		}
-		if (
-			url.protocol !== "https:" ||
-			url.hostname !== "codeload.github.com" ||
-			url.username ||
-			url.password ||
-			url.port
-		)
-			throw new Error("Repository manifest contains a disallowed download URL");
-		identifiers.add(repository.repositoryId);
-	}
-	return manifest;
-}
-
-function bounded(value: string): { output: string; truncated: boolean } {
-	const bytes = Buffer.from(value);
-	if (bytes.length <= MAX_OUTPUT) return { output: value, truncated: false };
-	return { output: bytes.subarray(0, MAX_OUTPUT).toString("utf8"), truncated: true };
-}
-
-function repositoryRoot(repositoryId: string): string {
-	if (!/^[0-9a-f-]{36}$/i.test(repositoryId)) throw new Error("Invalid repository identifier");
-	return `${WORKSPACE}/${repositoryId}`;
-}
+export type RailwaySandboxOptions = SandboxProviderOptions;
 
 export class RailwaySandboxProvider implements SandboxProvider {
 	constructor(private readonly options: RailwaySandboxOptions) {}
@@ -150,11 +113,10 @@ export class RailwaySandboxProvider implements SandboxProvider {
 			if (operation.name === "read_file") {
 				const safe = assertRelativeRepositoryPath(operation.path);
 				const text = await sandbox.files.read(`${root}/${safe}`);
-				const output = text
-					.split("\n")
-					.slice(operation.start - 1, operation.end)
-					.map((line, index) => `${operation.start + index}: ${line}`)
-					.join("\n");
+				const output = numberLines(
+					text.split("\n").slice(operation.start - 1, operation.end),
+					operation.start,
+				);
 				return {
 					status: "ok",
 					...bounded(output),
@@ -186,26 +148,16 @@ export class RailwaySandboxProvider implements SandboxProvider {
 				durationMs: Math.round(performance.now() - started),
 			};
 		} catch (error) {
-			return {
-				status: "error",
-				output: error instanceof Error ? error.message : "Inspection failed",
-				truncated: false,
-				durationMs: Math.round(performance.now() - started),
-			};
+			return errorResult(error, "Inspection failed", Math.round(performance.now() - started));
 		}
 	}
 
 	async runCheck(handle: SandboxHandle, request: CheckRequest): Promise<ToolResult> {
 		const started = performance.now();
-		if (!this.options.commandExecutionEnabled || !this.options.capabilityProbePassed) {
-			return {
-				status: "unavailable",
-				output: "",
-				truncated: false,
-				durationMs: 0,
-				limitation: "Command execution is disabled until the no-egress capability probe passes",
-			};
-		}
+		if (!this.options.commandExecutionEnabled || !this.options.capabilityProbePassed)
+			return unavailableCheck(
+				"Command execution is disabled until the no-egress capability probe passes",
+			);
 		const sandbox = await Sandbox.connect(handle.id);
 		const root = repositoryRoot(request.repositoryId);
 		try {
@@ -216,52 +168,17 @@ export class RailwaySandboxProvider implements SandboxProvider {
 				packageJson = JSON.parse(await sandbox.files.read(`${root}/package.json`));
 			const discovered = discoverCheckCommand(names, packageJson, request.check);
 			if (!discovered)
-				return {
-					status: "unavailable",
-					output: "",
-					truncated: false,
-					durationMs: Math.round(performance.now() - started),
-					limitation: `No approved ${request.check} command was discovered`,
-				};
-			const envArgs = Object.entries(discovered.environment).flatMap(([key, value]) => [
-				key,
-				value,
-			]);
-			const argv = [
-				"/usr/local/bin/ocai-run-check",
-				root,
-				"env",
-				...envArgs,
-				discovered.executable,
-				...discovered.args,
-			];
-			const result = await sandbox.exec(argv.map(shellQuote).join(" "), {
+				return unavailableCheck(
+					`No approved ${request.check} command was discovered`,
+					Math.round(performance.now() - started),
+				);
+			const result = await sandbox.exec(checkArgv(root, discovered).map(shellQuote).join(" "), {
 				cwd: root,
 				timeoutSec: 120,
 			});
-			const output = bounded([result.stdout, result.stderr].filter(Boolean).join("\n"));
-			if (result.timedOut)
-				return {
-					status: "timed_out",
-					...output,
-					durationMs: Math.round(performance.now() - started),
-				};
-			const unavailable =
-				result.exitCode === 127 ||
-				/not found|missing dependency|cannot find module/i.test(output.output);
-			return {
-				status: unavailable ? "unavailable" : result.exitCode === 0 ? "ok" : "error",
-				...output,
-				durationMs: Math.round(performance.now() - started),
-				...(unavailable ? { limitation: "Required offline dependencies are unavailable" } : {}),
-			};
+			return checkResult(result, Math.round(performance.now() - started));
 		} catch (error) {
-			return {
-				status: "error",
-				output: error instanceof Error ? error.message : "Check failed",
-				truncated: false,
-				durationMs: Math.round(performance.now() - started),
-			};
+			return errorResult(error, "Check failed", Math.round(performance.now() - started));
 		}
 	}
 
@@ -269,4 +186,20 @@ export class RailwaySandboxProvider implements SandboxProvider {
 		const sandbox = await Sandbox.connect(handle.id);
 		await sandbox.destroy();
 	}
+}
+
+export async function openRailwayProbeSession(): Promise<ProbeSession> {
+	const sandbox = await Sandbox.create(analysisTemplate(), {
+		idleTimeoutMinutes: 10,
+		networkIsolation: "ISOLATED",
+		env: {},
+	});
+	return {
+		writeFile: async (path, content) => {
+			await sandbox.files.write(path, content);
+		},
+		readFile: (path) => sandbox.files.read(path),
+		exec: async (command, timeoutSec) => await sandbox.exec(command, { timeoutSec }),
+		destroy: () => sandbox.destroy(),
+	};
 }

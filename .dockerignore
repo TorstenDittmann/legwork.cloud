@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/build
+**/.svelte-kit
+.git
+.wsu
+.env
+.env.*
+*.db
+*.db-*
+*.pem

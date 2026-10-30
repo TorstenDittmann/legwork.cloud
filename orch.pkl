@@ -1,0 +1,97 @@
+amends "https://orch.torsten.work/pkl/v1alpha1/Application.pkl"
+
+// Legwork on orch: the web app, the analysis worker and libSQL. Analysis sandboxes run on
+// sbx, outside this cluster; the worker reaches it at SBX_URL.
+name = "legwork"
+
+local image = "ghcr.io/torstendittmann/legwork.cloud:latest"
+local domain = "legwork.cloud"
+
+local shared = new Mapping<String, String> {
+  ["LOG_LEVEL"] = "info"
+  ["APP_URL"] = "https://\(domain)"
+}
+
+services {
+  ["web"] {
+    image = image
+    command { "bun"; "run"; "--filter"; "@legwork/web"; "start" }
+    resources { cpu = "500m"; memory = "512Mi" }
+    http = new Http {
+      port = 3000
+      domains { domain }
+      healthPath = "/api/health"
+    }
+    env {
+      ...shared
+      ["WORKOS_REDIRECT_URI"] = "https://\(domain)/auth/callback"
+      ["DODO_PAYMENTS_RETURN_URL"] = "https://\(domain)/checkout/success"
+    }
+    connect { ["DATABASE_URL"] = "db" }
+    secretEnv {
+      ["DATABASE_AUTH_TOKEN"] = "db-token"
+      ["DATA_ENCRYPTION_KEY"] = "data-encryption-key"
+      ["DODO_PAYMENTS_API_KEY"] = "dodo-payments-api-key"
+      ["DODO_PAYMENTS_ENVIRONMENT"] = "dodo-payments-environment"
+      ["DODO_PAYMENTS_WEBHOOK_KEY"] = "dodo-payments-webhook-key"
+      ["DODO_PAYMENTS_TEAM_MONTHLY_PRODUCT_ID"] = "dodo-team-monthly-product-id"
+      ["DODO_PAYMENTS_TEAM_ANNUAL_PRODUCT_ID"] = "dodo-team-annual-product-id"
+      ["DODO_PAYMENTS_SCALE_MONTHLY_PRODUCT_ID"] = "dodo-scale-monthly-product-id"
+      ["DODO_PAYMENTS_SCALE_ANNUAL_PRODUCT_ID"] = "dodo-scale-annual-product-id"
+      ["GITHUB_APP_SLUG"] = "github-app-slug"
+      ["GITHUB_INSTALLATION_STATE_SECRET"] = "github-installation-state-secret"
+      ["GITHUB_WEBHOOK_SECRET"] = "github-webhook-secret"
+      ["METRICS_TOKEN"] = "metrics-token"
+      ["WORKOS_API_KEY"] = "workos-api-key"
+      ["WORKOS_CLIENT_ID"] = "workos-client-id"
+      ["WORKOS_COOKIE_PASSWORD"] = "workos-cookie-password"
+    }
+  }
+  ["worker"] {
+    image = image
+    command { "bun"; "run"; "--filter"; "@legwork/worker"; "start" }
+    // Archives are buffered in memory on their way into sbx: up to 250 MB per run.
+    resources { cpu = "1"; memory = "2Gi" }
+    // Matches SHUTDOWN_GRACE_MS, so in-flight jobs can drain before SIGKILL.
+    stopGracePeriod = "30s"
+    env {
+      ...shared
+      ["OPENROUTER_MODEL"] = "deepseek/deepseek-v4-flash-0731"
+      ["WORKER_CONCURRENCY"] = "5"
+      ["SHUTDOWN_GRACE_MS"] = "25000"
+      ["SANDBOX_PROVIDER"] = "sbx"
+      ["SBX_URL"] = "https://sbx.torsten.work"
+      // Flip both only after `bun run --filter @legwork/sandbox probe` passes against sbx.
+      ["SANDBOX_COMMAND_EXECUTION"] = "false"
+      ["SANDBOX_CAPABILITY_PROBE_PASSED"] = "false"
+    }
+    connect { ["DATABASE_URL"] = "db" }
+    secretEnv {
+      ["DATABASE_AUTH_TOKEN"] = "db-token"
+      ["DATA_ENCRYPTION_KEY"] = "data-encryption-key"
+      ["GITHUB_APP_ID"] = "github-app-id"
+      ["GITHUB_APP_PRIVATE_KEY"] = "github-app-private-key"
+      ["OPENROUTER_API_KEY"] = "openrouter-api-key"
+      ["RESEND_API_KEY"] = "resend-api-key"
+      ["RESEND_FROM_ADDRESS"] = "resend-from-address"
+      ["SBX_API_KEY"] = "sbx-api-key"
+    }
+  }
+}
+
+databases {
+  ["db"] = new LibSQL {
+    // Same libsql-server build that ran on Railway.
+    image = "ghcr.io/tursodatabase/libsql-server@sha256:07d5da358f37f7f327cc33c1cb5278e7892e04225f011a65a76049372a308982"
+    resources { cpu = "500m"; memory = "512Mi" }
+    backup = new DatabaseBackup { schedule = "0 */6 * * *"; keep = 28 }
+  }
+}
+
+deploy {
+  preDeploy = new PreDeployHook {
+    service = "web"
+    command { "bun"; "run"; "db:migrate" }
+    timeout = "5m"
+  }
+}

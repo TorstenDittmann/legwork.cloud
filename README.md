@@ -1,6 +1,6 @@
 # Legwork
 
-Evidence-backed, read-only incident diagnosis for approved GitHub repositories. Each analysis resolves immutable commit SHAs, gives a disposable Railway Sandbox temporary archive download capabilities, runs a durable LangGraph workflow, validates every evidence citation, and destroys the sandbox.
+Evidence-backed, read-only incident diagnosis for approved GitHub repositories. Each analysis resolves immutable commit SHAs, streams validated archives into a disposable sandbox, runs a durable LangGraph workflow, validates every evidence citation, and destroys the sandbox.
 
 For project continuation and implementation status, start with [`docs/HANDOFF.md`](./docs/HANDOFF.md). The documentation index is at [`docs/README.md`](./docs/README.md).
 
@@ -12,7 +12,7 @@ For project continuation and implementation status, start with [`docs/HANDOFF.md
 - `packages/db`: Drizzle schema for libSQL, migrations, tenant queries, quotas, idempotency, and durable jobs.
 - `packages/auth`: WorkOS AuthKit active-organization and `admin`/`member` enforcement.
 - `packages/github`: signed installation state, webhook verification, short-lived installation tokens, exact-SHA archives.
-- `packages/sandbox`: Railway SDK `3.6.0` provider and mandatory no-egress capability probe.
+- `packages/sandbox`: sbx and Railway Sandbox providers, the shared sandbox image scripts, and the mandatory no-egress capability probe.
 - `packages/agent`: OpenRouter model boundary, strict structured output, and evidence validation.
 - `packages/contracts`: Zod contracts for agents, incidents, providers, callbacks, notifications, and problem responses.
 - `packages/integrations`: Grafana and Sentry alert intake, provider connections, and discovery.
@@ -85,9 +85,21 @@ webhook URL and work immediately; email requires `RESEND_API_KEY` and `RESEND_FR
 worker plus a sending domain verified in Resend. Each channel routes to every service unless you
 narrow it, and **Send test** posts a real message through the same path a diagnosis takes.
 
+## orch deployment
+
+Production runs on [orch](https://orch.torsten.work) from `orch.pkl`: the `web` and `worker` services share one image built from the root `Dockerfile`, `db` is a LibSQL database with backups every six hours, and every deploy runs `bun run db:migrate` as a pre-deploy hook before the rollout. orch generates the database credentials and passes the connection URL as `DATABASE_URL`.
+
+Set the application secrets named in `orch.pkl` once before the first deploy, for example:
+
+```sh
+printf '%s' "$OPENROUTER_API_KEY" | orch secret set legwork openrouter-api-key --from-stdin
+```
+
+Run `orch github init` once from a checkout to trust this repository and write `.github/workflows/deploy.yml`; every push to `main` then builds `ghcr.io/torstendittmann/legwork.cloud` and deploys it.
+
 ## Railway deployment
 
-Create two Railway services from this repository and use these commands:
+Railway is being retired. Until the cutover, create two Railway services from this repository and use these commands:
 
 | Service | Build                                    | Start                                    | Health         |
 | ------- | ---------------------------------------- | ---------------------------------------- | -------------- |
@@ -96,15 +108,28 @@ Create two Railway services from this repository and use these commands:
 
 Both services use the same remote libSQL `DATABASE_URL`; local development uses `file:local.db`. Only the worker receives the GitHub private key and OpenRouter key. The web service receives WorkOS credentials and GitHub webhook/setup secrets. Scope shared values narrowly in Railway rather than exposing all secrets to both services.
 
+## Sandbox runtime
+
+`SANDBOX_PROVIDER` selects where analyses run:
+
+- `railway` (default for now): Railway Sandboxes, created from the template in `packages/sandbox/src/template.ts`. Needs `RAILWAY_TOKEN`.
+- `sbx`: one [sbx](https://sbx.torsten.work) sandbox per analysis on the `gvisor` backend with network mode `none`, no Linux capabilities and a non-root user. The worker downloads each exact-SHA archive from `codeload.github.com` and uploads it, so the sandbox never has egress. Needs `SBX_URL` and a sandbox-scoped `SBX_API_KEY`. The analysis template is named after a hash of its image and steps; after changing anything in `packages/sandbox/image`, create the new one with an admin key before deploying the worker:
+
+  ```sh
+  SBX_URL=https://sbx.torsten.work SBX_API_KEY=<admin key> bun run --filter @legwork/sandbox sbx:template
+  ```
+
+  The worker refuses to start if its template is missing or gVisor is unavailable.
+
 ## Sandbox command gate
 
-Repository code execution is disabled by default. With Railway Sandbox credentials configured, run:
+Repository code execution is disabled by default. With the target sandbox provider configured, run:
 
 ```sh
 bun run --filter @legwork/sandbox probe
 ```
 
-The probe creates a real sandbox and checks file transfer, execution, DNS, public HTTP, Railway private DNS, metadata endpoints, UID/capability isolation, namespace reconfiguration, secret visibility, timeout termination, and destruction. Set both of these only after the complete probe returns `passed: true` in the target environment:
+The probe creates a real sandbox on the configured provider and checks file transfer, execution, DNS, public HTTP, private DNS and private-network HTTP, metadata endpoints, UID/capability isolation, namespace reconfiguration, secret visibility, timeout termination, and destruction. On sbx it also requires the gVisor runtime and a disabled network. Set both of these only after the complete probe returns `passed: true` in the target environment:
 
 ```sh
 SANDBOX_COMMAND_EXECUTION=true
