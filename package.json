@@ -23,13 +23,13 @@
 		"@types/bun": "1.4.0",
 		"@types/node": "22.18.0",
 		"jose": "6.2.8",
-		"oxfmt": "0.62.0",
+		"oxfmt": "0.72.0",
 		"oxlint": "1.77.0",
 		"railway": "3.6.0",
 		"typescript": "5.9.2",
-		"vitest": "3.2.6",
-		"workspace-utils": "2.1.0",
-		"zod": "4.1.5"
+		"vitest": "4.1.11",
+		"workspace-utils": "2.1.4",
+		"zod": "4.6.7"
 	},
 	"overrides": {
 		"@esbuild-kit/core-utils>esbuild": "0.25.12"
